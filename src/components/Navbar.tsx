@@ -3,101 +3,81 @@
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { 
-  Sparkles, HeartHandshake, Compass, QrCode, ShieldCheck, 
-  User, LogOut, Lock, ChevronDown, Award, PlusCircle
+  HeartHandshake, Sparkles, User, LogOut, ShieldCheck, 
+  ChevronDown, Award, Lock, ExternalLink
 } from 'lucide-react';
-import { supabase } from '@/lib/supabaseClient';
+import { getActiveUser, setActiveUser, ADMIN_USER, SAMPLE_CITIZEN, UserProfile } from '@/lib/auth';
 
 export default function Navbar() {
-  const [user, setUser] = useState<{ name: string; karma: number } | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Đọc trạng thái đăng nhập từ localStorage để hỗ trợ kiểm thử linh hoạt
   useEffect(() => {
-    const storedAuth = localStorage.getItem('SOVA_AUTH_USER');
-    if (storedAuth) {
-      try {
-        setUser(JSON.parse(storedAuth));
-      } catch {
-        setUser(null);
-      }
-    } else {
-      // Mặc định tự động nhận diện nếu đã đăng nhập Supabase hoặc giả lập phiên Trọng tài
-      setUser({ name: 'Nguyễn Khiêm', karma: 200 });
-    }
+    setUser(getActiveUser());
+    const handleAuth = () => setUser(getActiveUser());
+    window.addEventListener('sova_auth_change', handleAuth);
 
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+
+    return () => {
+      window.removeEventListener('sova_auth_change', handleAuth);
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
   }, []);
-
-  const handleLoginGoogle = () => {
-    // Giả lập phiên đăng nhập thành công cho Trọng tài Nguyễn Khiêm
-    const loggedUser = { name: 'Nguyễn Khiêm', karma: 200 };
-    localStorage.setItem('SOVA_AUTH_USER', JSON.stringify(loggedUser));
-    setUser(loggedUser);
-  };
-
-  const handleLogout = () => {
-    localStorage.removeItem('SOVA_AUTH_USER');
-    setUser(null);
-    setDropdownOpen(false);
-  };
 
   return (
     <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-warm-200 shadow-2xs">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
         
-        {/* Logo Thương Hiệu */}
-        <Link href="/" className="flex items-center gap-2.5 group shrink-0">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white shadow-soft group-hover:scale-105 transition-transform">
+        {/* Logo */}
+        <Link href="/" className="flex items-center gap-2.5 shrink-0 group">
+          <div className="w-10 h-10 rounded-2xl bg-brand-600 flex items-center justify-center text-white shadow-soft group-hover:scale-105 transition-transform">
             <HeartHandshake className="w-6 h-6"/>
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-black text-xl text-brand-900 tracking-tight">SOVA GIVE 100</span>
-              <span className="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200">
+              <span className="font-black text-base text-warm-900 tracking-tight">SOVA GIVE 100</span>
+              <span className="text-[10px] font-black px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 border border-brand-200">
                 0-VND
               </span>
             </div>
-            <p className="text-[10px] text-warm-700 font-medium">Mạng Lưới Tuần Hoàn Sinh Kế</p>
+            <p className="text-[10px] text-warm-700 font-semibold">Mạng Lưới Tuần Hoàn Sinh Kế</p>
           </div>
         </Link>
 
-        {/* Menu Điều Hướng Trung Tâm */}
-        <nav className="hidden md:flex items-center gap-1 text-sm font-semibold text-warm-700">
-          <Link href="/" className="px-3.5 py-2 rounded-xl hover:bg-warm-100 hover:text-brand-700 transition-colors flex items-center gap-1.5">
-            <Sparkles className="w-4 h-4 text-brand-600"/>
-            <span>Cây Ước Nguyện</span>
+        {/* Menu Điều Hướng */}
+        <nav className="hidden md:flex items-center gap-1 text-xs font-bold text-warm-700">
+          <Link href="/" className="px-3.5 py-2 rounded-xl hover:bg-warm-100 hover:text-brand-700 transition-all">
+            Cây Nguyện Ước
           </Link>
-          <Link href="/passports/" className="px-3.5 py-2 rounded-xl hover:bg-warm-100 hover:text-brand-700 transition-colors flex items-center gap-1.5">
-            <Compass className="w-4 h-4 text-blue-600"/>
-            <span>Hộ Chiếu Vật Phẩm</span>
+          <Link href="/passports/" className="px-3.5 py-2 rounded-xl hover:bg-warm-100 hover:text-brand-700 transition-all">
+            Hộ Chiếu Vật Phẩm
           </Link>
-          <Link href="/handshake/" className="px-3.5 py-2 rounded-xl hover:bg-warm-100 hover:text-brand-700 transition-colors flex items-center gap-1.5">
-            <QrCode className="w-4 h-4 text-sun-500"/>
-            <span>Bắt Tay QR</span>
-          </Link>
-          <Link 
-            href="/create-wish/"
-            className="ml-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-sm hover:shadow-float transition-all flex items-center gap-1.5"
-          >
-            <PlusCircle className="w-4 h-4"/>
-            <span>Gửi Ước Nguyện 0Đ</span>
+          <Link href="/handshake/" className="px-3.5 py-2 rounded-xl hover:bg-warm-100 hover:text-brand-700 transition-all">
+            Bắt Tay QR
           </Link>
         </nav>
 
-        {/* Nút Hành Động Phải: Đăng Nhập / Profile Dropdown */}
+        {/* Cụm Tài Khoản */}
         <div className="flex items-center gap-2.5">
-          {/* Chưa Đăng Nhập -> Hiện nút Google One-Tap */}
+          <Link 
+            href="/create-wish/"
+            className="hidden sm:inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-xs transition-all"
+          >
+            <Sparkles className="w-3.5 h-3.5"/>
+            <span>Gửi Ước Nguyện</span>
+          </Link>
+
           {!user ? (
             <button
-              onClick={handleLoginGoogle}
+              onClick={() => setLoginModalOpen(true)}
               className="px-4 py-2 rounded-xl border-2 border-warm-200 bg-white hover:bg-brand-50 hover:border-brand-500 text-xs font-black text-warm-900 shadow-2xs transition-all flex items-center gap-2 cursor-pointer"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
@@ -109,14 +89,13 @@ export default function Navbar() {
               <span>Đăng Nhập</span>
             </button>
           ) : (
-            /* Đã Đăng Nhập -> Hiện Avatar Dropdown */
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="flex items-center gap-2 p-1.5 pr-3 rounded-2xl border border-warm-200 bg-white hover:bg-brand-50 transition-all shadow-2xs cursor-pointer"
               >
                 <div className="w-8 h-8 rounded-xl bg-brand-600 text-white font-black text-sm flex items-center justify-center">
-                  {user.name.charAt(0)}
+                  {user.avatar}
                 </div>
                 <div className="text-left hidden sm:block">
                   <span className="text-xs font-black text-warm-900 block leading-tight">{user.name}</span>
@@ -127,13 +106,14 @@ export default function Navbar() {
                 <ChevronDown className="w-3.5 h-3.5 text-warm-700"/>
               </button>
 
-              {/* Menu Thả Xuống */}
               {dropdownOpen && (
                 <div className="absolute right-0 mt-2 w-64 bg-white rounded-3xl border border-warm-200 shadow-xl p-2.5 space-y-1 text-xs font-bold text-warm-700 animate-in fade-in zoom-in-95 z-50">
                   <div className="p-3 bg-brand-50/60 rounded-2xl border border-brand-100 mb-1.5">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-brand-700 block">Tài Khoản Xác Minh</span>
+                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-brand-700 block">
+                      {user.role === 'SUPER_ADMIN' ? 'Trọng Tài Tối Cao' : 'Công Dân Xác Minh'}
+                    </span>
                     <p className="text-sm font-black text-warm-900">{user.name}</p>
-                    <span className="text-[11px] font-bold text-sun-600">{user.karma} Điểm Vốn Xã Hội (Karma)</span>
+                    <span className="text-[11px] font-bold text-sun-600">{user.karma} ⭐ Vốn Xã Hội</span>
                   </div>
 
                   <Link 
@@ -142,26 +122,31 @@ export default function Navbar() {
                     className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-warm-100 hover:text-brand-700 transition-colors"
                   >
                     <User className="w-4 h-4 text-brand-600"/>
-                    <span>Hồ Sơ Của Tôi & Chứng Chỉ</span>
+                    <span>Hồ Sơ Cá Nhân & Chứng Chỉ</span>
                   </Link>
 
-                  <Link 
-                    href="/admin/"
-                    onClick={() => setDropdownOpen(false)}
-                    className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-sun-50/70 text-sun-900 hover:bg-sun-100 transition-colors"
-                  >
-                    <ShieldCheck className="w-4 h-4 text-sun-600"/>
-                    <span className="font-black">Bàn Quản Trị Tối Cao</span>
-                  </Link>
+                  {user.role === 'SUPER_ADMIN' && (
+                    <Link 
+                      href="/admin/"
+                      onClick={() => setDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-sun-50/80 text-sun-900 hover:bg-sun-100 transition-colors"
+                    >
+                      <ShieldCheck className="w-4 h-4 text-sun-600"/>
+                      <span className="font-black">Bàn Quản Trị Tối Cao</span>
+                    </Link>
+                  )}
 
                   <div className="border-t border-warm-100 my-1"/>
 
                   <button
-                    onClick={handleLogout}
+                    onClick={() => {
+                      setActiveUser(null);
+                      setDropdownOpen(false);
+                    }}
                     className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 transition-colors text-left cursor-pointer"
                   >
                     <LogOut className="w-4 h-4"/>
-                    <span>Đăng Xuất Khỏi Thiết Bị</span>
+                    <span>Đăng Xuất (Về Khách Vãng Lai)</span>
                   </button>
                 </div>
               )}
@@ -170,6 +155,63 @@ export default function Navbar() {
 
         </div>
       </div>
+
+      {/* Modal Chọn Tài Khoản Đăng Nhập 1 Chạm */}
+      {loginModalOpen && (
+        <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-warm-200 max-w-sm w-full p-6 shadow-2xl space-y-4">
+            <div className="text-center space-y-1">
+              <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 mx-auto flex items-center justify-center border border-brand-200">
+                <Lock className="w-6 h-6"/>
+              </div>
+              <h3 className="text-lg font-black text-warm-900">Đăng Nhập 1 Chạm</h3>
+              <p className="text-xs text-warm-700">Chọn định danh để trải nghiệm đa vai trò</p>
+            </div>
+
+            <div className="space-y-2 pt-2">
+              <button
+                onClick={() => {
+                  setActiveUser(ADMIN_USER);
+                  setLoginModalOpen(false);
+                }}
+                className="w-full p-3 rounded-2xl border-2 border-sun-300 hover:border-sun-500 bg-sun-50/50 flex items-center gap-3 transition-all text-left cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-xl bg-sun-500 text-white font-black flex items-center justify-center shrink-0">
+                  K
+                </div>
+                <div>
+                  <span className="text-xs font-black text-warm-900 block">Nguyễn Khiêm (Trọng Tài Tối Cao)</span>
+                  <span className="text-[10px] text-sun-700 font-bold">Toàn quyền duyệt, xóa & quản trị 100%</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => {
+                  setActiveUser(SAMPLE_CITIZEN);
+                  setLoginModalOpen(false);
+                }}
+                className="w-full p-3 rounded-2xl border border-warm-200 hover:border-brand-500 bg-white flex items-center gap-3 transition-all text-left cursor-pointer"
+              >
+                <div className="w-9 h-9 rounded-xl bg-brand-600 text-white font-black flex items-center justify-center shrink-0">
+                  A
+                </div>
+                <div>
+                  <span className="text-xs font-black text-warm-900 block">Nguyễn Văn An (Người Nhận)</span>
+                  <span className="text-[10px] text-warm-700 font-medium">Quyền tự sửa & rút ước nguyện</span>
+                </div>
+              </button>
+            </div>
+
+            <button
+              onClick={() => setLoginModalOpen(false)}
+              className="w-full py-2.5 rounded-xl border border-warm-200 text-xs font-bold text-warm-700 hover:bg-warm-100 transition-all cursor-pointer"
+            >
+              Hủy Bỏ
+            </button>
+          </div>
+        </div>
+      )}
+
     </header>
   );
 }
