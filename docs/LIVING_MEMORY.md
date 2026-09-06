@@ -1,10 +1,8 @@
-# SOVA GIVE 100 - BỘ NHỚ SỐNG HỆ THỐNG (LIVING MEMORY 6 SAO)
+# SOVA GIVE 100 - BỘ NHỚ SỐNG HỆ THỐNG (CHIP 63 TỈNH THÀNH & HÌNH ẢNH MINH HỌA)
 - Quyền lực tối cao: Trọng tài Nguyễn Khiêm (21/08/1984)
-- Triết lý cốt lõi: Kinh tế tuần hoàn 0-VND • Trao công cụ sinh kế • Bảo vệ nhân phẩm (Dignity-First).
-- Cấu trúc trang chủ:
-  1. Hero Section: "Đừng để đồ tốt ngủ quên trong góc tối - Hãy biến chúng thành tương lai của ai đó."
-  2. Bảng đối chiếu: Sự bất cập của việc bán ve chai / cho tặng cũ vs. Văn minh tuần hoàn SOVA.
-  3. Cánh cửa kép: Dành cho Người Trao (Angel) & Dành cho Người Cần Tiếp Sức (Dreamer).
-  4. Trình diễn Hộ Chiếu Số & Phả hệ vòng đời (Case Study ThinkPad T480 & Sổ lưu bút tri ân).
-  5. Cây Nguyện Ước Live: Kết nối Supabase Singapore, bộ lọc địa lý 63 tỉnh thành, modal khớp nối RPC.
-  6. Viral Loop: Nút chia sẻ Zalo/Facebook văn minh, kích hoạt lòng trắc ẩn tự nhiên.
+- Triết lý cốt lõi: 100% Không tiền mặt • Trao công cụ sinh kế • Bảo vệ nhân phẩm (Dignity Shield).
+- Đột phá giao diện:
+  1. Đầy đủ 63 Tỉnh/Thành phố Việt Nam trong bộ lọc địa lý (Geo-filter) tại `src/lib/provinces.ts`.
+  2. Hình ảnh minh chứng thực tế cho từng vật phẩm (Laptop, Xe đạp, Máy may) có phủ tem Dignity Shield.
+  3. Visual minh họa sống động cho 3 bước chuyển giao và Case Study Hộ Chiếu Tuần Hoàn (ThinkPad T480).
+  4. Động cơ lan tỏa Viral Loop một chạm qua Zalo/Facebook.

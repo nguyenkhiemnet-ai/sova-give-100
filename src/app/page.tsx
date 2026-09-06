@@ -3,18 +3,19 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
+import { VIETNAM_PROVINCES } from '@/lib/provinces';
 import { 
   Sparkles, Heart, Search, MapPin, Filter, Leaf, 
   Clock, Repeat, AlertCircle, ShieldCheck, CheckCircle2,
   Laptop, Bike, Scissors, BookOpen, Wrench, Navigation,
-  ArrowRight, Share2, Copy, Check, ExternalLink, Lock,
-  Award, HeartHandshake, UserCheck, ChevronRight, MessageSquare
+  ArrowRight, Share2, Copy, Check, MessageSquare
 } from 'lucide-react';
 
 interface WishItem {
   id: string;
   title: string;
   category: string;
+  imageUrl?: string;
   reason?: string;
   reason_description?: string;
   honor_commitment?: string;
@@ -26,16 +27,6 @@ interface WishItem {
   province_code?: string;
   created_at?: string;
 }
-
-const PROVINCES = [
-  { code: 'ALL', name: 'Toàn quốc (63 Tỉnh/Thành)' },
-  { code: '01', name: 'Hà Nội' },
-  { code: '79', name: 'TP. Hồ Chí Minh' },
-  { code: '48', name: 'Đà Nẵng' },
-  { code: '03', name: 'Hà Giang' },
-  { code: '31', name: 'Hải Phòng' },
-  { code: '92', name: 'Cần Thơ' },
-];
 
 const CATEGORIES = [
   { id: 'ALL', label: 'Tất cả ước nguyện', icon: Sparkles },
@@ -77,6 +68,7 @@ export default function HomePage() {
             id: 'a1111111-1111-1111-1111-111111111111',
             title: 'Máy tính xách tay phục vụ học tập CNTT',
             category: 'laptop',
+            imageUrl: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80',
             reason: 'Em vừa đỗ đại học nhưng gia đình làm nông ở vùng bão lũ không đủ kinh phí sắm máy thực hành lập trình Web.',
             honor_commitment: 'Em cam kết giữ gìn máy cẩn thận, học đạt loại giỏi và trao lại cho đàn em khóa sau khi ra trường.',
             urgency: 'urgent',
@@ -87,16 +79,18 @@ export default function HomePage() {
             id: 'b2222222-2222-2222-2222-222222222222',
             title: 'Xe đạp đến trường cho học sinh nghèo hiếu học',
             category: 'bicycle',
+            imageUrl: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=600&q=80',
             reason: 'Đoạn đường từ nhà tới trường cấp 3 dài 8km đường đồi núi hiểm trở, gia đình chưa có điều kiện mua xe cho em.',
             honor_commitment: 'Em cam kết đi học chuyên cần, bảo dưỡng xích líp tốt và nhượng lại cho học sinh khó khăn khác khi tốt nghiệp.',
             urgency: 'urgent',
-            province_code: '03',
+            province_code: '02',
             status: 'verified',
           },
           {
             id: 'c3333333-3333-3333-3333-333333333333',
             title: 'Máy may sinh kế cho mẹ đơn thân gia công tại nhà',
             category: 'sewing_machine',
+            imageUrl: 'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?auto=format&fit=crop&w=600&q=80',
             reason: 'Cần máy may gia đình để nhận đồ may gia công kiếm thêm thu nhập trang trải tiền thuốc và nuôi hai con nhỏ ăn học.',
             honor_commitment: 'Tôi cam kết dùng máy đúng mục đích mưu sinh và sẵn sàng hướng dẫn nghề may miễn phí cho chị em khó khăn trong xóm.',
             urgency: 'normal',
@@ -159,48 +153,64 @@ export default function HomePage() {
   return (
     <div className="space-y-16 max-w-6xl mx-auto">
       
-      {/* 1. HERO SECTION: CHẠM VÀO CẢM XÚC ĐỜI THƯỜNG */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand-50 via-white to-sun-50 rounded-3xl border border-warm-200 p-6 sm:p-14 shadow-soft">
-        <div className="max-w-3xl space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black bg-white text-brand-700 border border-brand-200 shadow-2xs">
-            <Sparkles className="w-4 h-4 text-brand-500 animate-spin-slow"/>
-            Kinh Tế Tuần Hoàn 0-VND • Trao Cơ Hội, Giữ Danh Dự
+      {/* 1. HERO SECTION: CẢM XÚC & HÌNH ẢNH MINH HỌA SỐNG ĐỘNG */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-brand-50 via-white to-sun-50 rounded-3xl border border-warm-200 p-6 sm:p-12 lg:p-14 shadow-soft">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          
+          <div className="lg:col-span-7 space-y-6">
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black bg-white text-brand-700 border border-brand-200 shadow-2xs">
+              <Sparkles className="w-4 h-4 text-brand-500 animate-spin-slow"/>
+              Kinh Tế Tuần Hoàn 0-VND • Trao Cơ Hội, Giữ Danh Dự
+            </div>
+
+            <h1 className="text-3xl sm:text-5xl font-black text-warm-900 tracking-tight leading-[1.15]">
+              Đừng để đồ tốt ngủ quên trong góc tối.<br/>
+              <span className="text-brand-700 bg-gradient-to-r from-brand-700 to-brand-500 bg-clip-text text-transparent">
+                Hãy biến chúng thành tương lai của ai đó.
+              </span>
+            </h1>
+
+            <p className="text-warm-700 text-sm sm:text-base leading-relaxed font-normal">
+              Bao nhiêu chiếc laptop cũ, xe đạp, máy may vẫn còn chạy rất tốt nhưng đang nằm phủ bụi trong kho? 
+              Bán ve chai thì rẻ mạt và xót của, cho trên mạng thì sợ gặp con buôn. 
+              Tại <strong>SOVA GIVE 100</strong>, vật phẩm của bạn tìm thấy cuộc đời thứ hai qua <strong>Hộ Chiếu Số</strong> và cái <strong>Bắt Tay Tử Tế 0 Đồng</strong>.
+            </p>
+
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
+              <a 
+                href="#wishlist-section"
+                className="px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-sm shadow-float hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+              >
+                <Heart className="w-4 h-4 fill-white"/>
+                <span>Tôi Muốn Trao Đồ Tốt (Angel)</span>
+              </a>
+
+              <Link className="px-6 py-3.5 rounded-2xl bg-white hover:bg-brand-50 border-2 border-brand-600 text-brand-700 font-black text-sm shadow-soft hover:scale-[1.02] transition-all flex items-center justify-center gap-2" href="/create-wish/">
+                <Sparkles className="w-4 h-4"/>
+                <span>Tôi Cần Dụng Cụ Để Tự Lập</span>
+              </Link>
+            </div>
           </div>
 
-          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-warm-900 tracking-tight leading-[1.15]">
-            Đừng để đồ tốt ngủ quên trong góc tối.<br/>
-            <span className="text-brand-700 bg-gradient-to-r from-brand-700 to-brand-500 bg-clip-text text-transparent">
-              Hãy biến chúng thành tương lai của ai đó.
-            </span>
-          </h1>
-
-          <p className="text-warm-700 text-sm sm:text-lg leading-relaxed max-w-2xl font-normal">
-            Bao nhiêu chiếc laptop cũ, xe đạp, máy may vẫn còn chạy rất tốt nhưng đang nằm phủ bụi trong kho? 
-            Bán ve chai thì rẻ mạt và xót của, cho trên mạng thì sợ gặp con buôn. 
-            Tại <strong>SOVA GIVE 100</strong>, vật phẩm của bạn tìm thấy cuộc đời thứ hai qua <strong>Hộ Chiếu Số</strong> và cái <strong>Bắt Tay Tử Tế 0 Đồng</strong>.
-          </p>
-
-          {/* Cụm nút chuyển đổi kép (Dual CTAs) */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
-            <a 
-              href="#wishlist-section"
-              className="px-7 py-4 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-sm shadow-float hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
-            >
-              <Heart className="w-4 h-4 fill-white"/>
-              <span>Tôi Muốn Trao Đồ Tốt (Angel)</span>
-            </a>
-
-            <Link 
-              href="/create-wish/"
-              className="px-7 py-4 rounded-2xl bg-white hover:bg-brand-50 border-2 border-brand-600 text-brand-700 font-black text-sm shadow-soft hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
-            >
-              <Sparkles className="w-4 h-4"/>
-              <span>Tôi Cần Dụng Cụ Để Tự Lập</span>
-            </Link>
+          {/* Hình ảnh Hero thực tế */}
+          <div className="lg:col-span-5 relative">
+            <div className="relative mx-auto rounded-3xl overflow-hidden shadow-xl border-4 border-white">
+              <img 
+                src="https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=800&q=80" 
+                alt="Trao công cụ học tập và lao động" 
+                className="w-full h-80 object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-5">
+                <p className="text-white text-xs font-bold leading-relaxed">
+                  "Mỗi chiếc máy tính cũ trao đi là một tương lai thoát nghèo được thắp sáng."
+                </p>
+              </div>
+            </div>
           </div>
+
         </div>
 
-        {/* 3 Thẻ Kính Tác Động Xã Hội (Live Glass Cards) */}
+        {/* 3 Thẻ Kính Tác Động Xã Hội */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10 pt-8 border-t border-warm-200/80">
           <div className="bg-white/90 backdrop-blur-sm p-4 rounded-2xl border border-warm-200 shadow-2xs flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
@@ -237,7 +247,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. BẢNG TƯƠNG PHẢN: NỖI ĐAU THỰC TẾ VS. GIẢI PHÁP SOVA */}
+      {/* 2. BẢNG TƯƠNG PHẢN THỰC TẾ: NỖI ĐAU VS GIẢI PHÁP SOVA */}
       <section className="space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-black uppercase tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full border border-brand-200">
@@ -252,53 +262,67 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Cách cũ */}
-          <div className="bg-white rounded-3xl border border-red-100 p-6 sm:p-8 space-y-4 shadow-soft">
-            <div className="flex items-center gap-2 text-red-600 font-black text-base border-b border-red-50 pb-3">
-              <AlertCircle className="w-5 h-5"/>
-              <span>Khi Bạn Tặng Hoặc Xin Đồ Ở Nơi Khác</span>
+          {/* Cột 1: Cách cũ */}
+          <div className="bg-white rounded-3xl border border-red-100 p-6 sm:p-8 space-y-4 shadow-soft flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-red-600 font-black text-base border-b border-red-50 pb-3">
+                <AlertCircle className="w-5 h-5"/>
+                <span>Khi Bạn Tặng Hoặc Xin Đồ Ở Nơi Khác</span>
+              </div>
+              
+              <div className="rounded-2xl overflow-hidden h-44 border border-warm-200">
+                <img 
+                  src="https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?auto=format&fit=crop&w=600&q=80" 
+                  alt="Đồ dùng bị bỏ phí chất đống" 
+                  className="w-full h-full object-cover filter grayscale contrast-125"
+                />
+              </div>
+
+              <ul className="space-y-2.5 text-xs text-warm-700 leading-relaxed">
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 font-bold shrink-0">✕</span>
+                  <span><strong>Bị con buôn gom sạch:</strong> Đăng đồ lên mạng xã hội, 80% người "xin" là thợ gom đồ cũ về bán lại.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-red-500 font-bold shrink-0">✕</span>
+                  <span><strong>Tổn thương lòng tự trọng:</strong> Người nghèo phải phơi bày gia cảnh, nhận đồ với cảm giác van xin.</span>
+                </li>
+              </ul>
             </div>
-            <ul className="space-y-3 text-xs text-warm-700 leading-relaxed">
-              <li className="flex items-start gap-2">
-                <span className="text-red-500 font-bold shrink-0">✕</span>
-                <span><strong>Bị con buôn gom sạch:</strong> Đăng đồ lên mạng xã hội, 80% người nhanh tay "xin" là thợ đồ cũ gom về bán lại kiếm lời.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-red-500 font-bold shrink-0">✕</span>
-                <span><strong>Xúc phạm lòng tự trọng:</strong> Người nghèo phải kể khổ, phơi bày gia cảnh, bị chụp ảnh nhận quà rơm rớm nước mắt để đổi lấy sự thương hại.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-red-500 font-bold shrink-0">✕</span>
-                <span><strong>Rơi vào "hố đen":</strong> Cho xong là bặt vô âm tín, không bao giờ biết món đồ thân thương của mình đang giúp ai hay đã ra tiệm cầm đồ.</span>
-              </li>
-            </ul>
           </div>
 
-          {/* Cách của SOVA GIVE 100 */}
-          <div className="bg-gradient-to-br from-brand-50/60 to-white rounded-3xl border border-brand-200 p-6 sm:p-8 space-y-4 shadow-soft">
-            <div className="flex items-center gap-2 text-brand-700 font-black text-base border-b border-brand-100 pb-3">
-              <ShieldCheck className="w-5 h-5 text-brand-600"/>
-              <span>Trải Nghiệm Văn Minh Tại SOVA GIVE 100</span>
+          {/* Cột 2: Cách của SOVA */}
+          <div className="bg-gradient-to-br from-brand-50/70 to-white rounded-3xl border border-brand-200 p-6 sm:p-8 space-y-4 shadow-soft flex flex-col justify-between">
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-brand-700 font-black text-base border-b border-brand-100 pb-3">
+                <ShieldCheck className="w-5 h-5 text-brand-600"/>
+                <span>Trải Nghiệm Văn Minh Tại SOVA GIVE 100</span>
+              </div>
+
+              <div className="rounded-2xl overflow-hidden h-44 border border-brand-200 shadow-xs">
+                <img 
+                  src="https://images.unsplash.com/photo-1529156069898-49953e39b3ac?auto=format&fit=crop&w=600&q=80" 
+                  alt="Trao tặng văn minh ấm áp" 
+                  className="w-full h-full object-cover"
+                />
+              </div>
+
+              <ul className="space-y-2.5 text-xs text-brand-950 leading-relaxed">
+                <li className="flex items-start gap-2">
+                  <span className="text-brand-600 font-bold shrink-0">✓</span>
+                  <span><strong>Chống con buôn 100%:</strong> Mã QR Bắt tay động đổi sau 60 giây, chỉ trao tận tay người đã thẩm định.</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="text-brand-600 font-bold shrink-0">✓</span>
+                  <span><strong>Bảo vệ nhân phẩm:</strong> Tự động che mờ tư gia; nhận đồ bằng Lời Cam Kết Danh Dự tự lập.</span>
+                </li>
+              </ul>
             </div>
-            <ul className="space-y-3 text-xs text-brand-950 leading-relaxed">
-              <li className="flex items-start gap-2">
-                <span className="text-brand-600 font-bold shrink-0">✓</span>
-                <span><strong>Chống con buôn bằng mật mã học:</strong> Mã QR Bắt tay tự xoay đổi sau 60 giây, chỉ trao tận tay người nhận đã được Đại sứ thẩm định.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-brand-600 font-bold shrink-0">✓</span>
-                <span><strong>Bảo vệ nhân phẩm (Dignity-First):</strong> Tự động che mờ tư gia, xóa định vị GPS; người nhận nhận quà bằng Lời Cam Kết Danh Dự tự lập.</span>
-              </li>
-              <li className="flex items-start gap-2">
-                <span className="text-brand-600 font-bold shrink-0">✓</span>
-                <span><strong>Hộ Chiếu Số Vĩnh Cửu:</strong> Dõi theo cuốn Hộ Chiếu ghi lại hành trình món đồ tiếp sức cho từng thế hệ và đọc sổ lưu bút tri ân chân thực.</span>
-              </li>
-            </ul>
           </div>
         </div>
       </section>
 
-      {/* 3. SHOW DIỄN HỘ CHIẾU TUẦN HOÀN SỐ (THE WOW FACTOR) */}
+      {/* 3. SHOW DIỄN HỘ CHIẾU TUẦN HOÀN SỐ VỚI ẢNH MINH CHỨNG */}
       <section className="bg-gradient-to-b from-white to-warm-50/80 rounded-3xl border border-warm-200 p-6 sm:p-10 shadow-soft space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -309,58 +333,68 @@ export default function HomePage() {
               Câu Chuyện Chiếc ThinkPad T480 (SOVA-PASS-8842-VN)
             </h2>
           </div>
-          <Link
-            href="/passports/"
-            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-50 border border-brand-200 text-xs font-bold text-brand-700 hover:bg-brand-100 transition-all w-fit"
-          >
+          <Link className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-50 border border-brand-200 text-xs font-bold text-brand-700 hover:bg-brand-100 transition-all w-fit" href="/passports/">
             <span>Khám Phá Sổ Cái Hộ Chiếu</span>
             <ArrowRight className="w-3.5 h-3.5"/>
           </Link>
         </div>
 
-        {/* Timeline sống động */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
-          <div className="bg-white p-5 rounded-2xl border border-warm-200 shadow-2xs space-y-2">
-            <span className="px-2.5 py-0.5 rounded-md bg-warm-100 text-warm-800 text-[10px] font-black uppercase">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-white rounded-2xl border border-warm-200 overflow-hidden shadow-2xs space-y-3 p-4">
+            <img 
+              src="https://images.unsplash.com/photo-1588872657578-7efd1f1555ed?auto=format&fit=crop&w=500&q=80" 
+              alt="Laptop ThinkPad trao tặng" 
+              className="w-full h-36 object-cover rounded-xl"
+            />
+            <span className="px-2.5 py-0.5 rounded-md bg-warm-100 text-warm-800 text-[10px] font-black uppercase inline-block">
               2024 • Khởi Tạo
             </span>
-            <h4 className="text-sm font-black text-warm-900">Anh Nguyễn Minh Trí (Kỹ sư)</h4>
+            <h4 className="text-sm font-black text-warm-900">Anh Trí (Kỹ sư phần mềm)</h4>
             <p className="text-xs text-warm-700 leading-relaxed">
-              Nâng cấp máy mới, quyết định tặng chiếc laptop gắn bó 4 năm để tiếp sức cho tân sinh viên nghèo đỗ đại học.
+              Nâng cấp thiết bị làm việc, tặng lại chiếc máy cho tân sinh viên hoàn cảnh khó khăn tại Hà Nội.
             </p>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-brand-200 shadow-2xs space-y-2">
-            <span className="px-2.5 py-0.5 rounded-md bg-brand-50 text-brand-700 border border-brand-200 text-[10px] font-black uppercase">
-              2025 • Thành Tựu
+          <div className="bg-white rounded-2xl border border-brand-200 overflow-hidden shadow-2xs space-y-3 p-4">
+            <img 
+              src="https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=500&q=80" 
+              alt="Học sinh sinh viên học tập" 
+              className="w-full h-36 object-cover rounded-xl"
+            />
+            <span className="px-2.5 py-0.5 rounded-md bg-brand-50 text-brand-700 border border-brand-200 text-[10px] font-black uppercase inline-block">
+              2025 • Đổi Đời
             </span>
-            <h4 className="text-sm font-black text-warm-900">Em Trần Đức Nam (K68 ĐHBK)</h4>
+            <h4 className="text-sm font-black text-warm-900">Em Nam (K68 Bách Khoa)</h4>
             <p className="text-xs text-warm-700 leading-relaxed">
-              Nhờ có máy tính thực hành lập trình, em đạt học bổng kỳ 3 và bảo quản máy cẩn thận như vật báu của mình.
+              Nhờ có máy thực hành lập trình, Nam đã giành học bổng khuyến khích và giữ máy cẩn thận từng chi tiết.
             </p>
           </div>
 
-          <div className="bg-white p-5 rounded-2xl border border-sun-200 shadow-2xs space-y-2">
-            <span className="px-2.5 py-0.5 rounded-md bg-sun-50 text-sun-700 border border-sun-200 text-[10px] font-black uppercase">
-              2026 • Tiếp Nối
+          <div className="bg-white rounded-2xl border border-sun-200 overflow-hidden shadow-2xs space-y-3 p-4">
+            <img 
+              src="https://images.unsplash.com/photo-1516321318423-f06f85e504b3?auto=format&fit=crop&w=500&q=80" 
+              alt="Bàn giao chuyển tiếp thiết bị" 
+              className="w-full h-36 object-cover rounded-xl"
+            />
+            <span className="px-2.5 py-0.5 rounded-md bg-sun-50 text-sun-700 border border-sun-200 text-[10px] font-black uppercase inline-block">
+              2026 • Chuyển Giao
             </span>
-            <h4 className="text-sm font-black text-warm-900">Em Lê Thu Hằng (Thái Nguyên)</h4>
+            <h4 className="text-sm font-black text-warm-900">Em Hằng (Tân sinh viên)</h4>
             <p className="text-xs text-warm-700 leading-relaxed">
-              Nhận lại bàn giao máy qua Trạm Bắt Tay QR 0Đ ngày 05/09/2026 để chuẩn bị bước vào giảng đường công nghệ.
+              Bắt tay nhận chuyển giao qua QR 0Đ ngày 05/09/2026 để chuẩn bị bước vào giảng đường công nghệ.
             </p>
           </div>
         </div>
 
-        {/* Trích đoạn thư tri ân xúc động */}
-        <div className="p-4 bg-brand-50/70 rounded-2xl border border-brand-100 text-xs text-brand-950 flex items-start gap-3 italic leading-relaxed">
+        <div className="p-4 bg-brand-50/80 rounded-2xl border border-brand-100 text-xs text-brand-950 flex items-start gap-3 italic leading-relaxed">
           <MessageSquare className="w-5 h-5 text-brand-600 shrink-0 mt-0.5"/>
           <div>
-            "Em xúc động rơi nước mắt khi nhận được chiếc máy từ anh Nam. Em hứa sẽ học thật giỏi và giữ máy bền đẹp để 3 năm nữa lại trao tiếp cho một đàn em khó khăn khác!" — <strong>Em Hằng (Người nhận vòng đời 2)</strong>
+            "Em xúc động rơi nước mắt khi nhận được chiếc máy từ anh Nam. Em hứa sẽ học thật giỏi và giữ gìn để 3 năm nữa lại trao tiếp cho một em học sinh nghèo khác!" — <strong>Em Hằng (Thái Nguyên)</strong>
           </div>
         </div>
       </section>
 
-      {/* 4. CÂY NGUYỆN ƯỚC LIVE & BỘ LỌC ĐỊA LÝ 63 TỈNH THÀNH */}
+      {/* 4. CÂY NGUYỆN ƯỚC LIVE & BỘ LỌC ĐẦY ĐỦ 63 TỈNH THÀNH */}
       <section id="wishlist-section" className="space-y-6 pt-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -377,7 +411,7 @@ export default function HomePage() {
           </span>
         </div>
 
-        {/* Bộ Công Cụ Tìm Kiếm & Lọc Địa Lý */}
+        {/* Bộ Công Cụ Tìm Kiếm & Lọc Đầy Đủ 63 Tỉnh Thành */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-warm-200 shadow-2xs">
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-warm-700 absolute left-3.5 top-1/2 -translate-y-1/2"/>
@@ -390,14 +424,14 @@ export default function HomePage() {
             />
           </div>
 
-          <div className="relative min-w-[220px]">
+          <div className="relative min-w-[260px]">
             <MapPin className="w-4 h-4 text-brand-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"/>
             <select
               value={selectedProvince}
               onChange={e => setSelectedProvince(e.target.value)}
               className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-warm-200 bg-warm-50 text-sm font-bold text-warm-900 focus:outline-none focus:ring-2 focus:ring-brand-500 appearance-none cursor-pointer"
             >
-              {PROVINCES.map(p => (
+              {VIETNAM_PROVINCES.map(p => (
                 <option key={p.code} value={p.code}>{p.name}</option>
               ))}
             </select>
@@ -420,14 +454,14 @@ export default function HomePage() {
                     : 'bg-white text-warm-700 border border-warm-200 hover:bg-warm-100'
                 }`}
               >
-                <Icon className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-warm-700'}`}/>
+                <Icon className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-warm-700'}`} />
                 <span>{cat.label}</span>
               </button>
             );
           })}
         </div>
 
-        {/* Grid Thẻ Điều Ước Nhân Phẩm */}
+        {/* Grid Thẻ Điều Ước Nhân Phẩm Có Ảnh Thực Tế */}
         {loading ? (
           <div className="py-16 text-center text-warm-700 font-medium animate-pulse">
             Đang tải dữ liệu nhân văn từ Supabase Singapore...
@@ -435,7 +469,7 @@ export default function HomePage() {
         ) : filteredWishes.length === 0 ? (
           <div className="bg-white rounded-3xl border border-warm-200 p-12 text-center space-y-3">
             <h3 className="font-bold text-warm-900">Không tìm thấy ước nguyện phù hợp tại khu vực này</h3>
-            <p className="text-xs text-warm-700">Hãy thử chọn "Toàn quốc" để xem thêm các hoàn cảnh khác đang chờ tiếp sức.</p>
+            <p className="text-xs text-warm-700">Hãy thử chọn "Toàn quốc (63 Tỉnh/Thành)" để xem thêm các hoàn cảnh khác đang chờ tiếp sức.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -443,55 +477,65 @@ export default function HomePage() {
               const isUrgent = item.urgency === 'urgent' || item.urgency_level === 'CRITICAL' || item.urgency_level === 'HIGH';
               const reasonText = item.reason || item.reason_description || 'Hoàn cảnh khó khăn cần hỗ trợ phương tiện học tập và mưu sinh.';
               const pledgeText = item.honor_commitment || item.commitment_pledge || 'Cam kết bảo quản tốt và trao lại cho người khác khi xong việc.';
-              const provName = PROVINCES.find(p => p.code === item.province_code)?.name || 'Hà Nội';
+              const provName = VIETNAM_PROVINCES.find(p => p.code === item.province_code)?.name || 'Hà Nội';
+              const fallbackImg = item.imageUrl || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80';
 
               return (
                 <div 
                   key={item.id}
-                  className="bg-white rounded-3xl border border-warm-200 p-6 shadow-soft hover:shadow-md transition-all flex flex-col justify-between space-y-4 group"
+                  className="bg-white rounded-3xl border border-warm-200 overflow-hidden shadow-soft hover:shadow-md transition-all flex flex-col justify-between group"
                 >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-2">
-                      <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-brand-50 text-brand-700 uppercase tracking-wider">
+                  <div className="relative h-44 overflow-hidden">
+                    <img 
+                      src={fallbackImg} 
+                      alt={item.title} 
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute top-3 left-3 right-3 flex justify-between items-center">
+                      <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-white/95 backdrop-blur-xs text-brand-800 uppercase tracking-wider shadow-xs">
                         {item.category}
                       </span>
                       {isUrgent && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-red-50 text-red-600 border border-red-200">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black bg-red-600 text-white shadow-xs">
                           <AlertCircle className="w-3 h-3"/> Cấp Thiết
                         </span>
                       )}
                     </div>
+                  </div>
 
-                    <h3 className="font-black text-warm-900 text-lg leading-snug group-hover:text-brand-700 transition-colors">
-                      {item.title}
-                    </h3>
-                    <p className="text-xs text-warm-700 line-clamp-3 leading-relaxed">
-                      {reasonText}
-                    </p>
+                  <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
+                    <div className="space-y-2">
+                      <h3 className="font-black text-warm-900 text-base leading-snug group-hover:text-brand-700 transition-colors">
+                        {item.title}
+                      </h3>
+                      <p className="text-xs text-warm-700 line-clamp-2 leading-relaxed">
+                        {reasonText}
+                      </p>
+                    </div>
 
-                    <div className="p-3.5 bg-brand-50/50 rounded-2xl border border-brand-100 text-xs space-y-1">
+                    <div className="p-3 bg-brand-50/50 rounded-2xl border border-brand-100 text-xs space-y-1">
                       <span className="text-[10px] font-extrabold uppercase text-brand-800 tracking-wider block">
                         Lời Cam Kết Danh Dự:
                       </span>
-                      <p className="italic text-brand-950 font-medium leading-relaxed">
+                      <p className="italic text-brand-950 font-medium text-[11px] leading-relaxed line-clamp-2">
                         "{pledgeText}"
                       </p>
                     </div>
-                  </div>
 
-                  <div className="pt-3 border-t border-warm-100 flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-1 text-[11px] font-semibold text-warm-700">
-                      <Navigation className="w-3.5 h-3.5 text-brand-600"/>
-                      <span>{provName}</span>
+                    <div className="pt-3 border-t border-warm-100 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1 text-[11px] font-bold text-warm-700 truncate">
+                        <Navigation className="w-3.5 h-3.5 text-brand-600 shrink-0"/>
+                        <span className="truncate">{provName}</span>
+                      </div>
+
+                      <button
+                        onClick={() => { setSelectedWish(item); setClaimSuccess(null); }}
+                        className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-xs hover:shadow-float transition-all flex items-center gap-1.5 shrink-0"
+                      >
+                        <Heart className="w-3.5 h-3.5 fill-current"/>
+                        <span>Trao Tặng</span>
+                      </button>
                     </div>
-
-                    <button
-                      onClick={() => { setSelectedWish(item); setClaimSuccess(null); }}
-                      className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-xs hover:shadow-float transition-all flex items-center gap-1.5"
-                    >
-                      <Heart className="w-3.5 h-3.5 fill-current"/>
-                      <span>Trao Tặng Ngay</span>
-                    </button>
                   </div>
                 </div>
               );
@@ -500,41 +544,68 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* 5. QUY TRÌNH 3 BƯỚC: ĐƠN GIẢN NHƯ GỌI GRAB */}
-      <section className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-10 shadow-soft space-y-6 text-center">
+      {/* 5. QUY TRÌNH 3 BƯỚC VỚI ẢNH MINH HỌA THAO TÁC THỰC TẾ */}
+      <section className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-10 shadow-soft space-y-8 text-center">
         <div className="max-w-xl mx-auto space-y-1">
-          <span className="text-xs font-black uppercase tracking-wider text-brand-700">Thao Tác Thuận Tiện</span>
+          <span className="text-xs font-black uppercase tracking-wider text-brand-700">Quy Trình Văn Minh</span>
           <h2 className="text-2xl font-black text-warm-900">Chạm Là Trao, Quét Là Nhận (Chỉ 60 Giây)</h2>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
-          <div className="p-5 rounded-2xl bg-warm-50 border border-warm-200 space-y-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 text-white font-black text-sm flex items-center justify-center">1</div>
-            <h4 className="font-bold text-warm-900 text-sm">Gửi Nguyện Ước / Đăng Đồ</h4>
+          <div className="p-4 rounded-2xl bg-warm-50 border border-warm-200 space-y-3">
+            <div className="rounded-xl overflow-hidden h-36">
+              <img 
+                src="https://images.unsplash.com/photo-1512428559087-560fa5ceab42?auto=format&fit=crop&w=500&q=80" 
+                alt="Chụp ảnh bảo vệ nhân phẩm" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-brand-600 text-white font-black text-xs flex items-center justify-center">1</div>
+              <h4 className="font-bold text-warm-900 text-sm">Chụp Ảnh & Khử Vị Trí GPS</h4>
+            </div>
             <p className="text-xs text-warm-700 leading-relaxed">
-              Chọn nhóm dụng cụ và chụp ảnh. Thuật toán Dignity Shield tự động che mờ vị trí tư gia để bảo vệ bạn.
+              Dignity Shield tự động che mờ góc nhà và xóa định vị GPS để bảo vệ không gian sống của bạn.
             </p>
           </div>
 
-          <div className="p-5 rounded-2xl bg-warm-50 border border-warm-200 space-y-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 text-white font-black text-sm flex items-center justify-center">2</div>
-            <h4 className="font-bold text-warm-900 text-sm">Ghép Nối Gần Bạn (&lt; 5km)</h4>
+          <div className="p-4 rounded-2xl bg-warm-50 border border-warm-200 space-y-3">
+            <div className="rounded-xl overflow-hidden h-36">
+              <img 
+                src="https://images.unsplash.com/photo-1524661135-423995f22d0b?auto=format&fit=crop&w=500&q=80" 
+                alt="Bản đồ kết nối địa phương" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-brand-600 text-white font-black text-xs flex items-center justify-center">2</div>
+              <h4 className="font-bold text-warm-900 text-sm">Đại Sứ Kết Nối Gần (&lt; 5km)</h4>
+            </div>
             <p className="text-xs text-warm-700 leading-relaxed">
-              Đại sứ địa phương thẩm định hoàn cảnh thực tế và kết nối những người cùng khu vực địa lý để tiện trao nhận.
+              Hệ thống lọc người khó khăn cùng khu vực địa phương để việc trao nhận diễn ra thuận tiện nhất.
             </p>
           </div>
 
-          <div className="p-5 rounded-2xl bg-warm-50 border border-warm-200 space-y-2">
-            <div className="w-8 h-8 rounded-lg bg-brand-600 text-white font-black text-sm flex items-center justify-center">3</div>
-            <h4 className="font-bold text-warm-900 text-sm">Bắt Tay QR 0 Đồng (0.2s)</h4>
+          <div className="p-4 rounded-2xl bg-warm-50 border border-warm-200 space-y-3">
+            <div className="rounded-xl overflow-hidden h-36">
+              <img 
+                src="https://images.unsplash.com/photo-1556742049-0a67c5574f73?auto=format&fit=crop&w=500&q=80" 
+                alt="Bắt tay quét mã QR ngoài đời" 
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded-md bg-brand-600 text-white font-black text-xs flex items-center justify-center">3</div>
+              <h4 className="font-bold text-warm-900 text-sm">Bắt Tay QR 0-VND (0.2s)</h4>
+            </div>
             <p className="text-xs text-warm-700 leading-relaxed">
-              Gặp nhau trao đồ, dùng camera quét mã QR động 60 giây để xác nhận bàn giao và kích hoạt Hộ Chiếu Số.
+              Gặp nhau trao đồ, quét mã QR xoay vòng 60 giây để xác nhận hoàn tất và kích hoạt Hộ Chiếu Số.
             </p>
           </div>
         </div>
       </section>
 
-      {/* 6. HỘP LAN TỎA & VIRAL LOOP (CHIA SẺ DANH DỰ) */}
+      {/* 6. HỘP LAN TỎA & VIRAL LOOP */}
       <section className="bg-gradient-to-r from-brand-600 to-brand-700 text-white rounded-3xl p-8 sm:p-12 shadow-float text-center space-y-6">
         <div className="max-w-2xl mx-auto space-y-3">
           <h2 className="text-2xl sm:text-4xl font-black tracking-tight">
@@ -567,7 +638,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* MODAL TIẾP NHẬN TRAO QUÀ (ANGEL CLAIM MODAL) */}
+      {/* MODAL TIẾP NHẬN TRAO QUÀ */}
       {selectedWish && (
         <div className="fixed inset-0 z-50 bg-warm-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-warm-200 max-w-lg w-full p-6 sm:p-8 shadow-xl space-y-6">
