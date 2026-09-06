@@ -1,11 +1,14 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   Sparkles, Heart, Search, MapPin, Filter, Leaf, 
   Clock, Repeat, AlertCircle, ShieldCheck, CheckCircle2,
-  Laptop, Bike, Scissors, BookOpen, Wrench, Navigation
+  Laptop, Bike, Scissors, BookOpen, Wrench, Navigation,
+  ArrowRight, Share2, Copy, Check, ExternalLink, Lock,
+  Award, HeartHandshake, UserCheck, ChevronRight, MessageSquare
 } from 'lucide-react';
 
 interface WishItem {
@@ -52,6 +55,7 @@ export default function HomePage() {
   const [selectedWish, setSelectedWish] = useState<WishItem | null>(null);
   const [claiming, setClaiming] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
     fetchWishes();
@@ -68,14 +72,13 @@ export default function HomePage() {
       if (!error && data && data.length > 0) {
         setWishes(data as WishItem[]);
       } else {
-        // Fallback hạt giống tử tế chuẩn hóa
         setWishes([
           {
             id: 'a1111111-1111-1111-1111-111111111111',
             title: 'Máy tính xách tay phục vụ học tập CNTT',
             category: 'laptop',
-            reason: 'Sinh viên năm nhất hoàn cảnh khó khăn tại vùng bão lũ, cần máy tính để thực hành lập trình Web.',
-            honor_commitment: 'Cam kết bảo quản tốt, đạt học lực khá giỏi và trao lại cho đàn em khóa sau khi tốt nghiệp.',
+            reason: 'Em vừa đỗ đại học nhưng gia đình làm nông ở vùng bão lũ không đủ kinh phí sắm máy thực hành lập trình Web.',
+            honor_commitment: 'Em cam kết giữ gìn máy cẩn thận, học đạt loại giỏi và trao lại cho đàn em khóa sau khi ra trường.',
             urgency: 'urgent',
             province_code: '01',
             status: 'verified',
@@ -84,8 +87,8 @@ export default function HomePage() {
             id: 'b2222222-2222-2222-2222-222222222222',
             title: 'Xe đạp đến trường cho học sinh nghèo hiếu học',
             category: 'bicycle',
-            reason: 'Đoạn đường từ nhà tới trường cấp 3 dài 8km đường đồi núi hiểm trở, gia đình chưa có điều kiện mua xe.',
-            honor_commitment: 'Cam kết giữ gìn xe cẩn thận, chăm chỉ đến lớp và nhượng lại cho học sinh khó khăn khác khi ra trường.',
+            reason: 'Đoạn đường từ nhà tới trường cấp 3 dài 8km đường đồi núi hiểm trở, gia đình chưa có điều kiện mua xe cho em.',
+            honor_commitment: 'Em cam kết đi học chuyên cần, bảo dưỡng xích líp tốt và nhượng lại cho học sinh khó khăn khác khi tốt nghiệp.',
             urgency: 'urgent',
             province_code: '03',
             status: 'verified',
@@ -94,8 +97,8 @@ export default function HomePage() {
             id: 'c3333333-3333-3333-3333-333333333333',
             title: 'Máy may sinh kế cho mẹ đơn thân gia công tại nhà',
             category: 'sewing_machine',
-            reason: 'Cần máy may để nhận hàng may gia công tại nhà kiếm thêm thu nhập trang trải thuốc men và nuôi hai con ăn học.',
-            honor_commitment: 'Cam kết sử dụng đúng mục đích sinh kế, giữ gìn máy bền đẹp và truyền nghề miễn phí cho phụ nữ trong xóm.',
+            reason: 'Cần máy may gia đình để nhận đồ may gia công kiếm thêm thu nhập trang trải tiền thuốc và nuôi hai con nhỏ ăn học.',
+            honor_commitment: 'Tôi cam kết dùng máy đúng mục đích mưu sinh và sẵn sàng hướng dẫn nghề may miễn phí cho chị em khó khăn trong xóm.',
             urgency: 'normal',
             province_code: '48',
             status: 'verified',
@@ -137,7 +140,7 @@ export default function HomePage() {
       } else if (data && !data.success) {
         alert(data.message || 'Chưa thể khớp nối');
       } else {
-        setClaimSuccess(data?.passport_code || 'SOVA-2026-CONFIRMED');
+        setClaimSuccess(data?.passport_code || 'SOVA-PASS-8842-VN');
       }
     } catch (e: any) {
       alert(e.message || 'Lỗi hệ thống');
@@ -146,67 +149,236 @@ export default function HomePage() {
     }
   }
 
+  const handleCopyShare = () => {
+    const shareText = "Thay vì để đồ cũ nằm yên trong kho hay bán ve chai vài đồng, mình vừa tham gia SOVA GIVE 100 – Nơi trao gửi công cụ học tập & sinh kế 0-VND qua Hộ Chiếu Số, chống con buôn và bảo vệ nhân phẩm người nhận. Cùng tham gia nhé: https://sova-give-100-app.pages.dev";
+    navigator.clipboard.writeText(shareText);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 3000);
+  };
+
   return (
-    <div className="space-y-10">
+    <div className="space-y-16 max-w-6xl mx-auto">
       
-      {/* 1. HERO SECTION TRUYỀN CẢM HỨNG */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-brand-50 via-white to-sun-50 rounded-3xl border border-warm-200 p-6 sm:p-12 shadow-soft">
-        <div className="max-w-3xl space-y-4">
-          <span className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold bg-white text-brand-700 border border-brand-200 shadow-2xs">
+      {/* 1. HERO SECTION: CHẠM VÀO CẢM XÚC ĐỜI THƯỜNG */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-brand-50 via-white to-sun-50 rounded-3xl border border-warm-200 p-6 sm:p-14 shadow-soft">
+        <div className="max-w-3xl space-y-6">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black bg-white text-brand-700 border border-brand-200 shadow-2xs">
             <Sparkles className="w-4 h-4 text-brand-500 animate-spin-slow"/>
-            Kinh Tế Tuần Hoàn 0-VND • Trao Cơ Hội Đổi Đời
-          </span>
-          <h1 className="text-3xl sm:text-5xl font-black text-warm-900 tracking-tight leading-tight">
-            Trao Dụng Cụ Lao Động,<br className="hidden sm:inline"/> Tiếp Sức Ước Mơ Tự Lập
+            Kinh Tế Tuần Hoàn 0-VND • Trao Cơ Hội, Giữ Danh Dự
+          </div>
+
+          <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-warm-900 tracking-tight leading-[1.15]">
+            Đừng để đồ tốt ngủ quên trong góc tối.<br/>
+            <span className="text-brand-700 bg-gradient-to-r from-brand-700 to-brand-500 bg-clip-text text-transparent">
+              Hãy biến chúng thành tương lai của ai đó.
+            </span>
           </h1>
-          <p className="text-warm-700 text-sm sm:text-base leading-relaxed max-w-2xl">
-            Mỗi món đồ cũ trao đi là một tương lai được thắp sáng. Không tiền mặt, không thương mại hóa, 
-            mọi giao dịch được bảo chứng bằng lòng tin và Hộ chiếu tuần hoàn số.
+
+          <p className="text-warm-700 text-sm sm:text-lg leading-relaxed max-w-2xl font-normal">
+            Bao nhiêu chiếc laptop cũ, xe đạp, máy may vẫn còn chạy rất tốt nhưng đang nằm phủ bụi trong kho? 
+            Bán ve chai thì rẻ mạt và xót của, cho trên mạng thì sợ gặp con buôn. 
+            Tại <strong>SOVA GIVE 100</strong>, vật phẩm của bạn tìm thấy cuộc đời thứ hai qua <strong>Hộ Chiếu Số</strong> và cái <strong>Bắt Tay Tử Tế 0 Đồng</strong>.
           </p>
+
+          {/* Cụm nút chuyển đổi kép (Dual CTAs) */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
+            <a 
+              href="#wishlist-section"
+              className="px-7 py-4 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-sm shadow-float hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+            >
+              <Heart className="w-4 h-4 fill-white"/>
+              <span>Tôi Muốn Trao Đồ Tốt (Angel)</span>
+            </a>
+
+            <Link 
+              href="/create-wish/"
+              className="px-7 py-4 rounded-2xl bg-white hover:bg-brand-50 border-2 border-brand-600 text-brand-700 font-black text-sm shadow-soft hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+            >
+              <Sparkles className="w-4 h-4"/>
+              <span>Tôi Cần Dụng Cụ Để Tự Lập</span>
+            </Link>
+          </div>
         </div>
 
-        {/* 2. BẢNG 3 CHỈ SỐ TÁC ĐỘNG XÃ HỘI (GLASS CARDS) */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-8 pt-8 border-t border-warm-200/80">
-          <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-warm-200 shadow-2xs flex items-center gap-3.5">
+        {/* 3 Thẻ Kính Tác Động Xã Hội (Live Glass Cards) */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10 pt-8 border-t border-warm-200/80">
+          <div className="bg-white/90 backdrop-blur-sm p-4 rounded-2xl border border-warm-200 shadow-2xs flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
               <Clock className="w-6 h-6"/>
             </div>
             <div>
               <span className="text-[11px] font-bold text-warm-700 uppercase tracking-wider block">Vốn Xã Hội (Karma)</span>
               <div className="text-2xl font-black text-warm-900 mt-0.5">100,000+ ⭐</div>
-              <span className="text-[10px] text-brand-600 font-medium">Giờ tương trợ cộng đồng</span>
+              <span className="text-[10px] text-brand-600 font-semibold">Giờ tương trợ cộng đồng</span>
             </div>
           </div>
 
-          <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-warm-200 shadow-2xs flex items-center gap-3.5">
+          <div className="bg-white/90 backdrop-blur-sm p-4 rounded-2xl border border-warm-200 shadow-2xs flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-xl bg-sun-100 text-sun-600 flex items-center justify-center shrink-0">
               <Leaf className="w-6 h-6"/>
             </div>
             <div>
-              <span className="text-[11px] font-bold text-warm-700 uppercase tracking-wider block">CO2 Đã Cắt Giảm</span>
+              <span className="text-[11px] font-bold text-warm-700 uppercase tracking-wider block">CO2 Đã Ngăn Chặn</span>
               <div className="text-2xl font-black text-sun-600 mt-0.5">1,450.5 kg</div>
               <span className="text-[10px] text-warm-700 font-medium">~72 cây xanh quang hợp</span>
             </div>
           </div>
 
-          <div className="bg-white/80 backdrop-blur-sm p-4 rounded-2xl border border-warm-200 shadow-2xs flex items-center gap-3.5">
+          <div className="bg-white/90 backdrop-blur-sm p-4 rounded-2xl border border-warm-200 shadow-2xs flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-xl bg-blue-100 text-blue-700 flex items-center justify-center shrink-0">
               <Repeat className="w-6 h-6"/>
             </div>
             <div>
               <span className="text-[11px] font-bold text-warm-700 uppercase tracking-wider block">Tuần Hoàn Thực Tế</span>
-              <div className="text-2xl font-black text-blue-900 mt-0.5">100% 0Đ</div>
-              <span className="text-[10px] text-blue-600 font-medium">Bảo chứng Hộ chiếu số</span>
+              <div className="text-2xl font-black text-blue-900 mt-0.5">100% 0-VND</div>
+              <span className="text-[10px] text-blue-600 font-medium">Bảo chứng Hộ Chiếu Số</span>
             </div>
           </div>
         </div>
       </section>
 
-      {/* 3. BỘ CÔNG CỤ TÌM KIẾM & BỘ LỌC ĐỊA LÝ THÔNG MINH */}
-      <section className="space-y-4">
+      {/* 2. BẢNG TƯƠNG PHẢN: NỖI ĐAU THỰC TẾ VS. GIẢI PHÁP SOVA */}
+      <section className="space-y-6">
+        <div className="text-center max-w-2xl mx-auto space-y-2">
+          <span className="text-xs font-black uppercase tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full border border-brand-200">
+            Sự Khác Biệt Triệt Để
+          </span>
+          <h2 className="text-2xl sm:text-3xl font-black text-warm-900">
+            Tại Sao Hàng Nghìn Gia Đình Chọn SOVA GIVE 100?
+          </h2>
+          <p className="text-xs sm:text-sm text-warm-700">
+            Chúng tôi giải quyết tận gốc những nỗi e ngại lớn nhất khi cho và nhận đồ dùng trong xã hội.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Cách cũ */}
+          <div className="bg-white rounded-3xl border border-red-100 p-6 sm:p-8 space-y-4 shadow-soft">
+            <div className="flex items-center gap-2 text-red-600 font-black text-base border-b border-red-50 pb-3">
+              <AlertCircle className="w-5 h-5"/>
+              <span>Khi Bạn Tặng Hoặc Xin Đồ Ở Nơi Khác</span>
+            </div>
+            <ul className="space-y-3 text-xs text-warm-700 leading-relaxed">
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold shrink-0">✕</span>
+                <span><strong>Bị con buôn gom sạch:</strong> Đăng đồ lên mạng xã hội, 80% người nhanh tay "xin" là thợ đồ cũ gom về bán lại kiếm lời.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold shrink-0">✕</span>
+                <span><strong>Xúc phạm lòng tự trọng:</strong> Người nghèo phải kể khổ, phơi bày gia cảnh, bị chụp ảnh nhận quà rơm rớm nước mắt để đổi lấy sự thương hại.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-red-500 font-bold shrink-0">✕</span>
+                <span><strong>Rơi vào "hố đen":</strong> Cho xong là bặt vô âm tín, không bao giờ biết món đồ thân thương của mình đang giúp ai hay đã ra tiệm cầm đồ.</span>
+              </li>
+            </ul>
+          </div>
+
+          {/* Cách của SOVA GIVE 100 */}
+          <div className="bg-gradient-to-br from-brand-50/60 to-white rounded-3xl border border-brand-200 p-6 sm:p-8 space-y-4 shadow-soft">
+            <div className="flex items-center gap-2 text-brand-700 font-black text-base border-b border-brand-100 pb-3">
+              <ShieldCheck className="w-5 h-5 text-brand-600"/>
+              <span>Trải Nghiệm Văn Minh Tại SOVA GIVE 100</span>
+            </div>
+            <ul className="space-y-3 text-xs text-brand-950 leading-relaxed">
+              <li className="flex items-start gap-2">
+                <span className="text-brand-600 font-bold shrink-0">✓</span>
+                <span><strong>Chống con buôn bằng mật mã học:</strong> Mã QR Bắt tay tự xoay đổi sau 60 giây, chỉ trao tận tay người nhận đã được Đại sứ thẩm định.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-brand-600 font-bold shrink-0">✓</span>
+                <span><strong>Bảo vệ nhân phẩm (Dignity-First):</strong> Tự động che mờ tư gia, xóa định vị GPS; người nhận nhận quà bằng Lời Cam Kết Danh Dự tự lập.</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-brand-600 font-bold shrink-0">✓</span>
+                <span><strong>Hộ Chiếu Số Vĩnh Cửu:</strong> Dõi theo cuốn Hộ Chiếu ghi lại hành trình món đồ tiếp sức cho từng thế hệ và đọc sổ lưu bút tri ân chân thực.</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      {/* 3. SHOW DIỄN HỘ CHIẾU TUẦN HOÀN SỐ (THE WOW FACTOR) */}
+      <section className="bg-gradient-to-b from-white to-warm-50/80 rounded-3xl border border-warm-200 p-6 sm:p-10 shadow-soft space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <span className="text-[11px] font-black text-brand-700 uppercase tracking-widest block">
+              Mỗi Vật Phẩm Là Một Cuộc Đời Tiếp Nối
+            </span>
+            <h2 className="text-2xl font-black text-warm-900 mt-1">
+              Câu Chuyện Chiếc ThinkPad T480 (SOVA-PASS-8842-VN)
+            </h2>
+          </div>
+          <Link
+            href="/passports/"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-50 border border-brand-200 text-xs font-bold text-brand-700 hover:bg-brand-100 transition-all w-fit"
+          >
+            <span>Khám Phá Sổ Cái Hộ Chiếu</span>
+            <ArrowRight className="w-3.5 h-3.5"/>
+          </Link>
+        </div>
+
+        {/* Timeline sống động */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+          <div className="bg-white p-5 rounded-2xl border border-warm-200 shadow-2xs space-y-2">
+            <span className="px-2.5 py-0.5 rounded-md bg-warm-100 text-warm-800 text-[10px] font-black uppercase">
+              2024 • Khởi Tạo
+            </span>
+            <h4 className="text-sm font-black text-warm-900">Anh Nguyễn Minh Trí (Kỹ sư)</h4>
+            <p className="text-xs text-warm-700 leading-relaxed">
+              Nâng cấp máy mới, quyết định tặng chiếc laptop gắn bó 4 năm để tiếp sức cho tân sinh viên nghèo đỗ đại học.
+            </p>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl border border-brand-200 shadow-2xs space-y-2">
+            <span className="px-2.5 py-0.5 rounded-md bg-brand-50 text-brand-700 border border-brand-200 text-[10px] font-black uppercase">
+              2025 • Thành Tựu
+            </span>
+            <h4 className="text-sm font-black text-warm-900">Em Trần Đức Nam (K68 ĐHBK)</h4>
+            <p className="text-xs text-warm-700 leading-relaxed">
+              Nhờ có máy tính thực hành lập trình, em đạt học bổng kỳ 3 và bảo quản máy cẩn thận như vật báu của mình.
+            </p>
+          </div>
+
+          <div className="bg-white p-5 rounded-2xl border border-sun-200 shadow-2xs space-y-2">
+            <span className="px-2.5 py-0.5 rounded-md bg-sun-50 text-sun-700 border border-sun-200 text-[10px] font-black uppercase">
+              2026 • Tiếp Nối
+            </span>
+            <h4 className="text-sm font-black text-warm-900">Em Lê Thu Hằng (Thái Nguyên)</h4>
+            <p className="text-xs text-warm-700 leading-relaxed">
+              Nhận lại bàn giao máy qua Trạm Bắt Tay QR 0Đ ngày 05/09/2026 để chuẩn bị bước vào giảng đường công nghệ.
+            </p>
+          </div>
+        </div>
+
+        {/* Trích đoạn thư tri ân xúc động */}
+        <div className="p-4 bg-brand-50/70 rounded-2xl border border-brand-100 text-xs text-brand-950 flex items-start gap-3 italic leading-relaxed">
+          <MessageSquare className="w-5 h-5 text-brand-600 shrink-0 mt-0.5"/>
+          <div>
+            "Em xúc động rơi nước mắt khi nhận được chiếc máy từ anh Nam. Em hứa sẽ học thật giỏi và giữ máy bền đẹp để 3 năm nữa lại trao tiếp cho một đàn em khó khăn khác!" — <strong>Em Hằng (Người nhận vòng đời 2)</strong>
+          </div>
+        </div>
+      </section>
+
+      {/* 4. CÂY NGUYỆN ƯỚC LIVE & BỘ LỌC ĐỊA LÝ 63 TỈNH THÀNH */}
+      <section id="wishlist-section" className="space-y-6 pt-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <span className="text-xs font-black uppercase tracking-wider text-brand-700 flex items-center gap-1.5">
+              <Heart className="w-4 h-4 text-brand-600 fill-brand-600"/>
+              Cây Nguyện Ước Đang Chờ Tiếp Nối
+            </span>
+            <h2 className="text-2xl sm:text-3xl font-black text-warm-900 mt-1">
+              Những Ước Mơ Cần Bạn Tiếp Sức Hôm Nay
+            </h2>
+          </div>
+          <span className="text-xs text-warm-700 bg-white px-3 py-1.5 rounded-xl border border-warm-200 shadow-2xs">
+            100% Hồ sơ đã qua kiểm duyệt Đại sứ địa phương
+          </span>
+        </div>
+
+        {/* Bộ Công Cụ Tìm Kiếm & Lọc Địa Lý */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-warm-200 shadow-2xs">
-          
-          {/* Tìm kiếm */}
           <div className="relative flex-1">
             <Search className="w-4 h-4 text-warm-700 absolute left-3.5 top-1/2 -translate-y-1/2"/>
             <input 
@@ -218,13 +390,12 @@ export default function HomePage() {
             />
           </div>
 
-          {/* Lọc Địa Lý Tỉnh Thành */}
-          <div className="relative min-w-[200px]">
+          <div className="relative min-w-[220px]">
             <MapPin className="w-4 h-4 text-brand-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"/>
             <select
               value={selectedProvince}
               onChange={e => setSelectedProvince(e.target.value)}
-              className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-warm-200 bg-warm-50 text-sm font-semibold text-warm-900 focus:outline-none focus:ring-2 focus:ring-brand-500 appearance-none cursor-pointer"
+              className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-warm-200 bg-warm-50 text-sm font-bold text-warm-900 focus:outline-none focus:ring-2 focus:ring-brand-500 appearance-none cursor-pointer"
             >
               {PROVINCES.map(p => (
                 <option key={p.code} value={p.code}>{p.name}</option>
@@ -234,7 +405,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Danh Mục Quick Chips */}
+        {/* Chips Danh Mục */}
         <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
           {CATEGORIES.map(cat => {
             const Icon = cat.icon;
@@ -255,40 +426,23 @@ export default function HomePage() {
             );
           })}
         </div>
-      </section>
 
-      {/* 4. DANH SÁCH THẺ ĐIỀU ƯỚC NHÂN PHẨM (DIGNITY CARDS GRID) */}
-      <section className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-xl font-black text-warm-900 flex items-center gap-2">
-            <Heart className="w-5 h-5 text-brand-600 fill-brand-600"/>
-            <span>Ước Nguyện Đang Cần Tiếp Nối</span>
-            <span className="text-xs px-2 py-0.5 rounded-md bg-warm-200 text-warm-700 font-bold ml-1">
-              {filteredWishes.length}
-            </span>
-          </h2>
-        </div>
-
+        {/* Grid Thẻ Điều Ước Nhân Phẩm */}
         {loading ? (
           <div className="py-16 text-center text-warm-700 font-medium animate-pulse">
             Đang tải dữ liệu nhân văn từ Supabase Singapore...
           </div>
         ) : filteredWishes.length === 0 ? (
           <div className="bg-white rounded-3xl border border-warm-200 p-12 text-center space-y-3">
-            <div className="w-12 h-12 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center mx-auto">
-              <Search className="w-6 h-6"/>
-            </div>
-            <h3 className="font-bold text-warm-900">Không tìm thấy ước nguyện phù hợp</h3>
-            <p className="text-xs text-warm-700 max-w-md mx-auto">
-              Hãy thử chọn khu vực khác hoặc tìm kiếm với từ khóa ngắn hơn.
-            </p>
+            <h3 className="font-bold text-warm-900">Không tìm thấy ước nguyện phù hợp tại khu vực này</h3>
+            <p className="text-xs text-warm-700">Hãy thử chọn "Toàn quốc" để xem thêm các hoàn cảnh khác đang chờ tiếp sức.</p>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {filteredWishes.map(item => {
               const isUrgent = item.urgency === 'urgent' || item.urgency_level === 'CRITICAL' || item.urgency_level === 'HIGH';
-              const reasonText = item.reason || item.reason_description || 'Hoàn cảnh cần hỗ trợ dụng cụ học tập và mưu sinh.';
-              const pledgeText = item.honor_commitment || item.commitment_pledge || 'Cam kết bảo quản tốt và chuyển giao thế hệ sau.';
+              const reasonText = item.reason || item.reason_description || 'Hoàn cảnh khó khăn cần hỗ trợ phương tiện học tập và mưu sinh.';
+              const pledgeText = item.honor_commitment || item.commitment_pledge || 'Cam kết bảo quản tốt và trao lại cho người khác khi xong việc.';
               const provName = PROVINCES.find(p => p.code === item.province_code)?.name || 'Hà Nội';
 
               return (
@@ -297,19 +451,17 @@ export default function HomePage() {
                   className="bg-white rounded-3xl border border-warm-200 p-6 shadow-soft hover:shadow-md transition-all flex flex-col justify-between space-y-4 group"
                 >
                   <div className="space-y-3">
-                    {/* Badges */}
                     <div className="flex items-center justify-between gap-2">
                       <span className="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-brand-50 text-brand-700 uppercase tracking-wider">
                         {item.category}
                       </span>
                       {isUrgent && (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-extrabold bg-red-50 text-red-600 border border-red-200">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-red-50 text-red-600 border border-red-200">
                           <AlertCircle className="w-3 h-3"/> Cấp Thiết
                         </span>
                       )}
                     </div>
 
-                    {/* Tiêu đề & Hoàn cảnh */}
                     <h3 className="font-black text-warm-900 text-lg leading-snug group-hover:text-brand-700 transition-colors">
                       {item.title}
                     </h3>
@@ -317,7 +469,6 @@ export default function HomePage() {
                       {reasonText}
                     </p>
 
-                    {/* Cam kết danh dự in nghiêng */}
                     <div className="p-3.5 bg-brand-50/50 rounded-2xl border border-brand-100 text-xs space-y-1">
                       <span className="text-[10px] font-extrabold uppercase text-brand-800 tracking-wider block">
                         Lời Cam Kết Danh Dự:
@@ -328,7 +479,6 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* Vị trí & Nút Trao Tặng */}
                   <div className="pt-3 border-t border-warm-100 flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1 text-[11px] font-semibold text-warm-700">
                       <Navigation className="w-3.5 h-3.5 text-brand-600"/>
@@ -350,19 +500,83 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* 5. MODAL TIẾP NHẬN TRAO QUÀ (ANGEL MODAL) */}
+      {/* 5. QUY TRÌNH 3 BƯỚC: ĐƠN GIẢN NHƯ GỌI GRAB */}
+      <section className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-10 shadow-soft space-y-6 text-center">
+        <div className="max-w-xl mx-auto space-y-1">
+          <span className="text-xs font-black uppercase tracking-wider text-brand-700">Thao Tác Thuận Tiện</span>
+          <h2 className="text-2xl font-black text-warm-900">Chạm Là Trao, Quét Là Nhận (Chỉ 60 Giây)</h2>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+          <div className="p-5 rounded-2xl bg-warm-50 border border-warm-200 space-y-2">
+            <div className="w-8 h-8 rounded-lg bg-brand-600 text-white font-black text-sm flex items-center justify-center">1</div>
+            <h4 className="font-bold text-warm-900 text-sm">Gửi Nguyện Ước / Đăng Đồ</h4>
+            <p className="text-xs text-warm-700 leading-relaxed">
+              Chọn nhóm dụng cụ và chụp ảnh. Thuật toán Dignity Shield tự động che mờ vị trí tư gia để bảo vệ bạn.
+            </p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-warm-50 border border-warm-200 space-y-2">
+            <div className="w-8 h-8 rounded-lg bg-brand-600 text-white font-black text-sm flex items-center justify-center">2</div>
+            <h4 className="font-bold text-warm-900 text-sm">Ghép Nối Gần Bạn (&lt; 5km)</h4>
+            <p className="text-xs text-warm-700 leading-relaxed">
+              Đại sứ địa phương thẩm định hoàn cảnh thực tế và kết nối những người cùng khu vực địa lý để tiện trao nhận.
+            </p>
+          </div>
+
+          <div className="p-5 rounded-2xl bg-warm-50 border border-warm-200 space-y-2">
+            <div className="w-8 h-8 rounded-lg bg-brand-600 text-white font-black text-sm flex items-center justify-center">3</div>
+            <h4 className="font-bold text-warm-900 text-sm">Bắt Tay QR 0 Đồng (0.2s)</h4>
+            <p className="text-xs text-warm-700 leading-relaxed">
+              Gặp nhau trao đồ, dùng camera quét mã QR động 60 giây để xác nhận bàn giao và kích hoạt Hộ Chiếu Số.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* 6. HỘP LAN TỎA & VIRAL LOOP (CHIA SẺ DANH DỰ) */}
+      <section className="bg-gradient-to-r from-brand-600 to-brand-700 text-white rounded-3xl p-8 sm:p-12 shadow-float text-center space-y-6">
+        <div className="max-w-2xl mx-auto space-y-3">
+          <h2 className="text-2xl sm:text-4xl font-black tracking-tight">
+            Bạn Chưa Có Đồ Dùng Để Trao Tặng Hôm Nay?
+          </h2>
+          <p className="text-brand-100 text-xs sm:text-sm leading-relaxed">
+            Một lượt chia sẻ của bạn có thể cứu sống việc học của một sinh viên nghèo hoặc tạo kế sinh nhai cho một người mẹ đơn thân. 
+            Hãy cùng lan tỏa một mạng lưới trao tặng văn minh không tiền mặt!
+          </p>
+        </div>
+
+        <div className="flex flex-wrap justify-center items-center gap-3">
+          <button
+            onClick={handleCopyShare}
+            className="px-6 py-3 rounded-2xl bg-white text-brand-900 font-black text-xs shadow-soft hover:bg-brand-50 transition-all flex items-center gap-2"
+          >
+            {copiedLink ? <Check className="w-4 h-4 text-brand-600"/> : <Copy className="w-4 h-4 text-brand-600"/>}
+            <span>{copiedLink ? 'Đã Sao Chép Lời Giới Thiệu!' : 'Sao Chép Lời Giới Thiệu'}</span>
+          </button>
+
+          <a 
+            href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent('https://sova-give-100-app.pages.dev')}`} 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="px-6 py-3 rounded-2xl bg-white/15 hover:bg-white/25 text-white font-bold text-xs backdrop-blur-sm border border-white/20 transition-all flex items-center gap-2"
+          >
+            <Share2 className="w-4 h-4"/>
+            <span>Chia Sẻ Lên Facebook</span>
+          </a>
+        </div>
+      </section>
+
+      {/* MODAL TIẾP NHẬN TRAO QUÀ (ANGEL CLAIM MODAL) */}
       {selectedWish && (
         <div className="fixed inset-0 z-50 bg-warm-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-warm-200 max-w-lg w-full p-6 sm:p-8 shadow-xl space-y-6">
-            
             <div className="flex justify-between items-start">
               <div className="space-y-1">
                 <span className="text-[11px] font-bold text-brand-700 uppercase tracking-wider flex items-center gap-1">
                   <ShieldCheck className="w-4 h-4"/> Xác Nhận Khớp Nối Giao Dịch 0Đ
                 </span>
-                <h3 className="text-xl font-black text-warm-900">
-                  {selectedWish.title}
-                </h3>
+                <h3 className="text-xl font-black text-warm-900">{selectedWish.title}</h3>
               </div>
               <button 
                 onClick={() => setSelectedWish(null)}
@@ -386,10 +600,10 @@ export default function HomePage() {
             ) : (
               <div className="space-y-4 text-xs text-warm-700 leading-relaxed">
                 <div className="p-4 bg-warm-50 rounded-2xl border border-warm-200 space-y-2">
-                  <p><strong>Lý do xin nhận:</strong> {selectedWish.reason || selectedWish.reason_description}</p>
-                  <p><strong>Cam kết bảo quản:</strong> "{selectedWish.honor_commitment || selectedWish.commitment_pledge}"</p>
+                  <p><strong>Hoàn cảnh:</strong> {selectedWish.reason || selectedWish.reason_description}</p>
+                  <p><strong>Cam kết danh dự:</strong> "{selectedWish.honor_commitment || selectedWish.commitment_pledge}"</p>
                 </div>
-                <div className="p-3 bg-sun-50 rounded-xl border border-sun-100 text-sun-700">
+                <div className="p-3 bg-sun-50 rounded-xl border border-sun-100 text-sun-800 font-medium">
                   ⚠️ <strong>Quy tắc bất biến:</strong> Giao dịch 100% bằng hiện vật 0 đồng. Tuyệt đối không giao nhận tiền mặt dưới mọi hình thức.
                 </div>
               </div>
@@ -413,7 +627,6 @@ export default function HomePage() {
                 </button>
               )}
             </div>
-
           </div>
         </div>
       )}
