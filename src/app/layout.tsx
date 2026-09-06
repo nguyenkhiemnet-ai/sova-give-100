@@ -1,7 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Link from 'next/link';
-import { Sparkles, HeartHandshake, PlusCircle, QrCode, Compass, UserCheck, ShieldCheck } from 'lucide-react';
+import Navbar from '@/components/Navbar';
+import { Sparkles, PlusCircle, QrCode, Compass, UserCheck, ShieldCheck } from 'lucide-react';
 
 export const metadata: Metadata = {
   title: 'SOVA GIVE 100 - Cây Nguyện Ước Tuần Hoàn 0-VND',
@@ -17,57 +18,8 @@ export default function RootLayout({
     <html lang="vi" className="scroll-smooth">
       <body className="min-h-screen flex flex-col bg-warm-50 text-warm-900 selection:bg-brand-100 selection:text-brand-900 pb-20 md:pb-0">
         
-        {/* DESKTOP HEADER */}
-        <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-md border-b border-warm-200 shadow-xs">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 h-18 flex items-center justify-between gap-4">
-            
-            <div className="flex items-center gap-3">
-              <Link className="flex items-center gap-2.5 group" href="/">
-                <span className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 text-white flex items-center justify-center shadow-md shadow-brand-500/20 group-hover:scale-105 transition-transform">
-                  <HeartHandshake className="w-6 h-6"/>
-                </span>
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xl font-black tracking-tight text-brand-900">SOVA GIVE 100</span>
-                    <span className="hidden sm:inline-flex px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider rounded-md bg-brand-50 text-brand-700 border border-brand-200">
-                      Zero-Cash 10/10
-                    </span>
-                  </div>
-                  <span className="text-[11px] text-warm-700 font-medium block">Mạng Lưới Tuần Hoàn Sinh Kế</span>
-                </div>
-              </Link>
-            </div>
-
-            <nav className="hidden md:flex items-center gap-1 text-sm font-semibold text-warm-700">
-              <Link className="px-3.5 py-2 rounded-xl hover:bg-warm-100 hover:text-brand-700 transition-colors flex items-center gap-1.5" href="/">
-                <Sparkles className="w-4 h-4 text-brand-600"/>
-                <span>Cây Ước Nguyện</span>
-              </Link>
-              <Link className="px-3.5 py-2 rounded-xl hover:bg-warm-100 hover:text-brand-700 transition-colors flex items-center gap-1.5" href="/passports/">
-                <Compass className="w-4 h-4 text-blue-600"/>
-                <span>Hộ Chiếu Vật Phẩm</span>
-              </Link>
-              <Link className="px-3.5 py-2 rounded-xl hover:bg-warm-100 hover:text-brand-700 transition-colors flex items-center gap-1.5" href="/handshake/">
-                <QrCode className="w-4 h-4 text-sun-500"/>
-                <span>Bắt Tay QR</span>
-              </Link>
-              <Link className="ml-2 px-4 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold shadow-sm hover:shadow-float transition-all flex items-center gap-1.5" href="/create-wish/">
-                <PlusCircle className="w-4 h-4"/>
-                <span>Gửi Ước Nguyện 0Đ</span>
-              </Link>
-            </nav>
-
-            <div className="flex items-center gap-2">
-              <Link className="flex items-center gap-2 px-3 py-1.5 rounded-xl border border-warm-200 bg-white hover:border-brand-500 text-xs font-bold text-warm-900 shadow-soft transition-all" href="/profile/">
-                <span className="w-6 h-6 rounded-full bg-brand-100 text-brand-700 flex items-center justify-center font-black text-[10px]">
-                  K
-                </span>
-                <span className="hidden sm:inline">Nguyễn Khiêm</span>
-                <span className="px-1.5 py-0.5 rounded-md bg-sun-50 text-sun-600 text-[10px] font-extrabold border border-sun-100">100 ⭐</span>
-              </Link>
-            </div>
-          </div>
-        </header>
+        {/* DYNAMIC NAVBAR */}
+        <Navbar />
 
         {/* NỘI DUNG CHÍNH */}
         <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
