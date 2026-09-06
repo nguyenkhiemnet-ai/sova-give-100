@@ -8,7 +8,7 @@ import {
   Sparkles, Heart, Search, MapPin, Filter, Leaf, 
   Clock, Repeat, AlertCircle, ShieldCheck, CheckCircle2,
   Laptop, Bike, Scissors, BookOpen, Wrench, Navigation,
-  ArrowRight, Share2, Copy, Check, MessageSquare
+  ArrowRight, Share2, Copy, Check, MessageSquare, ArrowUp
 } from 'lucide-react';
 
 interface WishItem {
@@ -47,9 +47,15 @@ export default function HomePage() {
   const [claiming, setClaiming] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState<string | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
 
   useEffect(() => {
     fetchWishes();
+    const handleScroll = () => {
+      setShowBackToTop(window.scrollY > 400);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
   async function fetchWishes() {
@@ -90,7 +96,7 @@ export default function HomePage() {
             id: 'c3333333-3333-3333-3333-333333333333',
             title: 'Máy may sinh kế cho mẹ đơn thân gia công tại nhà',
             category: 'sewing_machine',
-            imageUrl: 'https://images.unsplash.com/photo-1528459801416-a9e53bbf4e17?auto=format&fit=crop&w=600&q=80',
+            imageUrl: 'https://images.unsplash.com/photo-1584992236310-6edddc08acff?auto=format&fit=crop&w=600&q=80',
             reason: 'Cần máy may gia đình để nhận đồ may gia công kiếm thêm thu nhập trang trải tiền thuốc và nuôi hai con nhỏ ăn học.',
             honor_commitment: 'Tôi cam kết dùng máy đúng mục đích mưu sinh và sẵn sàng hướng dẫn nghề may miễn phí cho chị em khó khăn trong xóm.',
             urgency: 'normal',
@@ -150,10 +156,25 @@ export default function HomePage() {
     setTimeout(() => setCopiedLink(false), 3000);
   };
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <div className="space-y-16 max-w-6xl mx-auto">
       
-      {/* 1. HERO SECTION: CẢM XÚC & HÌNH ẢNH MINH HỌA SỐNG ĐỘNG */}
+      {/* NÚT BACK TO TOP NỔI */}
+      {showBackToTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-20 right-6 z-40 p-3.5 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-float hover:scale-110 transition-all cursor-pointer"
+          title="Lên đầu trang"
+        >
+          <ArrowUp className="w-5 h-5"/>
+        </button>
+      )}
+
+      {/* 1. HERO SECTION */}
       <section className="relative overflow-hidden bg-gradient-to-br from-brand-50 via-white to-sun-50 rounded-3xl border border-warm-200 p-6 sm:p-12 lg:p-14 shadow-soft">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           
@@ -185,19 +206,21 @@ export default function HomePage() {
                 <span>Tôi Muốn Trao Đồ Tốt (Angel)</span>
               </a>
 
-              <Link className="px-6 py-3.5 rounded-2xl bg-white hover:bg-brand-50 border-2 border-brand-600 text-brand-700 font-black text-sm shadow-soft hover:scale-[1.02] transition-all flex items-center justify-center gap-2" href="/create-wish/">
+              <Link 
+                href="/create-wish/"
+                className="px-6 py-3.5 rounded-2xl bg-white hover:bg-brand-50 border-2 border-brand-600 text-brand-700 font-black text-sm shadow-soft hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+              >
                 <Sparkles className="w-4 h-4"/>
                 <span>Tôi Cần Dụng Cụ Để Tự Lập</span>
               </Link>
             </div>
           </div>
 
-          {/* Hình ảnh Hero thực tế */}
           <div className="lg:col-span-5 relative">
             <div className="relative mx-auto rounded-3xl overflow-hidden shadow-xl border-4 border-white">
               <img 
-                src="https://images.unsplash.com/photo-1531482615713-2afd69097998?auto=format&fit=crop&w=800&q=80" 
-                alt="Trao công cụ học tập và lao động" 
+                src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80" 
+                alt="Sinh viên học tập cùng thiết bị công nghệ" 
                 className="w-full h-80 object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-5">
@@ -210,7 +233,7 @@ export default function HomePage() {
 
         </div>
 
-        {/* 3 Thẻ Kính Tác Động Xã Hội */}
+        {/* 3 THẺ KÍNH CHỈ SỐ */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10 pt-8 border-t border-warm-200/80">
           <div className="bg-white/90 backdrop-blur-sm p-4 rounded-2xl border border-warm-200 shadow-2xs flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
@@ -247,7 +270,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. BẢNG TƯƠNG PHẢN THỰC TẾ: NỖI ĐAU VS GIẢI PHÁP SOVA */}
+      {/* 2. BẢNG TƯƠNG PHẢN */}
       <section className="space-y-6">
         <div className="text-center max-w-2xl mx-auto space-y-2">
           <span className="text-xs font-black uppercase tracking-wider text-brand-700 bg-brand-50 px-3 py-1 rounded-full border border-brand-200">
@@ -262,7 +285,6 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Cột 1: Cách cũ */}
           <div className="bg-white rounded-3xl border border-red-100 p-6 sm:p-8 space-y-4 shadow-soft flex flex-col justify-between">
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-red-600 font-black text-base border-b border-red-50 pb-3">
@@ -291,7 +313,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Cột 2: Cách của SOVA */}
           <div className="bg-gradient-to-br from-brand-50/70 to-white rounded-3xl border border-brand-200 p-6 sm:p-8 space-y-4 shadow-soft flex flex-col justify-between">
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-brand-700 font-black text-base border-b border-brand-100 pb-3">
@@ -322,7 +343,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. SHOW DIỄN HỘ CHIẾU TUẦN HOÀN SỐ VỚI ẢNH MINH CHỨNG */}
+      {/* 3. CASE STUDY HỘ CHIẾU SỐ */}
       <section className="bg-gradient-to-b from-white to-warm-50/80 rounded-3xl border border-warm-200 p-6 sm:p-10 shadow-soft space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -333,7 +354,10 @@ export default function HomePage() {
               Câu Chuyện Chiếc ThinkPad T480 (SOVA-PASS-8842-VN)
             </h2>
           </div>
-          <Link className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-50 border border-brand-200 text-xs font-bold text-brand-700 hover:bg-brand-100 transition-all w-fit" href="/passports/">
+          <Link 
+            href="/passports/"
+            className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-brand-50 border border-brand-200 text-xs font-bold text-brand-700 hover:bg-brand-100 transition-all w-fit"
+          >
             <span>Khám Phá Sổ Cái Hộ Chiếu</span>
             <ArrowRight className="w-3.5 h-3.5"/>
           </Link>
@@ -394,8 +418,8 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 4. CÂY NGUYỆN ƯỚC LIVE & BỘ LỌC ĐẦY ĐỦ 63 TỈNH THÀNH */}
-      <section id="wishlist-section" className="space-y-6 pt-6">
+      {/* 4. CÂY NGUYỆN ƯỚC VỚI THANH TÌM KIẾM STICKY NỔI BẬT */}
+      <section id="wishlist-section" className="space-y-6 pt-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <span className="text-xs font-black uppercase tracking-wider text-brand-700 flex items-center gap-1.5">
@@ -411,57 +435,68 @@ export default function HomePage() {
           </span>
         </div>
 
-        {/* Bộ Công Cụ Tìm Kiếm & Lọc Đầy Đủ 63 Tỉnh Thành */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 bg-white p-3 rounded-2xl border border-warm-200 shadow-2xs">
-          <div className="relative flex-1">
-            <Search className="w-4 h-4 text-warm-700 absolute left-3.5 top-1/2 -translate-y-1/2"/>
-            <input 
-              type="text" 
-              placeholder="Tìm kiếm ước nguyện (laptop, xe đạp, máy may...)"
-              value={searchQuery}
-              onChange={e => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-warm-200 bg-warm-50 text-sm text-warm-900 placeholder:text-warm-700 focus:outline-none focus:ring-2 focus:ring-brand-500 transition-all"
-            />
-          </div>
+        {/* THANH TÌM KIẾM CỐ ĐỊNH NỔI (STICKY SEARCH CONSOLE 10/10) */}
+        <div className="sticky top-16 z-30 bg-white/95 backdrop-blur-md p-3.5 sm:p-4 rounded-3xl border-2 border-brand-500/30 shadow-float space-y-3 transition-all">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            
+            {/* Ô tìm kiếm */}
+            <div className="relative flex-1">
+              <Search className="w-5 h-5 text-brand-600 absolute left-3.5 top-1/2 -translate-y-1/2"/>
+              <input 
+                type="text" 
+                placeholder="Tìm kiếm ước nguyện (laptop, xe đạp, máy may...)"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                className="w-full pl-11 pr-4 py-3 rounded-2xl border-2 border-warm-200 bg-white text-sm font-semibold text-warm-900 placeholder:text-warm-700 focus:outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-500/20 transition-all shadow-inner"
+              />
+            </div>
 
-          <div className="relative min-w-[260px]">
-            <MapPin className="w-4 h-4 text-brand-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"/>
-            <select
-              value={selectedProvince}
-              onChange={e => setSelectedProvince(e.target.value)}
-              className="w-full pl-10 pr-8 py-2.5 rounded-xl border border-warm-200 bg-warm-50 text-sm font-bold text-warm-900 focus:outline-none focus:ring-2 focus:ring-brand-500 appearance-none cursor-pointer"
-            >
-              {VIETNAM_PROVINCES.map(p => (
-                <option key={p.code} value={p.code}>{p.name}</option>
-              ))}
-            </select>
-            <Filter className="w-3.5 h-3.5 text-warm-700 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none"/>
-          </div>
-        </div>
-
-        {/* Chips Danh Mục */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-          {CATEGORIES.map(cat => {
-            const Icon = cat.icon;
-            const active = selectedCategory === cat.id;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setSelectedCategory(cat.id)}
-                className={`inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
-                  active 
-                    ? 'bg-brand-600 text-white shadow-xs' 
-                    : 'bg-white text-warm-700 border border-warm-200 hover:bg-warm-100'
-                }`}
+            {/* Dropdown 63 Tỉnh Thành */}
+            <div className="relative min-w-[260px]">
+              <MapPin className="w-5 h-5 text-sun-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"/>
+              <select
+                value={selectedProvince}
+                onChange={e => setSelectedProvince(e.target.value)}
+                className="w-full pl-11 pr-10 py-3 rounded-2xl border-2 border-warm-200 bg-white text-sm font-black text-warm-900 focus:outline-none focus:border-brand-600 focus:ring-4 focus:ring-brand-500/20 appearance-none cursor-pointer shadow-inner transition-all"
               >
-                <Icon className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-warm-700'}`} />
-                <span>{cat.label}</span>
-              </button>
-            );
-          })}
+                {VIETNAM_PROVINCES.map(p => (
+                  <option key={p.code} value={p.code}>{p.name}</option>
+                ))}
+              </select>
+              <Filter className="w-4 h-4 text-warm-700 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"/>
+            </div>
+          </div>
+
+          {/* Hàng Chips Danh Mục & Bộ Đếm */}
+          <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 no-scrollbar pt-1 border-t border-warm-200/60">
+            <div className="flex items-center gap-2">
+              {CATEGORIES.map(cat => {
+                const Icon = cat.icon;
+                const active = selectedCategory === cat.id;
+                return (
+                  <button
+                    key={cat.id}
+                    onClick={() => setSelectedCategory(cat.id)}
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                      active 
+                        ? 'bg-brand-600 text-white shadow-xs' 
+                        : 'bg-warm-100 hover:bg-warm-200 text-warm-700'
+                    }`}
+                  >
+                    <Icon className={`w-3.5 h-3.5 ${active ? 'text-white' : 'text-warm-700'}`}/>
+                    <span>{cat.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <div className="hidden sm:inline-block text-[11px] font-bold text-warm-700 whitespace-nowrap px-2">
+              Tìm thấy: <span className="text-brand-700 font-black">{filteredWishes.length}</span> hoàn cảnh
+            </div>
+          </div>
         </div>
 
-        {/* Grid Thẻ Điều Ước Nhân Phẩm Có Ảnh Thực Tế */}
+        {/* Grid Thẻ Điều Ước Nhân Phẩm */}
         {loading ? (
           <div className="py-16 text-center text-warm-700 font-medium animate-pulse">
             Đang tải dữ liệu nhân văn từ Supabase Singapore...
@@ -544,7 +579,7 @@ export default function HomePage() {
         )}
       </section>
 
-      {/* 5. QUY TRÌNH 3 BƯỚC VỚI ẢNH MINH HỌA THAO TÁC THỰC TẾ */}
+      {/* 5. QUY TRÌNH 3 BƯỚC VỚI ẢNH CHÂN THỰC 100% (KHÔNG CHẾT LINK) */}
       <section className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-10 shadow-soft space-y-8 text-center">
         <div className="max-w-xl mx-auto space-y-1">
           <span className="text-xs font-black uppercase tracking-wider text-brand-700">Quy Trình Văn Minh</span>
@@ -589,8 +624,8 @@ export default function HomePage() {
           <div className="p-4 rounded-2xl bg-warm-50 border border-warm-200 space-y-3">
             <div className="rounded-xl overflow-hidden h-36">
               <img 
-                src="https://images.unsplash.com/photo-1556742049-0a67c5574f73?auto=format&fit=crop&w=500&q=80" 
-                alt="Bắt tay quét mã QR ngoài đời" 
+                src="https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=500&q=80" 
+                alt="Bắt tay quét mã QR ngoài đời thực" 
                 className="w-full h-full object-cover"
               />
             </div>
@@ -605,7 +640,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 6. HỘP LAN TỎA & VIRAL LOOP */}
+      {/* 6. HỘP LAN TỎA */}
       <section className="bg-gradient-to-r from-brand-600 to-brand-700 text-white rounded-3xl p-8 sm:p-12 shadow-float text-center space-y-6">
         <div className="max-w-2xl mx-auto space-y-3">
           <h2 className="text-2xl sm:text-4xl font-black tracking-tight">
@@ -620,7 +655,7 @@ export default function HomePage() {
         <div className="flex flex-wrap justify-center items-center gap-3">
           <button
             onClick={handleCopyShare}
-            className="px-6 py-3 rounded-2xl bg-white text-brand-900 font-black text-xs shadow-soft hover:bg-brand-50 transition-all flex items-center gap-2"
+            className="px-6 py-3 rounded-2xl bg-white text-brand-900 font-black text-xs shadow-soft hover:bg-brand-50 transition-all flex items-center gap-2 cursor-pointer"
           >
             {copiedLink ? <Check className="w-4 h-4 text-brand-600"/> : <Copy className="w-4 h-4 text-brand-600"/>}
             <span>{copiedLink ? 'Đã Sao Chép Lời Giới Thiệu!' : 'Sao Chép Lời Giới Thiệu'}</span>
@@ -651,7 +686,7 @@ export default function HomePage() {
               </div>
               <button 
                 onClick={() => setSelectedWish(null)}
-                className="w-8 h-8 rounded-full bg-warm-100 hover:bg-warm-200 text-warm-700 flex items-center justify-center text-sm font-bold"
+                className="w-8 h-8 rounded-full bg-warm-100 hover:bg-warm-200 text-warm-700 flex items-center justify-center text-sm font-bold cursor-pointer"
               >
                 ✕
               </button>
@@ -683,7 +718,7 @@ export default function HomePage() {
             <div className="flex gap-3 pt-2">
               <button
                 onClick={() => setSelectedWish(null)}
-                className="flex-1 py-2.5 rounded-xl border border-warm-200 text-warm-700 font-bold text-xs hover:bg-warm-100"
+                className="flex-1 py-2.5 rounded-xl border border-warm-200 text-warm-700 font-bold text-xs hover:bg-warm-100 cursor-pointer"
               >
                 {claimSuccess ? 'Đóng Cửa Sổ' : 'Hủy Bỏ'}
               </button>
@@ -692,7 +727,7 @@ export default function HomePage() {
                 <button
                   disabled={claiming}
                   onClick={() => handleConfirmClaim(selectedWish.id)}
-                  className="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-xs disabled:opacity-50"
+                  className="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-xs disabled:opacity-50 cursor-pointer"
                 >
                   {claiming ? 'Đang Khóa Hàng ACID...' : 'Xác Nhận Trao Tặng (Angel)'}
                 </button>
