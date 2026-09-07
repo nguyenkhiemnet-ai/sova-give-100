@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { VIETNAM_PROVINCES, getDistrictsByProvince, CATEGORY_FALLBACK_IMAGES } from '@/lib/provinces';
 import { getFullSiteCMS, DEFAULT_FULL_CMS } from '@/lib/cms';
+import { getActiveUser, openAuthModal } from '@/lib/auth';
 import { 
   ArrowLeft, Sparkles, Laptop, Bike, Scissors, BookOpen, 
   Wrench, Camera, ShieldCheck, CheckCircle2, Heart, MapPin, 
-  Check, Plus
+  Check, Plus, Lock, User
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -42,9 +43,21 @@ export default function CreateWishPage() {
   const [submitting, setSubmitting] = useState(false);
   const [createdPassport, setCreatedPassport] = useState<string | null>(null);
   const [subpageNotice, setSubpageNotice] = useState(DEFAULT_FULL_CMS.subpages.createWishNotice);
+  const [currentUser, setCurrentUser] = useState<any>(null);
 
   useEffect(() => {
     setSubpageNotice(getFullSiteCMS().subpages.createWishNotice);
+    const user = getActiveUser();
+    setCurrentUser(user);
+    if (!user) {
+      openAuthModal('REGISTER');
+    }
+
+    const handleAuthChange = () => {
+      setCurrentUser(getActiveUser());
+    };
+    window.addEventListener('sova_auth_change', handleAuthChange);
+    return () => window.removeEventListener('sova_auth_change', handleAuthChange);
   }, []);
 
   // Tự động nhận diện danh mục theo từ khóa
@@ -107,6 +120,12 @@ export default function CreateWishPage() {
   };
 
   const handleSubmit = async () => {
+    const user = getActiveUser();
+    if (!user) {
+      openAuthModal('REGISTER');
+      return;
+    }
+
     if (!title.trim() || !reason.trim()) {
       alert('Vui lòng điền tiêu đề và chia sẻ hoàn cảnh của bạn.');
       return;
@@ -175,6 +194,26 @@ export default function CreateWishPage() {
 
       <div className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-10 shadow-soft space-y-8">
         
+        {!currentUser && (
+          <div className="p-4 bg-brand-50 border-2 border-brand-500 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-center sm:text-left shadow-soft">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-brand-600 text-white flex items-center justify-center shrink-0 shadow-2xs">
+                <Lock className="w-5 h-5"/>
+              </div>
+              <div>
+                <h4 className="text-xs font-black text-warm-900">Yêu cầu đăng ký tài khoản trước khi gửi ước nguyện</h4>
+                <p className="text-[11px] text-warm-600">Đăng ký hoàn toàn 0-VND để quản lý hồ sơ và nhận thông báo khi có Angel tiếp sức.</p>
+              </div>
+            </div>
+            <button
+              onClick={() => openAuthModal('REGISTER')}
+              className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-xs hover:scale-105 transition-all shrink-0 cursor-pointer"
+            >
+              Đăng Ký Miễn Phí Ngay
+            </button>
+          </div>
+        )}
+
         {/* Progress Bar */}
         <div className="flex items-center justify-between border-b border-warm-200 pb-5">
           <div className="flex items-center gap-2">

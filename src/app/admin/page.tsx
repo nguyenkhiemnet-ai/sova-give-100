@@ -15,9 +15,14 @@ import {
   ShieldCheck, CheckCircle2, AlertTriangle, XCircle, 
   Trash2, RefreshCw, Search, MapPin, Sparkles, 
   Camera, Edit3, KeyRound, Lock, Save, ShieldAlert, 
-  Clock, Award, Layout, FileText, Share2, LogIn, ArrowLeft
+  Clock, Award, Layout, FileText, Share2, LogIn, ArrowLeft,
+  Users, Mail
 } from 'lucide-react';
-import { getActiveUser, isSuperAdminEmail, buildUserProfile, SUPER_ADMIN_EMAIL, UserProfile, loginWithGoogle } from '@/lib/auth';
+import { 
+  getActiveUser, isSuperAdminEmail, buildUserProfile, 
+  SUPER_ADMIN_EMAIL, UserProfile, loginWithGoogle,
+  getAllProfiles, resetPassword
+} from '@/lib/auth';
 
 interface WishItem {
   id: string;
@@ -42,8 +47,37 @@ export default function DedicatedAdminPortal() {
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
 
-  // 4 Tabs Quản Trị
-  const [adminTab, setAdminTab] = useState<'HERO' | 'FOOTER' | 'SUBPAGES' | 'WISHES'>('HERO');
+  // 5 Tabs Quản Trị
+  const [adminTab, setAdminTab] = useState<'HERO' | 'FOOTER' | 'SUBPAGES' | 'WISHES' | 'USERS'>('HERO');
+
+  // Quản lý thành viên (Users)
+  const [users, setUsers] = useState<any[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
+  const [userRoleFilter, setUserRoleFilter] = useState<'ALL' | 'SUPER_ADMIN' | 'USER'>('ALL');
+  const [resetMessage, setResetMessage] = useState<{ [email: string]: string }>({});
+
+  const loadUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const data = await getAllProfiles();
+      setUsers(data);
+    } catch (e) {
+      console.error("Lỗi tải thành viên:", e);
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
+  const handleSendResetPassword = async (userEmail: string) => {
+    setResetMessage(prev => ({ ...prev, [userEmail]: 'Đang gửi...' }));
+    const res = await resetPassword(userEmail);
+    if (res.success) {
+      setResetMessage(prev => ({ ...prev, [userEmail]: 'Đã gửi email khôi phục thành công!' }));
+    } else {
+      setResetMessage(prev => ({ ...prev, [userEmail]: `Lỗi: ${res.error}` }));
+    }
+  };
 
   // Đổi Master PIN
   const [showChangePinModal, setShowChangePinModal] = useState(false);
@@ -90,6 +124,7 @@ export default function DedicatedAdminPortal() {
           setIsUnlocked(true);
           setFullCMS(getFullSiteCMS());
           loadWishes();
+          loadUsers();
         } else {
           setIsUnlocked(false);
         }
@@ -117,6 +152,7 @@ export default function DedicatedAdminPortal() {
       setPinInput('');
       setFullCMS(getFullSiteCMS());
       loadWishes();
+      loadUsers();
     } else {
       setPinError(true);
     }
@@ -452,8 +488,8 @@ export default function DedicatedAdminPortal() {
         </div>
       </div>
 
-      {/* CỤM 4 TABS CMS QUẢN LÝ TOÀN BỘ WEBSITE */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 bg-warm-100 p-1.5 rounded-2xl border border-warm-200">
+      {/* CỤM 5 TABS CMS QUẢN LÝ TOÀN BỘ WEBSITE */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 bg-warm-100 p-1.5 rounded-2xl border border-warm-200">
         <button
           onClick={() => setAdminTab('HERO')}
           className={`py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
@@ -492,6 +528,19 @@ export default function DedicatedAdminPortal() {
         >
           <Sparkles className="w-4 h-4"/>
           <span>4. Điều Ước ({wishes.length})</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setAdminTab('USERS');
+            loadUsers();
+          }}
+          className={`py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            adminTab === 'USERS' ? 'bg-white text-brand-700 shadow-xs' : 'text-warm-700 hover:text-warm-900'
+          }`}
+        >
+          <Users className="w-4 h-4"/>
+          <span>5. Thành Viên ({users.length})</span>
         </button>
       </div>
 
@@ -951,6 +1000,194 @@ export default function DedicatedAdminPortal() {
                 Lưu Thay Đổi (Cần Mật Mã)
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 5: QUẢN LÝ THÀNH VIÊN & KHÁCH HÀNG ĐĂNG KÝ */}
+      {adminTab === 'USERS' && (
+        <div className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-8 shadow-soft space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-warm-100 pb-5">
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-base font-black text-warm-900">Quản Lý Khách Hàng / Thành Viên Đăng Ký</h2>
+                <span className="px-2 py-0.5 rounded-full bg-brand-50 text-brand-700 text-xs font-black border border-brand-200">
+                  {users.length} tài khoản
+                </span>
+              </div>
+              <p className="text-xs text-warm-700 mt-0.5">
+                Dữ liệu khách hàng đăng ký 0-VND. Bạn có quyền kiểm soát, xem trạng thái và gửi liên kết đặt lại mật khẩu trực tiếp.
+              </p>
+            </div>
+            
+            <button
+              onClick={loadUsers}
+              disabled={loadingUsers}
+              className="px-4 py-2 rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-900 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer shrink-0"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${loadingUsers ? 'animate-spin' : ''}`}/>
+              <span>Làm Mới Danh Sách</span>
+            </button>
+          </div>
+
+          {/* THANH TÌM KIẾM & BỘ LỌC THÀNH VIÊN */}
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex-1 relative">
+              <Search className="w-4 h-4 text-warm-400 absolute left-3.5 top-1/2 -translate-y-1/2"/>
+              <input
+                type="text"
+                placeholder="Tìm theo email hoặc họ tên thành viên..."
+                value={userSearch}
+                onChange={e => setUserSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-2xl border-2 border-warm-200 text-xs font-bold text-warm-900 focus:outline-none focus:border-brand-600 placeholder:font-normal placeholder:text-warm-400"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setUserRoleFilter('ALL')}
+                className={`px-3 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors ${
+                  userRoleFilter === 'ALL' ? 'bg-brand-600 text-white' : 'bg-warm-100 text-warm-700 hover:bg-warm-200'
+                }`}
+              >
+                Tất cả ({users.length})
+              </button>
+              <button
+                onClick={() => setUserRoleFilter('SUPER_ADMIN')}
+                className={`px-3 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors ${
+                  userRoleFilter === 'SUPER_ADMIN' ? 'bg-amber-600 text-white' : 'bg-warm-100 text-warm-700 hover:bg-warm-200'
+                }`}
+              >
+                Quản Trị Tối Cao
+              </button>
+              <button
+                onClick={() => setUserRoleFilter('USER')}
+                className={`px-3 py-2 rounded-xl text-xs font-bold cursor-pointer transition-colors ${
+                  userRoleFilter === 'USER' ? 'bg-brand-600 text-white' : 'bg-warm-100 text-warm-700 hover:bg-warm-200'
+                }`}
+              >
+                Thành Viên Thường
+              </button>
+            </div>
+          </div>
+
+          {/* BẢNG DANH SÁCH THÀNH VIÊN */}
+          <div className="overflow-x-auto border border-warm-200 rounded-2xl">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-warm-50 border-b border-warm-200 text-warm-700 font-black">
+                  <th className="py-3 px-4">Thành Viên</th>
+                  <th className="py-3 px-4">Email Liên Hệ</th>
+                  <th className="py-3 px-4">Vai Trò</th>
+                  <th className="py-3 px-4">Vốn Xã Hội</th>
+                  <th className="py-3 px-4">Ngày Đăng Ký</th>
+                  <th className="py-3 px-4 text-right">Tác Vụ Quản Trị</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-warm-100">
+                {loadingUsers ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-warm-500 font-medium">
+                      <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-brand-600"/>
+                      Đang đồng bộ danh sách khách hàng từ Supabase...
+                    </td>
+                  </tr>
+                ) : (() => {
+                  const filtered = users.filter(u => {
+                    const matchSearch = !userSearch || 
+                      (u.email || '').toLowerCase().includes(userSearch.toLowerCase()) || 
+                      (u.full_name || '').toLowerCase().includes(userSearch.toLowerCase());
+                    const matchRole = userRoleFilter === 'ALL' || u.role === userRoleFilter;
+                    return matchSearch && matchRole;
+                  });
+
+                  if (filtered.length === 0) {
+                    return (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-warm-500 font-medium">
+                          Không tìm thấy thành viên nào phù hợp với bộ lọc.
+                        </td>
+                      </tr>
+                    );
+                  }
+
+                  return filtered.map((u: any) => {
+                    const isSuper = isSuperAdminEmail(u.email) || u.role === 'SUPER_ADMIN';
+                    const initial = (u.full_name || u.email || 'U').charAt(0).toUpperCase();
+                    const regDate = u.created_at ? new Date(u.created_at).toLocaleDateString('vi-VN', {
+                      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                    }) : 'Vừa xong';
+
+                    return (
+                      <tr key={u.id} className="hover:bg-warm-50/70 transition-colors">
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className={`w-8 h-8 rounded-xl text-white font-black text-xs flex items-center justify-center shadow-2xs ${
+                              isSuper ? 'bg-amber-600' : 'bg-brand-600'
+                            }`}>
+                              {initial}
+                            </div>
+                            <div>
+                              <p className="font-black text-warm-900 leading-tight">{u.full_name || 'Khách Hàng 0-VND'}</p>
+                              <p className="text-[10px] text-warm-500">ID: {u.id?.slice(0, 8)}...</p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-4 font-mono font-medium text-warm-900">
+                          {u.email}
+                        </td>
+
+                        <td className="py-3 px-4">
+                          {isSuper ? (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 font-black text-[10px] border border-amber-300">
+                              <ShieldCheck className="w-3 h-3 text-amber-700"/>
+                              <span>Trọng Tài Tối Cao</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-brand-50 text-brand-800 font-black text-[10px] border border-brand-200">
+                              <CheckCircle2 className="w-3 h-3 text-brand-600"/>
+                              <span>Người Dùng</span>
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="py-3 px-4">
+                          <div className="space-y-0.5">
+                            <span className="font-black text-sun-600 block">{u.karma || 100} ⭐ Karma</span>
+                            <span className="text-[10px] text-warm-600 block">{u.co2_saved || 0} kg CO₂</span>
+                          </div>
+                        </td>
+
+                        <td className="py-3 px-4 text-warm-600 font-medium">
+                          {regDate}
+                        </td>
+
+                        <td className="py-3 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => handleSendResetPassword(u.email)}
+                              className="px-3 py-1.5 rounded-xl bg-warm-100 hover:bg-brand-50 hover:text-brand-700 text-warm-800 text-[11px] font-bold border border-warm-200 transition-colors cursor-pointer flex items-center gap-1"
+                              title="Gửi email đặt lại mật khẩu cho khách hàng này"
+                            >
+                              <KeyRound className="w-3 h-3"/>
+                              <span>Gửi Link Reset</span>
+                            </button>
+                          </div>
+                          {resetMessage[u.email] && (
+                            <p className={`text-[10px] font-bold mt-1 ${
+                              resetMessage[u.email].includes('thành công') ? 'text-emerald-600' : 'text-warm-600'
+                            }`}>
+                              {resetMessage[u.email]}
+                            </p>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  });
+                })()}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

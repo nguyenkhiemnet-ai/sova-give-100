@@ -22,6 +22,7 @@ export default function Navbar() {
   const [showLoginMenu, setShowLoginMenu] = useState(false);
   const [showMobileLoginMenu, setShowMobileLoginMenu] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [authModalTab, setAuthModalTab] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileDropdownRef = useRef<HTMLDivElement>(null);
@@ -29,6 +30,13 @@ export default function Navbar() {
   const mobileLoginDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Lắng nghe sự kiện mở Auth Modal từ bất kỳ nút nào trên website
+    const handleOpenAuth = (e: any) => {
+      const tab = e?.detail?.tab || 'REGISTER';
+      setAuthModalTab(tab);
+      setShowAuthModal(true);
+    };
+    window.addEventListener('sova_open_auth', handleOpenAuth);
     // 1. Đồng bộ session tức thì khi Supabase nhận OAuth Token từ URL hoặc đăng nhập
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
@@ -77,6 +85,7 @@ export default function Navbar() {
     return () => {
       subscription.unsubscribe();
       window.removeEventListener('sova_auth_change', handleAuthChange);
+      window.removeEventListener('sova_open_auth', handleOpenAuth);
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
@@ -216,13 +225,20 @@ export default function Navbar() {
 
         {/* CỤM NÚT BÊN PHẢI */}
         <div className="flex items-center gap-2.5 shrink-0">
-          <Link
-            href="/create-wish/"
-            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-xs hover:scale-105 transition-all shrink-0"
+          <button
+            onClick={() => {
+              if (!currentUser) {
+                setAuthModalTab('REGISTER');
+                setShowAuthModal(true);
+              } else {
+                router.push('/create-wish/');
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-4 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-xs hover:scale-105 transition-all shrink-0 cursor-pointer"
           >
             <Sparkles className="w-3.5 h-3.5"/>
             <span>Gửi Ước Nguyện</span>
-          </Link>
+          </button>
 
           {/* User Menu Desktop */}
           {currentUser ? (
@@ -354,6 +370,7 @@ export default function Navbar() {
                   <button
                     onClick={() => {
                       setShowLoginMenu(false);
+                      setAuthModalTab('LOGIN');
                       setShowAuthModal(true);
                     }}
                     className="w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-brand-50/80 border border-warm-100 hover:border-brand-200 transition-all text-left cursor-pointer group"
@@ -484,6 +501,7 @@ export default function Navbar() {
                   <button
                     onClick={() => {
                       setShowMobileLoginMenu(false);
+                      setAuthModalTab('LOGIN');
                       setShowAuthModal(true);
                     }}
                     className="w-full flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-warm-50 text-left cursor-pointer transition-colors"
@@ -561,7 +579,8 @@ export default function Navbar() {
       {/* MODAL ĐĂNG NHẬP / ĐĂNG KÝ / KHÔI PHỤC MẬT KHẨU HIỆN ĐẠI */}
       <AuthModal 
         isOpen={showAuthModal} 
-        onClose={() => setShowAuthModal(false)} 
+        onClose={() => setShowAuthModal(false)}
+        defaultTab={authModalTab}
       />
     </header>
   );

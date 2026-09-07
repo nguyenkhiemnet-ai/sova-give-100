@@ -134,15 +134,49 @@ export async function signUpWithEmail(email: string, password: string, fullName:
       return { success: false, error: error.message };
     }
 
-    if (data.user && data.session) {
-      const profile = buildUserProfile(data.user);
-      setActiveUser(profile);
-      return { success: true, message: 'Đăng ký thành công và đã tự động đăng nhập!' };
+    // 1. Lưu hoặc đồng bộ thông tin khách hàng vào bảng public.profiles trong Supabase
+    const isSuperAdmin = isSuperAdminEmail(email.trim());
+    const userId = data.user?.id || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : 'usr-' + Date.now());
+    
+    try {
+      await supabase.from('profiles').upsert({
+        id: userId,
+        email: email.trim().toLowerCase(),
+        full_name: fullName.trim(),
+        role: isSuperAdmin ? 'SUPER_ADMIN' : 'CITIZEN',
+        karma: isSuperAdmin ? 200 : 100,
+        co2_saved: isSuperAdmin ? 130.5 : 0,
+        status: 'ACTIVE',
+        last_sign_in_at: new Date().toISOString()
+      });
+    } catch (dbErr) {
+      console.warn("Lưu hồ sơ profiles:", dbErr);
     }
+
+    // 2. Gửi email chúc mừng và cấp liên kết quản lý tài khoản + đặt lại mật khẩu
+    try {
+      await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: `${redirectTarget}/profile`
+      });
+    } catch (mailErr) {
+      console.warn("Gửi email đặt lại mật khẩu:", mailErr);
+    }
+
+    // 3. Tự động đăng nhập ngay lập tức cho người dùng
+    const userProfile: UserProfile = {
+      id: userId,
+      name: fullName.trim(),
+      email: email.trim(),
+      avatar: fullName.trim().charAt(0).toUpperCase() || 'U',
+      role: isSuperAdmin ? 'SUPER_ADMIN' : 'CITIZEN',
+      karma: isSuperAdmin ? 200 : 100,
+      co2Saved: isSuperAdmin ? 130.5 : 0
+    };
+    setActiveUser(userProfile);
 
     return { 
       success: true, 
-      message: 'Tài khoản đã tạo! Vui lòng kiểm tra hộp thư email để bấm xác nhận (nếu Supabase bật email confirmation).' 
+      message: 'Đăng ký thành công! Hệ thống đã tự động đăng nhập và gửi email xác nhận kèm liên kết quản lý đến hộp thư của bạn.' 
     };
   } catch (err: any) {
     return { success: false, error: err.message || 'Lỗi đăng ký không xác định.' };
@@ -156,7 +190,7 @@ export async function resetPassword(email: string): Promise<{ success: boolean; 
       : 'https://sovahub.org';
 
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: redirectTarget
+      redirectTo: `${redirectTarget}/profile`
     });
 
     if (error) {
@@ -172,6 +206,35 @@ export async function resetPassword(email: string): Promise<{ success: boolean; 
   }
 }
 
+export async function getAllProfiles(): Promise<any[]> {
+  try {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return data || [];
+  } catch (e) {
+    console.error("Lỗi truy vấn danh sách thành viên:", e);
+    return [];
+  }
+}
+
+export function openAuthModal(tab: 'REGISTER' | 'LOGIN' = 'REGISTER'): void {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('sova_open_auth', { detail: { tab } }));
+  }
+}
+
+export function requireAuth(onAuthenticated: () => void, tab: 'REGISTER' | 'LOGIN' = 'REGISTER'): void {
+  const user = getActiveUser();
+  if (user) {
+    onAuthenticated();
+  } else {
+    openAuthModal(tab);
+  }
+}
+
 export async function logoutUser(): Promise<void> {
   try {
     await supabase.auth.signOut();
@@ -180,3 +243,4 @@ export async function logoutUser(): Promise<void> {
 }
 
 export const logout = logoutUser;
+

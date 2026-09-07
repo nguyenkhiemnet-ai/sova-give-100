@@ -2,12 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   VIETNAM_PROVINCES, getDistrictsByProvince, CATEGORY_FALLBACK_IMAGES, 
   normalizeCategoryLabel, inferCategory 
 } from '@/lib/provinces';
-import { getActiveUser, loginWithGoogle, UserProfile } from '@/lib/auth';
+import { getActiveUser, loginWithGoogle, UserProfile, openAuthModal } from '@/lib/auth';
 import { getFullSiteCMS, FullSiteCMS, DEFAULT_FULL_CMS } from '@/lib/cms';
 import { 
   Sparkles, Heart, Search, MapPin, Filter, Leaf, 
@@ -43,6 +44,7 @@ const CATEGORIES = [
 ];
 
 export default function HomePage() {
+  const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [wishes, setWishes] = useState<WishItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -199,7 +201,7 @@ export default function HomePage() {
   const handleOpenClaimModal = (item: WishItem) => {
     const user = getActiveUser();
     if (!user) {
-      setShowAuthGateModal(true);
+      openAuthModal('REGISTER');
       return;
     }
     setSelectedWish(item);
@@ -226,7 +228,7 @@ export default function HomePage() {
   const openChatModal = (item: WishItem) => {
     const user = getActiveUser();
     if (!user) {
-      setShowAuthGateModal(true);
+      openAuthModal('REGISTER');
       return;
     }
     setChatWish(item);
@@ -354,21 +356,41 @@ export default function HomePage() {
             </p>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
-              <a 
-                href="#wishlist-section"
+              <button 
+                onClick={() => {
+                  const user = getActiveUser();
+                  if (!user) {
+                    openAuthModal('REGISTER');
+                  } else {
+                    const el = document.getElementById('wishlist-section');
+                    if (el) {
+                      const isMobile = window.innerWidth < 768;
+                      const navOffset = isMobile ? 112 : 80;
+                      const elementTop = el.getBoundingClientRect().top + window.pageYOffset;
+                      window.scrollTo({ top: Math.max(0, elementTop - navOffset), behavior: 'smooth' });
+                    }
+                  }
+                }}
                 className="px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-sm shadow-float hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Heart className="w-4 h-4 fill-white"/>
                 <span>Tôi Muốn Trao Đồ Tốt (Angel)</span>
-              </a>
+              </button>
 
-              <Link 
-                href="/create-wish/"
+              <button 
+                onClick={() => {
+                  const user = getActiveUser();
+                  if (!user) {
+                    openAuthModal('REGISTER');
+                  } else {
+                    router.push('/create-wish/');
+                  }
+                }}
                 className="px-6 py-3.5 rounded-2xl bg-white hover:bg-brand-50 border-2 border-brand-600 text-brand-700 font-black text-sm shadow-soft hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4"/>
                 <span>Tôi Cần Dụng Cụ Để Tự Lập</span>
-              </Link>
+              </button>
             </div>
           </div>
 
@@ -642,13 +664,20 @@ export default function HomePage() {
               >
                 Xem tất cả ước nguyện
               </button>
-              <Link
-                href="/create-wish/"
-                className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-soft transition-all inline-flex items-center gap-1.5"
+              <button
+                onClick={() => {
+                  const user = getActiveUser();
+                  if (!user) {
+                    openAuthModal('REGISTER');
+                  } else {
+                    router.push('/create-wish/');
+                  }
+                }}
+                className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-soft transition-all inline-flex items-center gap-1.5 cursor-pointer"
               >
                 <Sparkles className="w-3.5 h-3.5"/>
                 <span>Gửi ước nguyện đầu tiên</span>
-              </Link>
+              </button>
             </div>
           </div>
         )}
