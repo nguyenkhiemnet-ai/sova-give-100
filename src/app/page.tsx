@@ -410,7 +410,7 @@ export default function HomePage() {
         </div>
 
         {/* Thanh Chọn Danh Mục Tinh Gọn (Tìm kiếm đã đưa lên Header) */}
-        <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md p-3 rounded-2xl border border-warm-200 shadow-soft">
+        <div className="sticky top-[106px] md:top-20 z-30 bg-white/95 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl border border-warm-200 shadow-soft">
           <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
             <div className="flex items-center gap-2">
               {CATEGORIES.map(cat => {
