@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   X, Mail, Lock, User, Eye, EyeOff, KeyRound, 
   ArrowRight, CheckCircle2, AlertCircle, RefreshCw 
@@ -14,6 +15,7 @@ interface AuthModalProps {
 }
 
 export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: AuthModalProps) {
+  const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState<'LOGIN' | 'REGISTER' | 'FORGOT'>(defaultTab);
   
   // Form fields
@@ -22,6 +24,10 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
   const [fullName, setFullName] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // States
   const [loading, setLoading] = useState(false);
@@ -60,7 +66,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen, onClose]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !mounted) return null;
 
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
@@ -159,7 +165,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
     }
   };
 
-  return (
+  return createPortal(
     <div 
       onClick={handleBackdropClick}
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-warm-950/50 backdrop-blur-sm animate-in fade-in duration-200"
@@ -495,7 +501,8 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
           </div>
         )}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 
