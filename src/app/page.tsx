@@ -1,15 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
-import { VIETNAM_PROVINCES, getDistrictsByProvince, CATEGORY_FALLBACK_IMAGES, normalizeCategoryLabel, inferCategory } from '@/lib/provinces';
-import { getActiveUser, loginWithGoogle } from '@/lib/auth';
+import { 
+  VIETNAM_PROVINCES, getDistrictsByProvince, CATEGORY_FALLBACK_IMAGES, 
+  normalizeCategoryLabel, inferCategory 
+} from '@/lib/provinces';
+import { getActiveUser, ADMIN_USER, loginWithGoogle, UserProfile } from '@/lib/auth';
+import { getHeroCMS, saveHeroCMS, HeroCMSData, compressImageToWebP } from '@/lib/cms';
 import { 
   Sparkles, Heart, Search, MapPin, Filter, Leaf, 
   Clock, Repeat, AlertCircle, ShieldCheck, CheckCircle2,
   Laptop, Bike, Scissors, BookOpen, Wrench, Navigation,
-  ArrowUp, Lock, MessageSquare, Send, X, ExternalLink
+  ArrowUp, Lock, MessageSquare, Send, X, ExternalLink,
+  Edit3, Camera, Trash2, Settings, Save, Image as ImageIcon,
+  Check, RefreshCw
 } from 'lucide-react';
 
 interface WishItem {
@@ -37,15 +43,21 @@ const CATEGORIES = [
   { id: 'livelihood_tools', label: 'Công cụ mưu sinh', icon: Wrench },
 ];
 
-const CURATED_WISHES: WishItem[] = []; // Đã gỡ bỏ toàn bộ dữ liệu mẫu gán cứng
-
 export default function HomePage() {
-  const [wishes, setWishes] = useState<WishItem[]>(CURATED_WISHES);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [wishes, setWishes] = useState<WishItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedProvince, setSelectedProvince] = useState('ALL');
   const [selectedDistrict, setSelectedDistrict] = useState('ALL');
   
+  // Live Visual CMS State cho Quản Trị Viên
+  const [heroCMS, setHeroCMS] = useState<HeroCMSData>(getHeroCMS());
+  const [showEditCMSModal, setShowEditCMSModal] = useState(false);
+  const [editCMSForm, setEditCMSForm] = useState<HeroCMSData>(heroCMS);
+  const [compressStats, setCompressStats] = useState<{ orig: string; comp: string } | null>(null);
+  const [isCompressing, setIsCompressing] = useState(false);
+
   // Modal Chi Tiết & Trao Đổi
   const [detailWish, setDetailWish] = useState<WishItem | null>(null);
   const [chatWish, setChatWish] = useState<WishItem | null>(null);
@@ -59,11 +71,27 @@ export default function HomePage() {
   const [showAuthGateModal, setShowAuthGateModal] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
+  // Đổi ảnh nhanh trực tiếp trên thẻ bài (Admin 1-chạm)
+  const [quickImageWishId, setQuickImageWishId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN' || currentUser?.email === 'nguyenkhiem.net@gmail.com';
+
   useEffect(() => {
+    const user = getActiveUser();
+    setCurrentUser(user || ADMIN_USER);
+    setHeroCMS(getHeroCMS());
     fetchCombinedWishes();
+
     const handleScroll = () => setShowBackToTop(window.scrollY > 400);
+    const handleCMSUpdate = () => setHeroCMS(getHeroCMS());
+
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
+    window.addEventListener('sova_cms_updated', handleCMSUpdate);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('sova_cms_updated', handleCMSUpdate);
+    };
   }, []);
 
   async function fetchCombinedWishes() {
@@ -77,6 +105,13 @@ export default function HomePage() {
       }
     } catch {}
 
+    let deletedIds: string[] = [];
+    let updatedDict: Record<string, any> = {};
+    if (typeof window !== 'undefined') {
+      try { deletedIds = JSON.parse(localStorage.getItem('SOVA_DELETED_WISH_IDS') || '[]'); } catch {}
+      try { updatedDict = JSON.parse(localStorage.getItem('SOVA_UPDATED_WISH_DICT') || '{}'); } catch {}
+    }
+
     let localItems: WishItem[] = [];
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('SOVA_OPTIMISTIC_WISHES');
@@ -86,13 +121,6 @@ export default function HomePage() {
     }
 
     const mergedMap = new Map<string, WishItem>();
-
-    let deletedIds: string[] = [];
-    let updatedDict: Record<string, any> = {};
-    if (typeof window !== 'undefined') {
-      try { deletedIds = JSON.parse(localStorage.getItem('SOVA_DELETED_WISH_IDS') || '[]'); } catch {}
-      try { updatedDict = JSON.parse(localStorage.getItem('SOVA_UPDATED_WISH_DICT') || '{}'); } catch {}
-    }
 
     const isTestOrDeleted = (id: string, title?: string) => {
       if (deletedIds.includes(id)) return true;
@@ -115,7 +143,7 @@ export default function HomePage() {
       });
     });
 
-    // 2. Nạp items từ Server mà không làm mất ảnh cục bộ
+    // 2. Nạp items từ Server
     serverItems.forEach(item => {
       if (isTestOrDeleted(item.id, item.title)) return;
       const existing = mergedMap.get(item.id);
@@ -134,28 +162,13 @@ export default function HomePage() {
       });
     });
 
-    // 3. Nạp curated
-    CURATED_WISHES.forEach(item => {
-      if (!mergedMap.has(item.id)) mergedMap.set(item.id, item);
-    });
-
     setWishes(Array.from(mergedMap.values()));
   }
 
-  const handleOpenClaimModal = (item: WishItem) => {
-    const currentUser = getActiveUser();
-    if (!currentUser) {
-      setShowAuthGateModal(true);
-      return;
-    }
-    setSelectedWish(item);
-    setClaimSuccess(null);
-  };
-
-  // Hàm xóa nhanh dành cho Quản trị viên ngay tại Trang Chủ
+  // Admin Xóa Nhanh 1-Chạm
   const handleAdminQuickDelete = async (e: React.MouseEvent, wishId: string) => {
     e.stopPropagation();
-    if (!confirm('Quản trị viên: Bạn có chắc chắn muốn xóa vĩnh viễn tin này khỏi trang chủ?')) return;
+    if (!confirm('Quản trị viên: Bạn có chắc chắn muốn xóa vĩnh viễn tin này khỏi Cây Nguyện Ước?')) return;
     
     try {
       if (!wishId.startsWith('opt-')) {
@@ -174,10 +187,73 @@ export default function HomePage() {
       localStorage.removeItem(`SOVA_WISH_IMG_${wishId}`);
 
       setWishes(prev => prev.filter(w => w.id !== wishId));
-      alert('Đã xóa bài đăng thành công.');
     } catch {
       setWishes(prev => prev.filter(w => w.id !== wishId));
     }
+  };
+
+  // Admin Đổi Ảnh Nhanh trên Card (Có Nén Tự Động)
+  const triggerQuickImageChange = (e: React.MouseEvent, wishId: string) => {
+    e.stopPropagation();
+    setQuickImageWishId(wishId);
+    fileInputRef.current?.click();
+  };
+
+  const handleCardImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !quickImageWishId) return;
+
+    try {
+      const { dataUrl } = await compressImageToWebP(file);
+      localStorage.setItem(`SOVA_WISH_IMG_${quickImageWishId}`, dataUrl);
+      
+      let updatedDict: Record<string, any> = {};
+      try { updatedDict = JSON.parse(localStorage.getItem('SOVA_UPDATED_WISH_DICT') || '{}'); } catch {}
+      updatedDict[quickImageWishId] = { ...(updatedDict[quickImageWishId] || {}), imageUrl: dataUrl };
+      localStorage.setItem('SOVA_UPDATED_WISH_DICT', JSON.stringify(updatedDict));
+
+      setWishes(prev => prev.map(w => w.id === quickImageWishId ? { ...w, imageUrl: dataUrl } : w));
+      alert('Đã thay ảnh thành công! Ảnh đã được nén tối ưu hiển thị siêu tốc.');
+    } catch (err: any) {
+      alert('Không thể xử lý ảnh: ' + err.message);
+    } finally {
+      setQuickImageWishId(null);
+    }
+  };
+
+  // Lưu Live CMS Banner
+  const handleSaveCMS = () => {
+    saveHeroCMS(editCMSForm);
+    setHeroCMS(editCMSForm);
+    setShowEditCMSModal(false);
+    alert('Đã lưu cấu hình giao diện thành công! Nội dung mới đã được phân phối toàn cầu.');
+  };
+
+  // Tải & nén ảnh Banner trong Modal CMS
+  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsCompressing(true);
+    try {
+      const { dataUrl, originalSize, compressedSize } = await compressImageToWebP(file);
+      setEditCMSForm(prev => ({ ...prev, bannerImage: dataUrl }));
+      setCompressStats({ orig: originalSize, comp: compressedSize });
+    } catch (err: any) {
+      alert('Lỗi nén ảnh: ' + err.message);
+    } finally {
+      setIsCompressing(false);
+    }
+  };
+
+  const handleOpenClaimModal = (item: WishItem) => {
+    const currentUser = getActiveUser();
+    if (!currentUser) {
+      setShowAuthGateModal(true);
+      return;
+    }
+    setSelectedWish(item);
+    setClaimSuccess(null);
   };
 
   const handleConfirmClaim = async (wishId: string) => {
@@ -197,7 +273,6 @@ export default function HomePage() {
     }
   };
 
-  // Kênh chat lưu bền vững trong LocalStorage theo ID điều ước
   const openChatModal = (item: WishItem) => {
     const currentUser = getActiveUser();
     if (!currentUser) {
@@ -230,7 +305,6 @@ export default function HomePage() {
     localStorage.setItem(storageKey, JSON.stringify(updated));
     setChatInput('');
 
-    // Giả lập phản hồi tự động sau 1.2s
     setTimeout(() => {
       const reply = { sender: 'Người Nhận', text: 'Dạ em đã nhận được tin nhắn của anh/chị rồi ạ! Em cảm ơn tấm lòng của anh/chị rất nhiều!' };
       const withReply = [...updated, reply];
@@ -239,31 +313,27 @@ export default function HomePage() {
     }, 1200);
   };
 
-  // Thuật toán so khớp thông minh: Lọc cả Tỉnh lẫn Quận/Huyện
   const filteredWishes = wishes.filter(item => {
     const title = item.title || '';
     const desc = item.reason || item.reason_description || '';
     const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           desc.toLowerCase().includes(searchQuery.toLowerCase());
     
-    // So khớp danh mục thông minh (hỗ trợ cả mã cũ commute/study_device)
     const cat = (item.category || '').toLowerCase();
     let matchesCat = selectedCategory === 'ALL';
     if (!matchesCat) {
-      if (selectedCategory === 'bicycle') matchesCat = (cat === 'bicycle' || cat === 'commute' || title.toLowerCase().includes('xe đạp') || title.toLowerCase().includes('xe dap'));
+      if (selectedCategory === 'bicycle') matchesCat = (cat === 'bicycle' || cat === 'commute' || title.toLowerCase().includes('xe'));
       else if (selectedCategory === 'laptop') matchesCat = (cat === 'laptop' || cat === 'study_device' || title.toLowerCase().includes('máy tính') || title.toLowerCase().includes('laptop'));
       else if (selectedCategory === 'sewing_machine') matchesCat = (cat === 'sewing_machine' || cat === 'vocational_tool' || title.toLowerCase().includes('may'));
       else matchesCat = (cat === selectedCategory.toLowerCase());
     }
     
-    // So khớp Tỉnh Thành
     const prov = item.province_code || '48';
     const matchesProv = selectedProvince === 'ALL' || 
                         prov === selectedProvince || 
                         (selectedProvince === '48' && (prov.includes('Đà Nẵng') || prov.includes('Da Nang') || prov === '48')) ||
                         (selectedProvince === '01' && (prov.includes('Hà Nội') || prov.includes('Ha Noi') || prov === '01'));
 
-    // So khớp Quận Huyện
     const ward = item.ward_code || '';
     const matchesDistrict = selectedDistrict === 'ALL' || ward === selectedDistrict || ward.includes(selectedDistrict);
 
@@ -273,6 +343,15 @@ export default function HomePage() {
   return (
     <div className="space-y-16 max-w-6xl mx-auto">
       
+      {/* Input File ẩn dành cho Admin đổi ảnh nhanh */}
+      <input 
+        type="file" 
+        accept="image/*" 
+        ref={fileInputRef} 
+        onChange={handleCardImageUpload} 
+        className="hidden" 
+      />
+
       {showBackToTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -282,25 +361,42 @@ export default function HomePage() {
         </button>
       )}
 
-      {/* 1. HERO BANNER */}
+      {/* 1. HERO BANNER LIVE CMS (CÓ NÚT SỬA 1-CHẠM DÀNH CHO ADMIN) */}
       <section className="relative overflow-hidden bg-gradient-to-br from-brand-50 via-white to-sun-50 rounded-3xl border border-warm-200 p-6 sm:p-12 lg:p-14 shadow-soft">
+        
+        {/* Nút Quản Trị Viên Sửa Banner Tại Chỗ */}
+        {isSuperAdmin && (
+          <div className="absolute top-4 right-4 z-20">
+            <button
+              onClick={() => {
+                setEditCMSForm(heroCMS);
+                setCompressStats(null);
+                setShowEditCMSModal(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-warm-900/90 hover:bg-brand-700 text-white text-xs font-black shadow-float transition-all backdrop-blur-sm"
+            >
+              <Edit3 className="w-3.5 h-3.5 text-sun-400"/>
+              <span>Sửa Hero Banner & Khẩu Hiệu</span>
+            </button>
+          </div>
+        )}
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black bg-white text-brand-700 border border-brand-200 shadow-2xs">
               <Sparkles className="w-4 h-4 text-brand-500"/>
-              Kinh Tế Tuần Hoàn 0-VND • Trao Cơ Hội, Giữ Danh Dự
+              <span>{heroCMS.badge}</span>
             </div>
 
             <h1 className="text-3xl sm:text-5xl font-black text-warm-900 tracking-tight leading-[1.15]">
-              Đừng để đồ tốt ngủ quên trong góc tối.<br/>
+              {heroCMS.titlePrimary}<br/>
               <span className="text-brand-700 bg-gradient-to-r from-brand-700 to-brand-500 bg-clip-text text-transparent">
-                Hãy biến chúng thành tương lai của ai đó.
+                {heroCMS.titleHighlight}
               </span>
             </h1>
 
             <p className="text-warm-700 text-sm sm:text-base leading-relaxed font-normal">
-              Bao nhiêu chiếc laptop cũ, xe đạp, máy may vẫn còn chạy rất tốt nhưng đang nằm phủ bụi trong kho? 
-              Tại <strong>SOVA GIVE 100</strong>, vật phẩm của bạn tìm thấy cuộc đời thứ hai qua <strong>Hộ Chiếu Số</strong> và cái <strong>Bắt Tay Tử Tế 0 Đồng</strong>.
+              {heroCMS.description}
             </p>
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
@@ -322,23 +418,24 @@ export default function HomePage() {
             </div>
           </div>
 
+          {/* KHUNG HÌNH ẢNH KHÓA TỶ LỆ CHUẨN 16:10 - TUYỆT ĐỐI KHÔNG BỊ VỠ KHUNG */}
           <div className="lg:col-span-5 relative">
-            <div className="relative mx-auto rounded-3xl overflow-hidden shadow-xl border-4 border-white">
+            <div className="relative mx-auto rounded-3xl overflow-hidden shadow-xl border-4 border-white aspect-[16/11] bg-warm-900">
               <img 
-                src="https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80" 
-                alt="Xe đạp đến trường" 
-                className="w-full h-80 object-cover"
+                src={heroCMS.bannerImage} 
+                alt="Banner minh họa" 
+                className="w-full h-full object-cover object-center"
               />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-5">
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-5">
                 <p className="text-white text-xs font-bold leading-relaxed">
-                  "Mỗi chiếc xe đạp trao đi là con đường đến trường của các em bớt gập ghềnh."
+                  "{heroCMS.imageQuote}"
                 </p>
               </div>
             </div>
           </div>
         </div>
 
-        {/* 3 CHỈ SỐ */}
+        {/* 3 CHỈ SỐ CMS ĐỘNG */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10 pt-8 border-t border-warm-200/80">
           <div className="bg-white/90 p-4 rounded-2xl border border-warm-200 shadow-2xs flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
@@ -346,7 +443,7 @@ export default function HomePage() {
             </div>
             <div>
               <span className="text-[11px] font-bold text-warm-700 uppercase tracking-wider block">Vốn Xã Hội (Karma)</span>
-              <div className="text-2xl font-black text-warm-900 mt-0.5">100,000+ ⭐</div>
+              <div className="text-2xl font-black text-warm-900 mt-0.5">{heroCMS.statKarma}</div>
               <span className="text-[10px] text-brand-600 font-semibold">Giờ tương trợ cộng đồng</span>
             </div>
           </div>
@@ -357,7 +454,7 @@ export default function HomePage() {
             </div>
             <div>
               <span className="text-[11px] font-bold text-warm-700 uppercase tracking-wider block">CO2 Đã Ngăn Chặn</span>
-              <div className="text-2xl font-black text-sun-600 mt-0.5">1,450.5 kg</div>
+              <div className="text-2xl font-black text-sun-600 mt-0.5">{heroCMS.statCO2}</div>
               <span className="text-[10px] text-warm-700 font-medium">~72 cây xanh quang hợp</span>
             </div>
           </div>
@@ -368,7 +465,7 @@ export default function HomePage() {
             </div>
             <div>
               <span className="text-[11px] font-bold text-warm-700 uppercase tracking-wider block">Tuần Hoàn Thực Tế</span>
-              <div className="text-2xl font-black text-blue-900 mt-0.5">100% 0-VND</div>
+              <div className="text-2xl font-black text-blue-900 mt-0.5">{heroCMS.statRecycle}</div>
               <span className="text-[10px] text-blue-600 font-medium">Bảo chứng Hộ Chiếu Số</span>
             </div>
           </div>
@@ -392,7 +489,7 @@ export default function HomePage() {
           </span>
         </div>
 
-        {/* Thanh tìm kiếm & Lọc Đa Cấp Tỉnh / Huyện */}
+        {/* Bộ Lọc & Tìm Kiếm */}
         <div className="sticky top-16 z-30 bg-white/95 backdrop-blur-md p-3.5 sm:p-4 rounded-3xl border-2 border-brand-500/30 shadow-float space-y-3">
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
             
@@ -407,7 +504,6 @@ export default function HomePage() {
               />
             </div>
 
-            {/* Lọc Tỉnh/Thành */}
             <div className="relative min-w-[200px]">
               <MapPin className="w-4 h-4 text-sun-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"/>
               <select
@@ -425,7 +521,6 @@ export default function HomePage() {
               </select>
             </div>
 
-            {/* Lọc Quận/Huyện */}
             {selectedProvince !== 'ALL' && (
               <div className="relative min-w-[180px]">
                 <Filter className="w-4 h-4 text-brand-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"/>
@@ -444,7 +539,6 @@ export default function HomePage() {
 
           </div>
 
-          {/* Lọc Category Tabs */}
           <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 no-scrollbar border-t border-warm-200/60 pt-1">
             <div className="flex items-center gap-2">
               {CATEGORIES.map(cat => {
@@ -470,7 +564,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* LƯỚI ĐIỀU ƯỚC */}
+        {/* LƯỚI ĐIỀU ƯỚC: KHÓA TỶ LỆ ẢNH CHỐNG VỠ KHUNG & TÍCH HỢP ADMIN ACTIONS */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredWishes.map(item => {
             const isUrgent = item.urgency === 'urgent' || item.urgency_level === 'urgent';
@@ -478,29 +572,31 @@ export default function HomePage() {
             const reasonText = item.reason || item.reason_description || 'Hoàn cảnh khó khăn cần hỗ trợ thiết bị.';
             const pledgeText = item.honor_commitment || item.commitment_pledge || 'Cam kết bảo quản tốt và trao lại.';
             const provName = VIETNAM_PROVINCES.find(p => p.code === item.province_code)?.name || 'Đà Nẵng';
-            const badgeText = normalizeCategoryLabel(item.category);
-            const resolvedImg = item.imageUrl || CATEGORY_FALLBACK_IMAGES[item.category] || CATEGORY_FALLBACK_IMAGES['bicycle'];
+            const effectiveCat = inferCategory(item.title, item.category);
+            const badgeText = normalizeCategoryLabel(effectiveCat);
+            const resolvedImg = item.imageUrl || CATEGORY_FALLBACK_IMAGES[effectiveCat] || CATEGORY_FALLBACK_IMAGES['bicycle'];
 
             return (
               <div 
                 key={item.id} 
-                className="bg-white rounded-3xl border border-warm-200 overflow-hidden shadow-soft flex flex-col justify-between group hover:border-brand-500 hover:shadow-xl transition-all cursor-pointer"
+                className="bg-white rounded-3xl border border-warm-200 overflow-hidden shadow-soft flex flex-col justify-between group hover:border-brand-500 hover:shadow-xl transition-all cursor-pointer relative"
                 onClick={() => setDetailWish(item)}
               >
-                <div className="relative h-44 overflow-hidden">
-                  <img src={resolvedImg} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
-                  <div className="absolute top-3 left-3 right-3 flex justify-between items-center">
+                {/* Khung ảnh cố định tỷ lệ 16:10 */}
+                <div className="relative aspect-[16/10] overflow-hidden bg-warm-100">
+                  <img 
+                    src={resolvedImg} 
+                    alt={item.title} 
+                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                  />
+                  
+                  {/* Cụm huy hiệu & Nút Admin nhanh */}
+                  <div className="absolute top-3 left-3 right-3 flex justify-between items-center gap-1.5">
                     <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-white/95 text-brand-800 uppercase shadow-2xs">
                       {badgeText}
                     </span>
+
                     <div className="flex gap-1.5 items-center">
-                      <button
-                        onClick={(e) => handleAdminQuickDelete(e, item.id)}
-                        className="px-2 py-0.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[10px] font-black shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
-                        title="Xóa vĩnh viễn tin này khỏi hệ thống"
-                      >
-                        ✕ Xóa
-                      </button>
                       {isPending && (
                         <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-amber-500 text-white shadow-2xs">
                           Chờ Duyệt
@@ -510,6 +606,26 @@ export default function HomePage() {
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black bg-red-600 text-white shadow-2xs">
                           <AlertCircle className="w-3 h-3"/> Cấp Thiết
                         </span>
+                      )}
+
+                      {/* Công cụ Admin Quản Trị Tại Chỗ */}
+                      {isSuperAdmin && (
+                        <div className="flex gap-1 bg-black/60 backdrop-blur-xs p-1 rounded-xl">
+                          <button
+                            onClick={(e) => triggerQuickImageChange(e, item.id)}
+                            className="p-1.5 rounded-lg bg-white/90 hover:bg-white text-warm-900 text-[10px] font-bold shadow-xs transition-all cursor-pointer"
+                            title="Đổi ảnh món quà này"
+                          >
+                            <Camera className="w-3 h-3 text-brand-600"/>
+                          </button>
+                          <button
+                            onClick={(e) => handleAdminQuickDelete(e, item.id)}
+                            className="p-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold shadow-xs transition-all cursor-pointer"
+                            title="Xóa vĩnh viễn tin này"
+                          >
+                            <Trash2 className="w-3 h-3"/>
+                          </button>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -537,7 +653,7 @@ export default function HomePage() {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => openChatModal(item)}
-                        className="p-2 rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-800 text-xs font-bold transition-all"
+                        className="p-2 rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-800 text-xs font-bold transition-all cursor-pointer"
                         title="Nhắn tin trao đổi trước"
                       >
                         <MessageSquare className="w-4 h-4 text-brand-700"/>
@@ -545,7 +661,7 @@ export default function HomePage() {
 
                       <button
                         onClick={() => handleOpenClaimModal(item)}
-                        className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 shrink-0"
+                        className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer"
                       >
                         <Heart className="w-3.5 h-3.5 fill-current"/>
                         <span>Trao Tặng</span>
@@ -559,14 +675,159 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. MODAL CHI TIẾT ƯỚC NGUYỆN */}
+      {/* MODAL SỬA HERO BANNER CMS (DÀNH RIÊNG CHO SUPER ADMIN) */}
+      {showEditCMSModal && (
+        <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-warm-200 max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center border-b border-warm-100 pb-3">
+              <h3 className="font-black text-warm-900 text-base flex items-center gap-2">
+                <Edit3 className="w-4 h-4 text-brand-600"/>
+                <span>Quản Trị Visual CMS: Chỉnh Sửa Hero Banner</span>
+              </h3>
+              <button onClick={() => setShowEditCMSModal(false)} className="w-8 h-8 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center font-bold cursor-pointer">✕</button>
+            </div>
+
+            <div className="space-y-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-warm-800">Khẩu hiệu Badge nhỏ:</label>
+                <input
+                  type="text"
+                  value={editCMSForm.badge}
+                  onChange={e => setEditCMSForm({ ...editCMSForm, badge: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border-2 border-warm-200 text-xs font-bold text-warm-900 focus:border-brand-600 focus:outline-none"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-warm-800">Dòng tiêu đề chính:</label>
+                  <input
+                    type="text"
+                    value={editCMSForm.titlePrimary}
+                    onChange={e => setEditCMSForm({ ...editCMSForm, titlePrimary: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border-2 border-warm-200 text-xs font-bold text-warm-900 focus:border-brand-600 focus:outline-none"
+                  />
+                </div>
+
+                <div className="space-y-1">
+                  <label className="text-xs font-bold text-warm-800">Dòng tiêu đề nổi bật (Màu xanh):</label>
+                  <input
+                    type="text"
+                    value={editCMSForm.titleHighlight}
+                    onChange={e => setEditCMSForm({ ...editCMSForm, titleHighlight: e.target.value })}
+                    className="w-full p-2.5 rounded-xl border-2 border-brand-300 text-xs font-bold text-brand-900 focus:border-brand-600 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-warm-800">Đoạn văn mô tả sứ mệnh:</label>
+                <textarea
+                  rows={3}
+                  value={editCMSForm.description}
+                  onChange={e => setEditCMSForm({ ...editCMSForm, description: e.target.value })}
+                  className="w-full p-2.5 rounded-xl border-2 border-warm-200 text-xs font-medium text-warm-900 focus:border-brand-600 focus:outline-none"
+                />
+              </div>
+
+              {/* MỤC THAY ẢNH BANNER CÓ NÉN TỰ ĐỘNG */}
+              <div className="p-4 bg-brand-50/50 rounded-2xl border border-brand-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-brand-900 flex items-center gap-1.5">
+                    <Camera className="w-4 h-4 text-brand-600"/>
+                    Hình ảnh Banner (Tự động nén & chống vỡ khung):
+                  </span>
+                  <label className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-black cursor-pointer shadow-xs">
+                    <span>{isCompressing ? 'Đang Tối Ưu...' : 'Tải Ảnh Mới Từ Máy'}</span>
+                    <input type="file" accept="image/*" onChange={handleBannerUpload} className="hidden"/>
+                  </label>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="w-28 h-20 rounded-xl overflow-hidden border-2 border-brand-500 shadow-sm shrink-0">
+                    <img src={editCMSForm.bannerImage} alt="Banner Preview" className="w-full h-full object-cover object-center"/>
+                  </div>
+                  <div className="text-xs space-y-1">
+                    {compressStats ? (
+                      <p className="text-brand-800 font-bold">
+                        ✅ Đã tối ưu từ <span className="line-through text-warm-700">{compressStats.orig}</span> về <strong className="text-brand-700">{compressStats.comp}</strong> (Tốc độ 10/10).
+                      </p>
+                    ) : (
+                      <p className="text-warm-700">Dù bạn tải ảnh 20MB, hệ thống tự động nén nhẹ dưới 90KB để web luôn mượt mà.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="space-y-1 pt-1">
+                  <label className="text-[11px] font-bold text-warm-800">Lời trích dẫn dưới ảnh banner:</label>
+                  <input
+                    type="text"
+                    value={editCMSForm.imageQuote}
+                    onChange={e => setEditCMSForm({ ...editCMSForm, imageQuote: e.target.value })}
+                    className="w-full p-2 rounded-xl border border-brand-200 text-xs font-semibold text-warm-900"
+                  />
+                </div>
+              </div>
+
+              {/* 3 Chỉ số */}
+              <div className="grid grid-cols-3 gap-3">
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-warm-800">Vốn Karma:</label>
+                  <input
+                    type="text"
+                    value={editCMSForm.statKarma}
+                    onChange={e => setEditCMSForm({ ...editCMSForm, statKarma: e.target.value })}
+                    className="w-full p-2 rounded-xl border border-warm-200 text-xs font-bold"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-warm-800">CO2 Đã Giảm:</label>
+                  <input
+                    type="text"
+                    value={editCMSForm.statCO2}
+                    onChange={e => setEditCMSForm({ ...editCMSForm, statCO2: e.target.value })}
+                    className="w-full p-2 rounded-xl border border-warm-200 text-xs font-bold text-sun-700"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[11px] font-bold text-warm-800">Tuần Hoàn:</label>
+                  <input
+                    type="text"
+                    value={editCMSForm.statRecycle}
+                    onChange={e => setEditCMSForm({ ...editCMSForm, statRecycle: e.target.value })}
+                    className="w-full p-2 rounded-xl border border-warm-200 text-xs font-bold text-blue-700"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-warm-100 flex gap-3">
+              <button 
+                onClick={() => setShowEditCMSModal(false)} 
+                className="flex-1 py-2.5 rounded-xl border border-warm-200 text-warm-700 font-bold text-xs cursor-pointer"
+              >
+                Hủy Bỏ
+              </button>
+              <button
+                onClick={handleSaveCMS}
+                className="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-float flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Save className="w-3.5 h-3.5"/>
+                <span>Lưu Giao Diện Live</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL CHI TIẾT ƯỚC NGUYỆN */}
       {detailWish && (
         <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-warm-200 max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-start">
               <div className="space-y-1">
                 <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-brand-50 text-brand-700 border border-brand-200 uppercase">
-                  {normalizeCategoryLabel(detailWish.category)}
+                  {normalizeCategoryLabel(inferCategory(detailWish.title, detailWish.category))}
                 </span>
                 <h2 className="text-2xl font-black text-warm-900 mt-1">{detailWish.title}</h2>
                 <p className="text-xs text-warm-700 flex items-center gap-1">
@@ -574,14 +835,14 @@ export default function HomePage() {
                   <span>Khu vực: <strong>{VIETNAM_PROVINCES.find(p => p.code === detailWish.province_code)?.name || 'Đà Nẵng'}</strong></span>
                 </p>
               </div>
-              <button onClick={() => setDetailWish(null)} className="w-8 h-8 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center font-bold">✕</button>
+              <button onClick={() => setDetailWish(null)} className="w-8 h-8 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center font-bold cursor-pointer">✕</button>
             </div>
 
-            <div className="h-64 rounded-2xl overflow-hidden border border-warm-200">
+            <div className="aspect-[16/10] rounded-2xl overflow-hidden border border-warm-200 bg-warm-900">
               <img 
-                src={detailWish.imageUrl || CATEGORY_FALLBACK_IMAGES[detailWish.category] || CATEGORY_FALLBACK_IMAGES['bicycle']} 
+                src={detailWish.imageUrl || CATEGORY_FALLBACK_IMAGES[inferCategory(detailWish.title, detailWish.category)] || CATEGORY_FALLBACK_IMAGES['bicycle']} 
                 alt={detailWish.title} 
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-center"
               />
             </div>
 
@@ -609,7 +870,7 @@ export default function HomePage() {
                   setDetailWish(null);
                   openChatModal(item);
                 }}
-                className="flex-1 py-3 rounded-2xl bg-warm-100 hover:bg-warm-200 text-warm-900 font-bold text-xs flex items-center justify-center gap-2"
+                className="flex-1 py-3 rounded-2xl bg-warm-100 hover:bg-warm-200 text-warm-900 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"
               >
                 <MessageSquare className="w-4 h-4 text-brand-600"/>
                 <span>Nhắn Tin Tìm Hiểu Trước</span>
@@ -621,7 +882,7 @@ export default function HomePage() {
                   setDetailWish(null);
                   handleOpenClaimModal(item);
                 }}
-                className="flex-1 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-float flex items-center justify-center gap-2"
+                className="flex-1 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-float flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Heart className="w-4 h-4 fill-white"/>
                 <span>Chính Thức Trao Tặng (Angel)</span>
@@ -631,7 +892,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 4. MODAL NHẮN TIN TRAO ĐỔI LƯU BỀN VỮNG */}
+      {/* MODAL NHẮN TIN 1-1 */}
       {chatWish && (
         <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-warm-200 max-w-lg w-full p-6 shadow-2xl space-y-4">
@@ -643,7 +904,7 @@ export default function HomePage() {
                 </h3>
                 <p className="text-[11px] text-warm-700">Ước nguyện: {chatWish.title}</p>
               </div>
-              <button onClick={() => setChatWish(null)} className="w-7 h-7 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center font-bold">✕</button>
+              <button onClick={() => setChatWish(null)} className="w-7 h-7 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center font-bold cursor-pointer">✕</button>
             </div>
 
             <div className="h-48 overflow-y-auto p-3 bg-warm-50 rounded-2xl border border-warm-200 space-y-2 text-xs">
@@ -666,7 +927,7 @@ export default function HomePage() {
                 onKeyDown={e => e.key === 'Enter' && sendChatMessage()}
                 className="flex-1 px-3.5 py-2.5 rounded-xl border border-warm-200 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
               />
-              <button onClick={sendChatMessage} className="px-4 py-2 bg-brand-600 text-white font-bold text-xs rounded-xl flex items-center gap-1 shadow-xs">
+              <button onClick={sendChatMessage} className="px-4 py-2 bg-brand-600 text-white font-bold text-xs rounded-xl flex items-center gap-1 shadow-xs cursor-pointer">
                 <Send className="w-3.5 h-3.5"/> Gửi
               </button>
             </div>
@@ -679,7 +940,7 @@ export default function HomePage() {
                   setChatWish(null);
                   handleOpenClaimModal(item);
                 }}
-                className="px-4 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-xs"
+                className="px-4 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-xs cursor-pointer"
               >
                 Tiến Hành Trao Tặng
               </button>
@@ -688,7 +949,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 5. MODAL YÊU CẦU ĐĂNG NHẬP XÁC THỰC */}
+      {/* MODAL AUTH GATE */}
       {showAuthGateModal && (
         <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border-2 border-brand-500 max-w-md w-full p-6 sm:p-8 shadow-2xl text-center space-y-5">
@@ -698,17 +959,17 @@ export default function HomePage() {
             <div className="space-y-2">
               <h3 className="text-lg font-black text-warm-900">Yêu Cầu Xác Thực Người Trao (Angel)</h3>
               <p className="text-xs text-warm-700 leading-relaxed">
-                Để bảo vệ tính minh bạch và danh dự cho người nhận, vui lòng đăng nhập tài khoản Google để trao gửi quà tặng.
+                Vui lòng đăng nhập tài khoản Google để trao gửi quà tặng và được bảo chứng điểm Karma.
               </p>
             </div>
             <div className="flex gap-3 pt-2">
-              <button onClick={() => setShowAuthGateModal(false)} className="flex-1 py-2.5 rounded-xl border border-warm-200 text-xs font-bold text-warm-700">Hủy Bỏ</button>
+              <button onClick={() => setShowAuthGateModal(false)} className="flex-1 py-2.5 rounded-xl border border-warm-200 text-xs font-bold text-warm-700 cursor-pointer">Hủy Bỏ</button>
               <button
                 onClick={() => {
                   setShowAuthGateModal(false);
                   loginWithGoogle();
                 }}
-                className="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-xs flex items-center justify-center gap-2"
+                className="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-xs flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Đăng Nhập Ngay</span>
               </button>
@@ -717,7 +978,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 6. MODAL XÁC NHẬN KHỚP NỐI */}
+      {/* MODAL KHỚP NỐI TRAO TẶNG */}
       {selectedWish && (
         <div className="fixed inset-0 z-50 bg-warm-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-warm-200 max-w-lg w-full p-6 sm:p-8 shadow-xl space-y-6">
@@ -728,7 +989,7 @@ export default function HomePage() {
                 </span>
                 <h3 className="text-xl font-black text-warm-900">{selectedWish.title}</h3>
               </div>
-              <button onClick={() => setSelectedWish(null)} className="w-8 h-8 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center font-bold">✕</button>
+              <button onClick={() => setSelectedWish(null)} className="w-8 h-8 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center font-bold cursor-pointer">✕</button>
             </div>
 
             {claimSuccess ? (
@@ -761,11 +1022,11 @@ export default function HomePage() {
 
             {!claimSuccess && (
               <div className="flex gap-3 pt-2">
-                <button onClick={() => setSelectedWish(null)} className="flex-1 py-2.5 rounded-xl border border-warm-200 text-warm-700 font-bold text-xs">Hủy Bỏ</button>
+                <button onClick={() => setSelectedWish(null)} className="flex-1 py-2.5 rounded-xl border border-warm-200 text-warm-700 font-bold text-xs cursor-pointer">Hủy Bỏ</button>
                 <button
                   disabled={claiming}
                   onClick={() => handleConfirmClaim(selectedWish.id)}
-                  className="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-xs disabled:opacity-50"
+                  className="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-bold text-xs shadow-xs disabled:opacity-50 cursor-pointer"
                 >
                   {claiming ? 'Đang Khóa Hàng ACID...' : 'Xác Nhận Trao Tặng (Angel)'}
                 </button>
