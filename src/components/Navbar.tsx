@@ -60,13 +60,33 @@ export default function Navbar() {
     };
   }, []);
 
-  // Phát tín hiệu tìm kiếm toàn cục đến Trang Chủ
+  // Phát tín hiệu tìm kiếm toàn cục & tự động cuộn đến Cây Nguyện Ước
+  const handleSearchFocus = () => {
+    if (pathname !== '/') {
+      router.push('/#wishlist-section');
+      return;
+    }
+    const el = document.getElementById('wishlist-section');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
   const handleSearchChange = (val: string) => {
     setSearchQuery(val);
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new CustomEvent('sova_global_search_change', {
         detail: { query: val, province: selectedProvince }
       }));
+    }
+    if (pathname === '/') {
+      const el = document.getElementById('wishlist-section');
+      if (el) {
+        const rect = el.getBoundingClientRect();
+        if (rect.top > 250) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+      }
     }
   };
 
@@ -86,6 +106,7 @@ export default function Navbar() {
         detail: { query: searchQuery, province: prov }
       }));
     }
+    handleSearchFocus();
   };
 
   return (
@@ -118,6 +139,8 @@ export default function Navbar() {
                 type="text"
                 placeholder="Tìm kiếm ước nguyện (xe đạp, laptop, máy may...)"
                 value={searchQuery}
+                onFocus={handleSearchFocus}
+                onClick={handleSearchFocus}
                 onChange={e => handleSearchChange(e.target.value)}
                 className="w-full bg-transparent text-xs sm:text-sm font-bold text-warm-900 focus:outline-none placeholder:text-warm-400 placeholder:font-normal"
               />
@@ -152,7 +175,10 @@ export default function Navbar() {
 
             {/* Nút Tìm Kiếm Nổi Bật */}
             <button
-              onClick={() => handleSearchChange(searchQuery)}
+              onClick={() => {
+                handleSearchChange(searchQuery);
+                handleSearchFocus();
+              }}
               className="h-9 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs flex items-center justify-center gap-1.5 shadow-xs hover:scale-[1.02] transition-all shrink-0 cursor-pointer"
             >
               <Search className="w-3.5 h-3.5"/>
@@ -370,6 +396,8 @@ export default function Navbar() {
                 type="text"
                 placeholder="Tìm xe đạp, laptop, máy may..."
                 value={searchQuery}
+                onFocus={handleSearchFocus}
+                onClick={handleSearchFocus}
                 onChange={e => handleSearchChange(e.target.value)}
                 className="w-full bg-transparent text-xs font-bold text-warm-900 focus:outline-none placeholder:text-warm-400"
               />
@@ -400,7 +428,10 @@ export default function Navbar() {
 
             {/* Nút Tìm Kiếm Xanh */}
             <button
-              onClick={() => handleSearchChange(searchQuery)}
+              onClick={() => {
+                handleSearchChange(searchQuery);
+                handleSearchFocus();
+              }}
               className="w-8 h-8 rounded-xl bg-brand-600 text-white flex items-center justify-center shrink-0 shadow-xs active:scale-95 cursor-pointer"
             >
               <Search className="w-3.5 h-3.5"/>

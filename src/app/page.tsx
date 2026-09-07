@@ -393,7 +393,7 @@ export default function HomePage() {
       </section>
 
       {/* 2. CÂY NGUYỆN ƯỚC */}
-      <section id="wishlist-section" className="space-y-6 pt-2">
+      <section id="wishlist-section" className="space-y-6 pt-2 scroll-mt-32 md:scroll-mt-24">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <span className="text-xs font-black uppercase tracking-wider text-brand-700 flex items-center gap-1.5">
@@ -437,8 +437,31 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* LƯỚI ĐIỀU ƯỚC: HOÀN TOÀN SẠCH NÚT ADMIN */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Băng thông báo tìm kiếm đang kích hoạt */}
+        {searchQuery && (
+          <div className="flex items-center justify-between bg-brand-50/80 border border-brand-200 px-4 py-2.5 rounded-2xl text-xs animate-in fade-in shadow-2xs">
+            <span className="font-bold text-brand-950 flex items-center gap-1.5">
+              <Search className="w-3.5 h-3.5 text-brand-600 shrink-0"/>
+              <span>Đang lọc theo từ khóa: <strong className="text-brand-700 font-black">"{searchQuery}"</strong> ({filteredWishes.length} hoàn cảnh)</span>
+            </span>
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                if (typeof window !== 'undefined') {
+                  window.dispatchEvent(new CustomEvent('sova_global_search_change', {
+                    detail: { query: '', province: selectedProvince }
+                  }));
+                }
+              }}
+              className="text-xs font-black text-brand-700 hover:text-brand-900 underline ml-2 cursor-pointer shrink-0"
+            >
+              Xóa bộ lọc
+            </button>
+          </div>
+        )}
+
+        {/* LƯỚI ĐIỀU ƯỚC: 2 CỘT CHUẨN TRÊN MOBILE, 3 CỘT TRÊN DESKTOP */}
+        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4 md:gap-6">
           {filteredWishes.map(item => {
             const isUrgent = item.urgency === 'urgent' || item.urgency_level === 'urgent';
             const isPending = item.status === 'pending';
@@ -452,69 +475,70 @@ export default function HomePage() {
             return (
               <div 
                 key={item.id} 
-                className="bg-white rounded-3xl border border-warm-200 overflow-hidden shadow-soft flex flex-col justify-between group hover:border-brand-500 hover:shadow-xl transition-all cursor-pointer relative"
+                className="bg-white rounded-2xl sm:rounded-3xl border border-warm-200 overflow-hidden shadow-soft flex flex-col justify-between group hover:border-brand-500 hover:shadow-xl transition-all cursor-pointer relative"
                 onClick={() => setDetailWish(item)}
               >
-                <div className="relative aspect-[16/10] overflow-hidden bg-warm-100">
+                <div className="relative aspect-[4/3] sm:aspect-[16/10] overflow-hidden bg-warm-100">
                   <img 
                     src={resolvedImg} 
                     alt={item.title} 
                     className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                   />
                   
-                  <div className="absolute top-3 left-3 right-3 flex justify-between items-center gap-1.5">
-                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-white/95 text-brand-800 uppercase shadow-2xs">
+                  <div className="absolute top-2 left-2 right-2 sm:top-3 sm:left-3 sm:right-3 flex justify-between items-center gap-1">
+                    <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-black bg-white/95 text-brand-800 uppercase shadow-2xs backdrop-blur-xs">
                       {badgeText}
                     </span>
 
-                    <div className="flex gap-1.5 items-center">
+                    <div className="flex gap-1 items-center">
                       {isPending && (
-                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-amber-500 text-white shadow-2xs">
+                        <span className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-black bg-amber-500 text-white shadow-2xs">
                           Chờ Duyệt
                         </span>
                       )}
                       {isUrgent && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black bg-red-600 text-white shadow-2xs">
-                          <AlertCircle className="w-3 h-3"/> Cấp Thiết
+                        <span className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-black bg-red-600 text-white shadow-2xs">
+                          <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3"/> 
+                          <span className="hidden xs:inline">Cấp Thiết</span>
                         </span>
                       )}
                     </div>
                   </div>
                 </div>
 
-                <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
-                  <div className="space-y-1.5">
-                    <h3 className="font-black text-warm-900 text-base leading-snug group-hover:text-brand-700">
+                <div className="p-2.5 sm:p-5 space-y-2 sm:space-y-3 flex-1 flex flex-col justify-between">
+                  <div className="space-y-1">
+                    <h3 className="font-black text-warm-900 text-xs sm:text-base leading-snug group-hover:text-brand-700 line-clamp-2">
                       {item.title}
                     </h3>
-                    <p className="text-xs text-warm-700 line-clamp-2 leading-relaxed">{reasonText}</p>
+                    <p className="text-[11px] sm:text-xs text-warm-700 line-clamp-2 leading-relaxed">{reasonText}</p>
                   </div>
 
-                  <div className="p-3 bg-brand-50/50 rounded-2xl border border-brand-100 text-xs space-y-1">
-                    <span className="text-[10px] font-extrabold uppercase text-brand-800">Lời Cam Kết Danh Dự:</span>
-                    <p className="italic text-brand-950 text-[11px] line-clamp-2">"{pledgeText}"</p>
+                  <div className="p-2 sm:p-3 bg-brand-50/50 rounded-xl sm:rounded-2xl border border-brand-100 text-[10px] sm:text-xs space-y-0.5">
+                    <span className="text-[8px] sm:text-[10px] font-extrabold uppercase text-brand-800 block">Lời Cam Kết Danh Dự:</span>
+                    <p className="italic text-brand-950 text-[10px] sm:text-[11px] line-clamp-1 sm:line-clamp-2">"{pledgeText}"</p>
                   </div>
 
-                  <div className="pt-3 border-t border-warm-100 flex items-center justify-between gap-2" onClick={e => e.stopPropagation()}>
-                    <div className="flex items-center gap-1 text-[11px] font-bold text-warm-700 truncate">
-                      <Navigation className="w-3.5 h-3.5 text-brand-600 shrink-0"/>
+                  <div className="pt-2 sm:pt-3 border-t border-warm-100 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2" onClick={e => e.stopPropagation()}>
+                    <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-warm-700 truncate">
+                      <Navigation className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-brand-600 shrink-0"/>
                       <span className="truncate">{provName}</span>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end">
                       <button
                         onClick={() => openChatModal(item)}
-                        className="p-2 rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-800 text-xs font-bold transition-all cursor-pointer"
+                        className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-800 text-xs font-bold transition-all cursor-pointer"
                         title="Nhắn tin trao đổi trước"
                       >
-                        <MessageSquare className="w-4 h-4 text-brand-700"/>
+                        <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-700"/>
                       </button>
 
                       <button
                         onClick={() => handleOpenClaimModal(item)}
-                        className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 shrink-0 cursor-pointer"
+                        className="flex-1 sm:flex-none px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-[11px] sm:text-xs font-bold shadow-xs flex items-center justify-center gap-1 shrink-0 cursor-pointer"
                       >
-                        <Heart className="w-3.5 h-3.5 fill-current"/>
+                        <Heart className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current"/>
                         <span>Trao Tặng</span>
                       </button>
                     </div>
