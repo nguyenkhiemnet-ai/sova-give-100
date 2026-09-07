@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { 
@@ -8,14 +8,13 @@ import {
   normalizeCategoryLabel, inferCategory 
 } from '@/lib/provinces';
 import { getActiveUser, loginWithGoogle, UserProfile } from '@/lib/auth';
-import { getHeroCMS, saveHeroCMS, HeroCMSData, compressImageToWebP } from '@/lib/cms';
+import { getHeroCMS, HeroCMSData } from '@/lib/cms';
 import { 
   Sparkles, Heart, Search, MapPin, Filter, Leaf, 
   Clock, Repeat, AlertCircle, ShieldCheck, CheckCircle2,
   Laptop, Bike, Scissors, BookOpen, Wrench, Navigation,
   ArrowUp, Lock, MessageSquare, Send, X, ExternalLink,
-  Edit3, Camera, Trash2, Settings, Save, KeyRound, 
-  Share2, Check, Copy, ShieldAlert, Eye, EyeOff
+  Share2, Check, Copy
 } from 'lucide-react';
 
 interface WishItem {
@@ -51,18 +50,8 @@ export default function HomePage() {
   const [selectedProvince, setSelectedProvince] = useState('ALL');
   const [selectedDistrict, setSelectedDistrict] = useState('ALL');
 
-  // LỚP BẢO MẬT MASTER PIN DÀNH CHO QUẢN TRỊ VIÊN
-  const [adminModeUnlocked, setAdminModeUnlocked] = useState(false);
-  const [showPinModal, setShowPinModal] = useState(false);
-  const [pinInput, setPinInput] = useState('');
-  const [pinError, setPinError] = useState(false);
-
-  // Live Visual CMS Banner
+  // Đọc nội dung động từ CMS
   const [heroCMS, setHeroCMS] = useState<HeroCMSData>(getHeroCMS());
-  const [showEditCMSModal, setShowEditCMSModal] = useState(false);
-  const [editCMSForm, setEditCMSForm] = useState<HeroCMSData>(heroCMS);
-  const [compressStats, setCompressStats] = useState<{ orig: string; comp: string } | null>(null);
-  const [isCompressing, setIsCompressing] = useState(false);
 
   // Modal Chi Tiết & Trao Đổi
   const [detailWish, setDetailWish] = useState<WishItem | null>(null);
@@ -77,24 +66,11 @@ export default function HomePage() {
   const [showAuthGateModal, setShowAuthGateModal] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
-  // Đổi ảnh nhanh trên Card
-  const [quickImageWishId, setQuickImageWishId] = useState<string | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
-  // Trạng thái copy link MXH
+  // Copy link chia sẻ
   const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
-    // KHÔNG gán mặc định ADMIN_USER để chống rò rỉ quyền quản trị
-    const user = getActiveUser();
-    setCurrentUser(user);
-
-    // Kiểm tra trạng thái Master PIN trong phiên làm việc
-    if (typeof window !== 'undefined') {
-      const isPinActive = sessionStorage.getItem('SOVA_MASTER_ADMIN_UNLOCKED') === 'true';
-      setAdminModeUnlocked(isPinActive);
-    }
-
+    setCurrentUser(getActiveUser());
     setHeroCMS(getHeroCMS());
     fetchCombinedWishes();
 
@@ -108,27 +84,6 @@ export default function HomePage() {
       window.removeEventListener('sova_cms_updated', handleCMSUpdate);
     };
   }, []);
-
-  // Xác thực Master PIN
-  const handleVerifyPin = () => {
-    // Mật mã quản trị viên: 21081984 hoặc 1984
-    if (pinInput === '21081984' || pinInput === '1984') {
-      sessionStorage.setItem('SOVA_MASTER_ADMIN_UNLOCKED', 'true');
-      setAdminModeUnlocked(true);
-      setShowPinModal(false);
-      setPinInput('');
-      setPinError(false);
-      alert('Đã kích hoạt chế độ Quản Trị Tối Cao! Các công cụ sửa bài, đổi ảnh, xóa tin đã sẵn sàng.');
-    } else {
-      setPinError(true);
-    }
-  };
-
-  const handleLockAdminMode = () => {
-    sessionStorage.removeItem('SOVA_MASTER_ADMIN_UNLOCKED');
-    setAdminModeUnlocked(false);
-    alert('Đã khóa chế độ Quản Trị! Toàn bộ giao diện đã chuyển về góc nhìn người dùng chuẩn.');
-  };
 
   async function fetchCombinedWishes() {
     let serverItems: WishItem[] = [];
@@ -199,89 +154,9 @@ export default function HomePage() {
     setWishes(Array.from(mergedMap.values()));
   }
 
-  // Admin Xóa Nhanh
-  const handleAdminQuickDelete = async (e: React.MouseEvent, wishId: string) => {
-    e.stopPropagation();
-    if (!adminModeUnlocked) return;
-    if (!confirm('Quản trị viên: Bạn có chắc chắn muốn xóa vĩnh viễn tin này khỏi Cây Nguyện Ước?')) return;
-    
-    try {
-      if (!wishId.startsWith('opt-')) {
-        await supabase.from('wishes').delete().eq('id', wishId);
-      }
-      let deletedIds: string[] = [];
-      try { deletedIds = JSON.parse(localStorage.getItem('SOVA_DELETED_WISH_IDS') || '[]'); } catch {}
-      if (!deletedIds.includes(wishId)) deletedIds.push(wishId);
-      localStorage.setItem('SOVA_DELETED_WISH_IDS', JSON.stringify(deletedIds));
-
-      const stored = localStorage.getItem('SOVA_OPTIMISTIC_WISHES');
-      if (stored) {
-        const list: any[] = JSON.parse(stored);
-        localStorage.setItem('SOVA_OPTIMISTIC_WISHES', JSON.stringify(list.filter(item => item.id !== wishId)));
-      }
-      localStorage.removeItem(`SOVA_WISH_IMG_${wishId}`);
-
-      setWishes(prev => prev.filter(w => w.id !== wishId));
-    } catch {
-      setWishes(prev => prev.filter(w => w.id !== wishId));
-    }
-  };
-
-  const triggerQuickImageChange = (e: React.MouseEvent, wishId: string) => {
-    e.stopPropagation();
-    if (!adminModeUnlocked) return;
-    setQuickImageWishId(wishId);
-    fileInputRef.current?.click();
-  };
-
-  const handleCardImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file || !quickImageWishId) return;
-
-    try {
-      const { dataUrl } = await compressImageToWebP(file);
-      localStorage.setItem(`SOVA_WISH_IMG_${quickImageWishId}`, dataUrl);
-      
-      let updatedDict: Record<string, any> = {};
-      try { updatedDict = JSON.parse(localStorage.getItem('SOVA_UPDATED_WISH_DICT') || '{}'); } catch {}
-      updatedDict[quickImageWishId] = { ...(updatedDict[quickImageWishId] || {}), imageUrl: dataUrl };
-      localStorage.setItem('SOVA_UPDATED_WISH_DICT', JSON.stringify(updatedDict));
-
-      setWishes(prev => prev.map(w => w.id === quickImageWishId ? { ...w, imageUrl: dataUrl } : w));
-      alert('Đã thay đổi ảnh thành công!');
-    } catch (err: any) {
-      alert('Lỗi nén ảnh: ' + err.message);
-    } finally {
-      setQuickImageWishId(null);
-    }
-  };
-
-  const handleSaveCMS = () => {
-    saveHeroCMS(editCMSForm);
-    setHeroCMS(editCMSForm);
-    setShowEditCMSModal(false);
-    alert('Đã cập nhật giao diện Hero Banner thành công!');
-  };
-
-  const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setIsCompressing(true);
-    try {
-      const { dataUrl, originalSize, compressedSize } = await compressImageToWebP(file);
-      setEditCMSForm(prev => ({ ...prev, bannerImage: dataUrl }));
-      setCompressStats({ orig: originalSize, comp: compressedSize });
-    } catch (err: any) {
-      alert('Lỗi nén ảnh: ' + err.message);
-    } finally {
-      setIsCompressing(false);
-    }
-  };
-
   const handleOpenClaimModal = (item: WishItem) => {
-    const currentUser = getActiveUser();
-    if (!currentUser) {
+    const user = getActiveUser();
+    if (!user) {
       setShowAuthGateModal(true);
       return;
     }
@@ -307,8 +182,8 @@ export default function HomePage() {
   };
 
   const openChatModal = (item: WishItem) => {
-    const currentUser = getActiveUser();
-    if (!currentUser) {
+    const user = getActiveUser();
+    if (!user) {
       setShowAuthGateModal(true);
       return;
     }
@@ -346,7 +221,6 @@ export default function HomePage() {
     }, 1200);
   };
 
-  // Chia sẻ mạng xã hội
   const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://sova-give-100-app.pages.dev';
   const shareTitle = "SOVA GIVE 100 • Nền Tảng Tuần Hoàn Sinh Kế & Tri Thức 0-VND";
 
@@ -386,14 +260,6 @@ export default function HomePage() {
   return (
     <div className="space-y-16 max-w-6xl mx-auto pb-8">
       
-      <input 
-        type="file" 
-        accept="image/*" 
-        ref={fileInputRef} 
-        onChange={handleCardImageUpload} 
-        className="hidden" 
-      />
-
       {showBackToTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
@@ -403,62 +269,8 @@ export default function HomePage() {
         </button>
       )}
 
-      {/* THANH ĐIỀU KHIỂN BẢO MẬT QUẢN TRỊ VIÊN (TOP BAR) */}
-      <div className="flex items-center justify-between bg-white border border-warm-200 px-4 py-2.5 rounded-2xl shadow-2xs">
-        <div className="flex items-center gap-2">
-          <div className={`w-2.5 h-2.5 rounded-full ${adminModeUnlocked ? 'bg-brand-500 animate-pulse' : 'bg-warm-400'}`}/>
-          <span className="text-xs font-bold text-warm-800">
-            {adminModeUnlocked ? (
-              <span className="text-brand-700 font-black">Chế Độ Quản Trị Tối Cao: ĐÃ MỞ KHÓA</span>
-            ) : (
-              <span>Chế Độ Người Dùng Chuẩn (Đã Khóa Chỉnh Sửa)</span>
-            )}
-          </span>
-        </div>
-
-        {adminModeUnlocked ? (
-          <button
-            onClick={handleLockAdminMode}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-800 text-[11px] font-bold transition-all cursor-pointer"
-          >
-            <Lock className="w-3.5 h-3.5 text-warm-700"/>
-            <span>Khóa Chế Độ Quản Trị</span>
-          </button>
-        ) : (
-          <button
-            onClick={() => {
-              setPinError(false);
-              setPinInput('');
-              setShowPinModal(true);
-            }}
-            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-800 text-[11px] font-black border border-brand-200 transition-all cursor-pointer"
-          >
-            <KeyRound className="w-3.5 h-3.5 text-brand-600"/>
-            <span>Nhập Master PIN Quản Trị</span>
-          </button>
-        )}
-      </div>
-
-      {/* 1. HERO BANNER LIVE CMS */}
+      {/* 1. HERO BANNER THUẦN KHIẾT (HOÀN TOÀN KHÔNG CÓ NÚT ADMIN) */}
       <section className="relative overflow-hidden bg-gradient-to-br from-brand-50 via-white to-sun-50 rounded-3xl border border-warm-200 p-6 sm:p-12 lg:p-14 shadow-soft">
-        
-        {/* Nút Sửa Banner: CHỈ HIỆN KHI ĐÃ MỞ KHÓA MASTER PIN */}
-        {adminModeUnlocked && (
-          <div className="absolute top-4 right-4 z-20 animate-in fade-in">
-            <button
-              onClick={() => {
-                setEditCMSForm(heroCMS);
-                setCompressStats(null);
-                setShowEditCMSModal(true);
-              }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-warm-900/90 hover:bg-brand-700 text-white text-xs font-black shadow-float transition-all backdrop-blur-sm cursor-pointer"
-            >
-              <Edit3 className="w-3.5 h-3.5 text-sun-400"/>
-              <span>Sửa Hero Banner & Khẩu Hiệu</span>
-            </button>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-7 space-y-6">
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-black bg-white text-brand-700 border border-brand-200 shadow-2xs">
@@ -566,7 +378,7 @@ export default function HomePage() {
           </span>
         </div>
 
-        {/* Bộ Lọc & Tìm Kiếm */}
+        {/* Thanh Tìm Kiếm & Lọc */}
         <div className="sticky top-16 z-30 bg-white/95 backdrop-blur-md p-3.5 sm:p-4 rounded-3xl border-2 border-brand-500/30 shadow-float space-y-3">
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
             
@@ -641,7 +453,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* LƯỚI ĐIỀU ƯỚC: NÚT QUẢN TRỊ CHỈ HIỆN KHI ĐÃ MỞ KHÓA MASTER PIN */}
+        {/* LƯỚI ĐIỀU ƯỚC: HOÀN TOÀN SẠCH NÚT ADMIN */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredWishes.map(item => {
             const isUrgent = item.urgency === 'urgent' || item.urgency_level === 'urgent';
@@ -681,26 +493,6 @@ export default function HomePage() {
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black bg-red-600 text-white shadow-2xs">
                           <AlertCircle className="w-3 h-3"/> Cấp Thiết
                         </span>
-                      )}
-
-                      {/* CÁC NÚT ADMIN: CHỈ HIỂN THỊ KHI ĐÃ NHẬP MASTER PIN */}
-                      {adminModeUnlocked && (
-                        <div className="flex gap-1 bg-black/70 backdrop-blur-xs p-1 rounded-xl animate-in fade-in">
-                          <button
-                            onClick={(e) => triggerQuickImageChange(e, item.id)}
-                            className="p-1.5 rounded-lg bg-white/90 hover:bg-white text-warm-900 text-[10px] font-bold shadow-xs cursor-pointer"
-                            title="Đổi ảnh món quà này"
-                          >
-                            <Camera className="w-3 h-3 text-brand-600"/>
-                          </button>
-                          <button
-                            onClick={(e) => handleAdminQuickDelete(e, item.id)}
-                            className="p-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold shadow-xs cursor-pointer"
-                            title="Xóa vĩnh viễn tin này"
-                          >
-                            <Trash2 className="w-3 h-3"/>
-                          </button>
-                        </div>
                       )}
                     </div>
                   </div>
@@ -750,7 +542,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. CHÂN TRANG: KHU VỰC CHIA SẺ MẠNG XÃ HỘI (SOCIAL SHARE HUB) */}
+      {/* 3. CHÂN TRANG: CHIA SẺ MẠNG XÃ HỘI */}
       <footer className="bg-gradient-to-br from-brand-50/80 via-white to-warm-50 rounded-3xl border-2 border-brand-200 p-8 sm:p-10 shadow-soft text-center space-y-6">
         <div className="max-w-xl mx-auto space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100 text-brand-800 text-xs font-black uppercase">
@@ -761,13 +553,11 @@ export default function HomePage() {
             Một Lần Chia Sẻ • Một Tương Lai Được Thắp Sáng
           </h3>
           <p className="text-xs text-warm-700 leading-relaxed font-medium">
-            Hãy gửi đường link SOVA GIVE 100 tới người thân, bạn bè hoặc các hội nhóm thiện nguyện để những chiếc máy tính, xe đạp cũ tìm đúng người cần nhất.
+            Hãy gửi đường link SOVA GIVE 100 tới bạn bè hoặc các hội đồng hương để những chiếc xe đạp, máy tính cũ tìm đúng người cần nhất.
           </p>
         </div>
 
-        {/* Các nút bấm chia sẻ MXH 1-chạm */}
         <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
-          {/* Facebook */}
           <a
             href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
             target="_blank"
@@ -777,7 +567,6 @@ export default function HomePage() {
             <span>Facebook</span>
           </a>
 
-          {/* Zalo */}
           <a
             href={`https://zalo.me/share?url=${encodeURIComponent(shareUrl)}`}
             target="_blank"
@@ -787,7 +576,6 @@ export default function HomePage() {
             <span>Zalo</span>
           </a>
 
-          {/* Telegram */}
           <a
             href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`}
             target="_blank"
@@ -797,7 +585,6 @@ export default function HomePage() {
             <span>Telegram</span>
           </a>
 
-          {/* Nút Sao Chép Link Trực Tiếp */}
           <button
             onClick={handleCopyShareLink}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white hover:bg-warm-100 text-warm-900 border-2 border-warm-300 text-xs font-black shadow-xs transition-all hover:scale-105 cursor-pointer"
@@ -821,204 +608,6 @@ export default function HomePage() {
           <span>Bảo mật danh dự công dân theo Nghị định 13/2023/NĐ-CP</span>
         </div>
       </footer>
-
-      {/* POPUP NHẬP MASTER PIN XÁC THỰC QUẢN TRỊ VIÊN */}
-      {showPinModal && (
-        <div className="fixed inset-0 z-50 bg-warm-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
-          <div className="bg-white rounded-3xl border-2 border-brand-500 max-w-sm w-full p-6 shadow-2xl space-y-5 text-center">
-            <div className="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 mx-auto flex items-center justify-center ring-8 ring-brand-100">
-              <ShieldAlert className="w-7 h-7"/>
-            </div>
-
-            <div className="space-y-1.5">
-              <h3 className="text-lg font-black text-warm-900">Xác Thực Quản Trị Tối Cao</h3>
-              <p className="text-xs text-warm-700">
-                Nhập mã Master PIN để mở khóa quyền sửa nội dung, thay ảnh và xóa tin trên toàn bộ trang.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <input
-                type="password"
-                placeholder="Nhập mã PIN bí mật..."
-                value={pinInput}
-                onChange={e => {
-                  setPinInput(e.target.value);
-                  setPinError(false);
-                }}
-                onKeyDown={e => e.key === 'Enter' && handleVerifyPin()}
-                className={`w-full p-3 rounded-2xl border-2 text-center text-sm font-mono tracking-widest font-black focus:outline-none ${
-                  pinError ? 'border-red-500 bg-red-50/50' : 'border-warm-200 focus:border-brand-600'
-                }`}
-                autoFocus
-              />
-              {pinError && (
-                <p className="text-[11px] font-bold text-red-600">
-                  Mã PIN không chính xác! Vui lòng thử lại.
-                </p>
-              )}
-            </div>
-
-            <div className="flex gap-2.5 pt-1">
-              <button
-                onClick={() => setShowPinModal(false)}
-                className="flex-1 py-2.5 rounded-xl border border-warm-200 text-warm-700 text-xs font-bold hover:bg-warm-100 cursor-pointer"
-              >
-                Hủy Bỏ
-              </button>
-              <button
-                onClick={handleVerifyPin}
-                className="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-xs cursor-pointer"
-              >
-                Mở Khóa
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL SỬA HERO BANNER CMS */}
-      {showEditCMSModal && (
-        <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-warm-200 max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center border-b border-warm-100 pb-3">
-              <h3 className="font-black text-warm-900 text-base flex items-center gap-2">
-                <Edit3 className="w-4 h-4 text-brand-600"/>
-                <span>Quản Trị Visual CMS: Chỉnh Sửa Hero Banner</span>
-              </h3>
-              <button onClick={() => setShowEditCMSModal(false)} className="w-8 h-8 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center font-bold cursor-pointer">✕</button>
-            </div>
-
-            <div className="space-y-4">
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-warm-800">Khẩu hiệu Badge nhỏ:</label>
-                <input
-                  type="text"
-                  value={editCMSForm.badge}
-                  onChange={e => setEditCMSForm({ ...editCMSForm, badge: e.target.value })}
-                  className="w-full p-2.5 rounded-xl border-2 border-warm-200 text-xs font-bold text-warm-900 focus:border-brand-600 focus:outline-none"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-warm-800">Dòng tiêu đề chính:</label>
-                  <input
-                    type="text"
-                    value={editCMSForm.titlePrimary}
-                    onChange={e => setEditCMSForm({ ...editCMSForm, titlePrimary: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border-2 border-warm-200 text-xs font-bold text-warm-900 focus:border-brand-600 focus:outline-none"
-                  />
-                </div>
-
-                <div className="space-y-1">
-                  <label className="text-xs font-bold text-warm-800">Dòng tiêu đề nổi bật (Màu xanh):</label>
-                  <input
-                    type="text"
-                    value={editCMSForm.titleHighlight}
-                    onChange={e => setEditCMSForm({ ...editCMSForm, titleHighlight: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border-2 border-brand-300 text-xs font-bold text-brand-900 focus:border-brand-600 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-1">
-                <label className="text-xs font-bold text-warm-800">Đoạn văn mô tả sứ mệnh:</label>
-                <textarea
-                  rows={3}
-                  value={editCMSForm.description}
-                  onChange={e => setEditCMSForm({ ...editCMSForm, description: e.target.value })}
-                  className="w-full p-2.5 rounded-xl border-2 border-warm-200 text-xs font-medium text-warm-900 focus:border-brand-600 focus:outline-none"
-                />
-              </div>
-
-              <div className="p-4 bg-brand-50/50 rounded-2xl border border-brand-200 space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-black text-brand-900 flex items-center gap-1.5">
-                    <Camera className="w-4 h-4 text-brand-600"/>
-                    Hình ảnh Banner (Tự động nén & chống vỡ khung):
-                  </span>
-                  <label className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-black cursor-pointer shadow-xs">
-                    <span>{isCompressing ? 'Đang Tối Ưu...' : 'Tải Ảnh Mới Từ Máy'}</span>
-                    <input type="file" accept="image/*" onChange={handleBannerUpload} className="hidden"/>
-                  </label>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="w-28 h-20 rounded-xl overflow-hidden border-2 border-brand-500 shadow-sm shrink-0">
-                    <img src={editCMSForm.bannerImage} alt="Banner Preview" className="w-full h-full object-cover object-center"/>
-                  </div>
-                  <div className="text-xs space-y-1">
-                    {compressStats ? (
-                      <p className="text-brand-800 font-bold">
-                        ✅ Đã tối ưu từ <span className="line-through text-warm-700">{compressStats.orig}</span> về <strong className="text-brand-700">{compressStats.comp}</strong> (Tốc độ 10/10).
-                      </p>
-                    ) : (
-                      <p className="text-warm-700">Dù tải ảnh 20MB, hệ thống tự nén nhẹ dưới 90KB để web luôn mượt mà.</p>
-                    )}
-                  </div>
-                </div>
-
-                <div className="space-y-1 pt-1">
-                  <label className="text-[11px] font-bold text-warm-800">Lời trích dẫn dưới ảnh banner:</label>
-                  <input
-                    type="text"
-                    value={editCMSForm.imageQuote}
-                    onChange={e => setEditCMSForm({ ...editCMSForm, imageQuote: e.target.value })}
-                    className="w-full p-2 rounded-xl border border-brand-200 text-xs font-semibold text-warm-900"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-3 gap-3">
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-warm-800">Vốn Karma:</label>
-                  <input
-                    type="text"
-                    value={editCMSForm.statKarma}
-                    onChange={e => setEditCMSForm({ ...editCMSForm, statKarma: e.target.value })}
-                    className="w-full p-2 rounded-xl border border-warm-200 text-xs font-bold"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-warm-800">CO2 Đã Giảm:</label>
-                  <input
-                    type="text"
-                    value={editCMSForm.statCO2}
-                    onChange={e => setEditCMSForm({ ...editCMSForm, statCO2: e.target.value })}
-                    className="w-full p-2 rounded-xl border border-warm-200 text-xs font-bold text-sun-700"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <label className="text-[11px] font-bold text-warm-800">Tuần Hoàn:</label>
-                  <input
-                    type="text"
-                    value={editCMSForm.statRecycle}
-                    onChange={e => setEditCMSForm({ ...editCMSForm, statRecycle: e.target.value })}
-                    className="w-full p-2 rounded-xl border border-warm-200 text-xs font-bold text-blue-700"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="pt-3 border-t border-warm-100 flex gap-3">
-              <button 
-                onClick={() => setShowEditCMSModal(false)} 
-                className="flex-1 py-2.5 rounded-xl border border-warm-200 text-warm-700 font-bold text-xs cursor-pointer"
-              >
-                Hủy Bỏ
-              </button>
-              <button
-                onClick={handleSaveCMS}
-                className="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-float flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <Save className="w-3.5 h-3.5"/>
-                <span>Lưu Giao Diện Live</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* MODAL CHI TIẾT ƯỚC NGUYỆN */}
       {detailWish && (
