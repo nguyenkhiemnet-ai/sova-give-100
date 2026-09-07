@@ -65,3 +65,5 @@ export async function logoutUser(): Promise<void> {
   } catch (e) {}
   setActiveUser(null);
 }
+
+export const logout = logoutUser;

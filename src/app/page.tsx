@@ -87,6 +87,18 @@ export default function HomePage() {
     window.addEventListener('storage', handleCMSUpdate);
     window.addEventListener('sova_cms_updated', handleCMSUpdate);
 
+    // Lắng nghe tìm kiếm trực tiếp từ Navbar
+    const handleGlobalSearch = (e: any) => {
+      if (e.detail) {
+        if (typeof e.detail.query !== 'undefined') setSearchQuery(e.detail.query);
+        if (typeof e.detail.province !== 'undefined') {
+          setSelectedProvince(e.detail.province);
+          setSelectedDistrict('ALL');
+        }
+      }
+    };
+    window.addEventListener('sova_global_search_change', handleGlobalSearch);
+
     let channel: BroadcastChannel | null = null;
     try {
       channel = new BroadcastChannel('sova_cms_channel');
@@ -99,6 +111,7 @@ export default function HomePage() {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('storage', handleCMSUpdate);
       window.removeEventListener('sova_cms_updated', handleCMSUpdate);
+      window.removeEventListener('sova_global_search_change', handleGlobalSearch);
       if (channel) channel.close();
     };
   }, []);
@@ -396,57 +409,9 @@ export default function HomePage() {
           </span>
         </div>
 
-        {/* Thanh Tìm Kiếm & Lọc */}
-        <div className="sticky top-16 z-30 bg-white/95 backdrop-blur-md p-3.5 sm:p-4 rounded-3xl border-2 border-brand-500/30 shadow-float space-y-3">
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
-            
-            <div className="relative flex-1">
-              <Search className="w-5 h-5 text-brand-600 absolute left-3.5 top-1/2 -translate-y-1/2"/>
-              <input 
-                type="text" 
-                placeholder="Tìm kiếm ước nguyện (xe đạp, laptop, máy may...)"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="w-full pl-11 pr-4 py-3 rounded-2xl border-2 border-warm-200 bg-white text-sm font-semibold text-warm-900 focus:outline-none focus:border-brand-600"
-              />
-            </div>
-
-            <div className="relative min-w-[200px]">
-              <MapPin className="w-4 h-4 text-sun-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"/>
-              <select
-                value={selectedProvince}
-                onChange={e => {
-                  setSelectedProvince(e.target.value);
-                  setSelectedDistrict('ALL');
-                }}
-                className="w-full pl-10 pr-8 py-3 rounded-2xl border-2 border-warm-200 bg-white text-xs font-black text-warm-900 focus:outline-none focus:border-brand-600 cursor-pointer"
-              >
-                <option value="ALL">📍 Toàn quốc</option>
-                {VIETNAM_PROVINCES.map(p => (
-                  <option key={p.code} value={p.code}>{p.name}</option>
-                ))}
-              </select>
-            </div>
-
-            {selectedProvince !== 'ALL' && (
-              <div className="relative min-w-[180px]">
-                <Filter className="w-4 h-4 text-brand-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"/>
-                <select
-                  value={selectedDistrict}
-                  onChange={e => setSelectedDistrict(e.target.value)}
-                  className="w-full pl-10 pr-8 py-3 rounded-2xl border-2 border-brand-300 bg-brand-50/40 text-xs font-black text-brand-900 focus:outline-none focus:border-brand-600 cursor-pointer"
-                >
-                  <option value="ALL">Tất cả Quận/Huyện</option>
-                  {getDistrictsByProvince(selectedProvince).map(d => (
-                    <option key={d.code} value={d.code}>{d.name}</option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-          </div>
-
-          <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 no-scrollbar border-t border-warm-200/60 pt-1">
+        {/* Thanh Chọn Danh Mục Tinh Gọn (Tìm kiếm đã đưa lên Header) */}
+        <div className="sticky top-20 z-30 bg-white/95 backdrop-blur-md p-3 rounded-2xl border border-warm-200 shadow-soft">
+          <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
             <div className="flex items-center gap-2">
               {CATEGORIES.map(cat => {
                 const Icon = cat.icon;
@@ -455,7 +420,7 @@ export default function HomePage() {
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                       active ? 'bg-brand-600 text-white shadow-xs' : 'bg-warm-100 hover:bg-warm-200 text-warm-700'
                     }`}
                   >
@@ -465,7 +430,8 @@ export default function HomePage() {
                 );
               })}
             </div>
-            <div className="hidden sm:inline-block text-[11px] font-bold text-warm-700 whitespace-nowrap px-2">
+
+            <div className="text-[11px] font-bold text-warm-700 whitespace-nowrap px-3 py-1.5 rounded-xl bg-warm-50 border border-warm-200 shrink-0">
               Tìm thấy: <strong className="text-brand-700 font-black">{filteredWishes.length}</strong> hoàn cảnh
             </div>
           </div>
