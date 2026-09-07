@@ -107,11 +107,22 @@ export default function HomePage() {
       };
     } catch {}
 
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setDetailWish(null);
+        setChatWish(null);
+        setSelectedWish(null);
+        setShowAuthGateModal(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('storage', handleCMSUpdate);
       window.removeEventListener('sova_cms_updated', handleCMSUpdate);
       window.removeEventListener('sova_global_search_change', handleGlobalSearch);
+      window.removeEventListener('keydown', handleKeyDown);
       if (channel) channel.close();
     };
   }, []);
@@ -635,55 +646,76 @@ export default function HomePage() {
 
       {/* MODAL CHI TIẾT ƯỚC NGUYỆN */}
       {detailWish && (
-        <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-warm-200 max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-start">
-              <div className="space-y-1">
-                <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-brand-50 text-brand-700 border border-brand-200 uppercase">
-                  {normalizeCategoryLabel(inferCategory(detailWish.title, detailWish.category))}
-                </span>
-                <h2 className="text-2xl font-black text-warm-900 mt-1">{detailWish.title}</h2>
-                <p className="text-xs text-warm-700 flex items-center gap-1">
-                  <MapPin className="w-3.5 h-3.5 text-brand-600"/>
-                  <span>Khu vực: <strong>{VIETNAM_PROVINCES.find(p => p.code === detailWish.province_code)?.name || 'Đà Nẵng'}</strong></span>
+        <div 
+          className="fixed inset-0 z-[60] bg-warm-900/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in"
+          onClick={() => setDetailWish(null)}
+        >
+          <div 
+            className="bg-white rounded-t-3xl sm:rounded-3xl border border-warm-200 max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[92vh] sm:max-h-[90vh] animate-in slide-in-from-bottom-6 sm:zoom-in-95 duration-200 relative"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* STICKY HEADER WITH PERMANENT CLOSE BUTTON (X) */}
+            <div className="sticky top-0 z-20 bg-white/95 backdrop-blur-md border-b border-warm-100 p-4 sm:p-5 flex justify-between items-start gap-3 shadow-2xs">
+              <div className="space-y-1 flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="px-2.5 py-0.5 rounded-lg text-[10px] font-black bg-brand-50 text-brand-700 border border-brand-200 uppercase">
+                    {normalizeCategoryLabel(inferCategory(detailWish.title, detailWish.category))}
+                  </span>
+                  <p className="text-[11px] text-warm-600 flex items-center gap-1 font-bold">
+                    <MapPin className="w-3.5 h-3.5 text-brand-600 shrink-0"/>
+                    <span className="truncate">{VIETNAM_PROVINCES.find(p => p.code === detailWish.province_code)?.name || 'Đà Nẵng'}</span>
+                  </p>
+                </div>
+                <h2 className="text-base sm:text-xl font-black text-warm-900 leading-snug line-clamp-2">{detailWish.title}</h2>
+              </div>
+
+              {/* NÚT ĐÓNG X NỔI BẬT CHẠY XUYÊN SUỐT */}
+              <button 
+                onClick={() => setDetailWish(null)} 
+                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-warm-100 hover:bg-warm-200 text-warm-900 border border-warm-200/80 flex items-center justify-center font-black transition-all active:scale-95 hover:scale-105 shrink-0 cursor-pointer shadow-xs"
+                title="Đóng cửa sổ (hoặc bấm ra ngoài / phím Esc)"
+              >
+                <X className="w-5 h-5"/>
+              </button>
+            </div>
+
+            {/* SCROLLABLE BODY CONTENT */}
+            <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
+              <div className="aspect-[16/10] rounded-2xl overflow-hidden border border-warm-200 bg-warm-900 shadow-soft">
+                <img 
+                  src={detailWish.imageUrl || CATEGORY_FALLBACK_IMAGES[inferCategory(detailWish.title, detailWish.category)] || CATEGORY_FALLBACK_IMAGES['bicycle']} 
+                  alt={detailWish.title} 
+                  className="w-full h-full object-cover object-center"
+                />
+              </div>
+
+              <div className="p-4 bg-warm-50 rounded-2xl border border-warm-200 space-y-1.5">
+                <h4 className="text-[11px] font-black uppercase text-warm-700 tracking-wider">Chia Sẻ Hoàn Cảnh & Mục Tiêu Sử Dụng:</h4>
+                <p className="text-xs sm:text-sm text-warm-900 leading-relaxed font-medium">
+                  {detailWish.reason || detailWish.reason_description}
                 </p>
               </div>
-              <button onClick={() => setDetailWish(null)} className="w-8 h-8 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center font-bold cursor-pointer">✕</button>
+
+              <div className="p-4 bg-brand-50/60 rounded-2xl border border-brand-200 space-y-1.5">
+                <h4 className="text-[11px] font-black uppercase text-brand-900 tracking-wider flex items-center gap-1.5">
+                  <Heart className="w-4 h-4 text-brand-600 fill-brand-600"/>
+                  Lời Cam Kết Danh Dự 0-VND Của Người Nhận:
+                </h4>
+                <p className="text-xs sm:text-sm text-brand-950 italic leading-relaxed">
+                  "{detailWish.honor_commitment || detailWish.commitment_pledge}"
+                </p>
+              </div>
             </div>
 
-            <div className="aspect-[16/10] rounded-2xl overflow-hidden border border-warm-200 bg-warm-900">
-              <img 
-                src={detailWish.imageUrl || CATEGORY_FALLBACK_IMAGES[inferCategory(detailWish.title, detailWish.category)] || CATEGORY_FALLBACK_IMAGES['bicycle']} 
-                alt={detailWish.title} 
-                className="w-full h-full object-cover object-center"
-              />
-            </div>
-
-            <div className="p-4 bg-warm-50 rounded-2xl border border-warm-200 space-y-2">
-              <h4 className="text-xs font-black uppercase text-warm-900">Chia Sẻ Hoàn Cảnh & Mục Tiêu Sử Dụng:</h4>
-              <p className="text-xs text-warm-800 leading-relaxed font-medium">
-                {detailWish.reason || detailWish.reason_description}
-              </p>
-            </div>
-
-            <div className="p-4 bg-brand-50/60 rounded-2xl border border-brand-200 space-y-2">
-              <h4 className="text-xs font-black uppercase text-brand-900 flex items-center gap-1.5">
-                <Heart className="w-4 h-4 text-brand-600 fill-brand-600"/>
-                Lời Cam Kết Danh Dự 0-VND Của Người Nhận:
-              </h4>
-              <p className="text-xs text-brand-950 italic leading-relaxed">
-                "{detailWish.honor_commitment || detailWish.commitment_pledge}"
-              </p>
-            </div>
-
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            {/* PINNED STICKY BOTTOM ACTION FOOTER: LUÔN HIỆN DIỆN, KHÔNG BỊ CHE KHUẤT */}
+            <div className="sticky bottom-0 z-20 bg-white/95 backdrop-blur-md border-t border-warm-200/80 p-3.5 sm:p-4 flex flex-col sm:flex-row gap-2.5 shadow-float">
               <button
                 onClick={() => {
                   const item = detailWish;
                   setDetailWish(null);
                   openChatModal(item);
                 }}
-                className="flex-1 py-3 rounded-2xl bg-warm-100 hover:bg-warm-200 text-warm-900 font-bold text-xs flex items-center justify-center gap-2 cursor-pointer"
+                className="py-3 px-4 rounded-2xl bg-warm-100 hover:bg-warm-200 text-warm-900 font-bold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <MessageSquare className="w-4 h-4 text-brand-600"/>
                 <span>Nhắn Tin Tìm Hiểu Trước</span>
@@ -695,10 +727,10 @@ export default function HomePage() {
                   setDetailWish(null);
                   handleOpenClaimModal(item);
                 }}
-                className="flex-1 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-float flex items-center justify-center gap-2 cursor-pointer"
+                className="flex-1 py-3.5 px-6 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs sm:text-sm shadow-float flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 transition-all cursor-pointer"
               >
                 <Heart className="w-4 h-4 fill-white"/>
-                <span>Chính Thức Trao Tặng (Angel)</span>
+                <span>Chính Thức Trao Tặng Ước Mơ (Angel)</span>
               </button>
             </div>
           </div>
@@ -707,8 +739,14 @@ export default function HomePage() {
 
       {/* MODAL NHẮN TIN 1-1 */}
       {chatWish && (
-        <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-warm-200 max-w-lg w-full p-6 shadow-2xl space-y-4">
+        <div 
+          className="fixed inset-0 z-[60] bg-warm-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setChatWish(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl border border-warm-200 max-w-lg w-full p-6 shadow-2xl space-y-4 relative"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="flex justify-between items-center border-b border-warm-100 pb-3">
               <div>
                 <h3 className="font-black text-warm-900 text-sm flex items-center gap-2">
@@ -717,7 +755,13 @@ export default function HomePage() {
                 </h3>
                 <p className="text-[11px] text-warm-700">Ước nguyện: {chatWish.title}</p>
               </div>
-              <button onClick={() => setChatWish(null)} className="w-7 h-7 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center font-bold cursor-pointer">✕</button>
+              <button 
+                onClick={() => setChatWish(null)} 
+                className="w-8 h-8 rounded-full bg-warm-100 hover:bg-warm-200 text-warm-800 flex items-center justify-center font-bold cursor-pointer transition-all shadow-2xs"
+                title="Đóng (hoặc bấm ra ngoài / phím Esc)"
+              >
+                <X className="w-4 h-4"/>
+              </button>
             </div>
 
             <div className="h-48 overflow-y-auto p-3 bg-warm-50 rounded-2xl border border-warm-200 space-y-2 text-xs">
@@ -764,8 +808,22 @@ export default function HomePage() {
 
       {/* MODAL AUTH GATE */}
       {showAuthGateModal && (
-        <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border-2 border-brand-500 max-w-md w-full p-6 sm:p-8 shadow-2xl text-center space-y-5">
+        <div 
+          className="fixed inset-0 z-[60] bg-warm-900/60 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setShowAuthGateModal(false)}
+        >
+          <div 
+            className="bg-white rounded-3xl border-2 border-brand-500 max-w-md w-full p-6 sm:p-8 shadow-2xl text-center space-y-5 relative"
+            onClick={e => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setShowAuthGateModal(false)} 
+              className="absolute top-4 right-4 w-8 h-8 rounded-full bg-warm-100 hover:bg-warm-200 text-warm-800 flex items-center justify-center font-bold cursor-pointer transition-all shadow-2xs"
+              title="Đóng (hoặc bấm ra ngoài / phím Esc)"
+            >
+              <X className="w-4 h-4"/>
+            </button>
+
             <div className="w-16 h-16 rounded-full bg-brand-50 text-brand-600 mx-auto flex items-center justify-center ring-8 ring-brand-100">
               <Lock className="w-8 h-8"/>
             </div>
@@ -793,8 +851,14 @@ export default function HomePage() {
 
       {/* MODAL KHỚP NỐI */}
       {selectedWish && (
-        <div className="fixed inset-0 z-50 bg-warm-900/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-warm-200 max-w-lg w-full p-6 sm:p-8 shadow-xl space-y-6">
+        <div 
+          className="fixed inset-0 z-[60] bg-warm-900/50 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in"
+          onClick={() => setSelectedWish(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl border border-warm-200 max-w-lg w-full p-6 sm:p-8 shadow-xl space-y-6 relative"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="flex justify-between items-start">
               <div className="space-y-1">
                 <span className="text-[11px] font-bold text-brand-700 uppercase tracking-wider flex items-center gap-1">
@@ -802,7 +866,13 @@ export default function HomePage() {
                 </span>
                 <h3 className="text-xl font-black text-warm-900">{selectedWish.title}</h3>
               </div>
-              <button onClick={() => setSelectedWish(null)} className="w-8 h-8 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center font-bold cursor-pointer">✕</button>
+              <button 
+                onClick={() => setSelectedWish(null)} 
+                className="w-8 h-8 rounded-full bg-warm-100 hover:bg-warm-200 text-warm-800 flex items-center justify-center font-bold cursor-pointer transition-all shadow-2xs"
+                title="Đóng (hoặc bấm ra ngoài / phím Esc)"
+              >
+                <X className="w-4 h-4"/>
+              </button>
             </div>
 
             {claimSuccess ? (
