@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
-import { VIETNAM_PROVINCES, getDistrictsByProvince, CATEGORY_FALLBACK_IMAGES, normalizeCategoryLabel } from '@/lib/provinces';
+import { VIETNAM_PROVINCES, getDistrictsByProvince, CATEGORY_FALLBACK_IMAGES, normalizeCategoryLabel, inferCategory } from '@/lib/provinces';
 import { getActiveUser, loginWithGoogle } from '@/lib/auth';
 import { 
   Sparkles, Heart, Search, MapPin, Filter, Leaf, 
@@ -124,26 +124,43 @@ export default function HomePage() {
 
     const mergedMap = new Map<string, WishItem>();
 
-    // 1. Nạp items từ Local
+    let deletedIds: string[] = [];
+    let updatedDict: Record<string, any> = {};
+    if (typeof window !== 'undefined') {
+      try { deletedIds = JSON.parse(localStorage.getItem('SOVA_DELETED_WISH_IDS') || '[]'); } catch {}
+      try { updatedDict = JSON.parse(localStorage.getItem('SOVA_UPDATED_WISH_DICT') || '{}'); } catch {}
+    }
+
+    // 1. Nạp items từ Local (Lọc bỏ tin đã xóa & suy luận danh mục)
     localItems.forEach(item => {
+      if (deletedIds.includes(item.id)) return;
+      const override = updatedDict[item.id] || {};
+      const merged = { ...item, ...override };
       const savedImg = typeof window !== 'undefined' ? localStorage.getItem(`SOVA_WISH_IMG_${item.id}`) : null;
+      const effectiveCat = inferCategory(merged.title, merged.category);
       mergedMap.set(item.id, {
-        ...item,
-        imageUrl: savedImg || item.imageUrl || CATEGORY_FALLBACK_IMAGES[item.category] || CATEGORY_FALLBACK_IMAGES['bicycle']
+        ...merged,
+        category: effectiveCat,
+        imageUrl: savedImg || merged.imageUrl || CATEGORY_FALLBACK_IMAGES[effectiveCat] || CATEGORY_FALLBACK_IMAGES['bicycle']
       });
     });
 
     // 2. Nạp items từ Server mà không làm mất ảnh cục bộ
     serverItems.forEach(item => {
+      if (deletedIds.includes(item.id)) return;
       const existing = mergedMap.get(item.id);
+      const override = updatedDict[item.id] || {};
+      const merged = { ...item, ...existing, ...override };
+      const effectiveCat = inferCategory(merged.title, merged.category);
       const savedImg = typeof window !== 'undefined' ? localStorage.getItem(`SOVA_WISH_IMG_${item.id}`) : null;
-      const resolvedImg = savedImg || existing?.imageUrl || item.imageUrl || CATEGORY_FALLBACK_IMAGES[item.category] || CATEGORY_FALLBACK_IMAGES['bicycle'];
+      const resolvedImg = savedImg || merged.imageUrl || CATEGORY_FALLBACK_IMAGES[effectiveCat] || CATEGORY_FALLBACK_IMAGES['bicycle'];
       
       mergedMap.set(item.id, {
-        ...item,
+        ...merged,
+        category: effectiveCat,
         imageUrl: resolvedImg,
-        province_code: item.province_code || existing?.province_code,
-        ward_code: item.ward_code || existing?.ward_code
+        province_code: merged.province_code || '48',
+        ward_code: merged.ward_code || '48-ST'
       });
     });
 

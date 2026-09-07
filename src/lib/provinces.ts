@@ -9,19 +9,31 @@ export interface Province {
   districts: District[];
 }
 
-// Bảng ánh xạ ảnh fallback chuẩn cho cả mã mới và mã cũ trong Database
 export const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
-  laptop: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=800&q=80',
-  study_device: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=800&q=80',
   bicycle: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80',
   commute: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80',
+  laptop: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=800&q=80',
+  study_device: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=800&q=80',
   sewing_machine: 'https://images.unsplash.com/photo-1584992236310-6edddc08acff?auto=format&fit=crop&w=800&q=80',
   vocational_tool: 'https://images.unsplash.com/photo-1584992236310-6edddc08acff?auto=format&fit=crop&w=800&q=80',
   study_tools: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80',
   livelihood_tools: 'https://images.unsplash.com/photo-1581783342308-f792dbdd27c5?auto=format&fit=crop&w=800&q=80',
 };
 
-// Chuẩn hóa tên danh mục hiển thị
+// Hàm suy luận tự động danh mục thông minh theo tiêu đề
+export function inferCategory(title: string, currentCategory?: string): string {
+  const t = (title || '').toLowerCase();
+  if (t.includes('xe đạp') || t.includes('xe dap') || t.includes('xe ') || t.includes('bike')) return 'bicycle';
+  if (t.includes('máy may') || t.includes('may may') || t.includes('khâu')) return 'sewing_machine';
+  if (t.includes('máy tính') || t.includes('laptop') || t.includes('pc') || t.includes('máy')) return 'laptop';
+  
+  const c = (currentCategory || '').toLowerCase();
+  if (c === 'commute') return 'bicycle';
+  if (c === 'study_device') return 'laptop';
+  if (c === 'vocational_tool') return 'sewing_machine';
+  return currentCategory || 'bicycle';
+}
+
 export function normalizeCategoryLabel(cat: string): string {
   const c = (cat || '').toLowerCase();
   if (c === 'bicycle' || c === 'commute') return 'Xe Đạp';
@@ -104,7 +116,7 @@ export const VIETNAM_PROVINCES: Province[] = [
     name: 'Tỉnh/Thành phố khác',
     districts: [
       { code: '99-01', name: 'Khu vực Trung tâm' },
-      { code: '99-02', name: 'Khu vực Ngoại vi / Huyện' }
+      { code: '99-02', name: 'Khu vực Ngoại vi' }
     ]
   }
 ];
@@ -112,4 +124,16 @@ export const VIETNAM_PROVINCES: Province[] = [
 export function getDistrictsByProvince(provinceCode: string): District[] {
   const p = VIETNAM_PROVINCES.find(prov => prov.code === provinceCode);
   return p ? p.districts : [{ code: 'ALL', name: 'Toàn bộ Quận/Huyện' }];
+}
+
+// Khắc phục triệt để lỗi gán nhầm quận chéo tỉnh
+export function getDistrictNameSafe(provCode: string, wardCode?: string): string {
+  if (!wardCode) return 'Khu vực Trung tâm';
+  const inProv = getDistrictsByProvince(provCode).find(d => d.code === wardCode);
+  if (inProv) return inProv.name;
+  for (const p of VIETNAM_PROVINCES) {
+    const found = p.districts.find(d => d.code === wardCode);
+    if (found) return found.name;
+  }
+  return 'Khu vực Trung tâm';
 }
