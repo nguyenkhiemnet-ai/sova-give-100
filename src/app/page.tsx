@@ -7,15 +7,15 @@ import {
   VIETNAM_PROVINCES, getDistrictsByProvince, CATEGORY_FALLBACK_IMAGES, 
   normalizeCategoryLabel, inferCategory 
 } from '@/lib/provinces';
-import { getActiveUser, ADMIN_USER, loginWithGoogle, UserProfile } from '@/lib/auth';
+import { getActiveUser, loginWithGoogle, UserProfile } from '@/lib/auth';
 import { getHeroCMS, saveHeroCMS, HeroCMSData, compressImageToWebP } from '@/lib/cms';
 import { 
   Sparkles, Heart, Search, MapPin, Filter, Leaf, 
   Clock, Repeat, AlertCircle, ShieldCheck, CheckCircle2,
   Laptop, Bike, Scissors, BookOpen, Wrench, Navigation,
   ArrowUp, Lock, MessageSquare, Send, X, ExternalLink,
-  Edit3, Camera, Trash2, Settings, Save, Image as ImageIcon,
-  Check, RefreshCw
+  Edit3, Camera, Trash2, Settings, Save, KeyRound, 
+  Share2, Check, Copy, ShieldAlert, Eye, EyeOff
 } from 'lucide-react';
 
 interface WishItem {
@@ -50,8 +50,14 @@ export default function HomePage() {
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedProvince, setSelectedProvince] = useState('ALL');
   const [selectedDistrict, setSelectedDistrict] = useState('ALL');
-  
-  // Live Visual CMS State cho Quản Trị Viên
+
+  // LỚP BẢO MẬT MASTER PIN DÀNH CHO QUẢN TRỊ VIÊN
+  const [adminModeUnlocked, setAdminModeUnlocked] = useState(false);
+  const [showPinModal, setShowPinModal] = useState(false);
+  const [pinInput, setPinInput] = useState('');
+  const [pinError, setPinError] = useState(false);
+
+  // Live Visual CMS Banner
   const [heroCMS, setHeroCMS] = useState<HeroCMSData>(getHeroCMS());
   const [showEditCMSModal, setShowEditCMSModal] = useState(false);
   const [editCMSForm, setEditCMSForm] = useState<HeroCMSData>(heroCMS);
@@ -71,15 +77,24 @@ export default function HomePage() {
   const [showAuthGateModal, setShowAuthGateModal] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
-  // Đổi ảnh nhanh trực tiếp trên thẻ bài (Admin 1-chạm)
+  // Đổi ảnh nhanh trên Card
   const [quickImageWishId, setQuickImageWishId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN' || currentUser?.email === 'nguyenkhiem.net@gmail.com';
+  // Trạng thái copy link MXH
+  const [copiedLink, setCopiedLink] = useState(false);
 
   useEffect(() => {
+    // KHÔNG gán mặc định ADMIN_USER để chống rò rỉ quyền quản trị
     const user = getActiveUser();
-    setCurrentUser(user || ADMIN_USER);
+    setCurrentUser(user);
+
+    // Kiểm tra trạng thái Master PIN trong phiên làm việc
+    if (typeof window !== 'undefined') {
+      const isPinActive = sessionStorage.getItem('SOVA_MASTER_ADMIN_UNLOCKED') === 'true';
+      setAdminModeUnlocked(isPinActive);
+    }
+
     setHeroCMS(getHeroCMS());
     fetchCombinedWishes();
 
@@ -93,6 +108,27 @@ export default function HomePage() {
       window.removeEventListener('sova_cms_updated', handleCMSUpdate);
     };
   }, []);
+
+  // Xác thực Master PIN
+  const handleVerifyPin = () => {
+    // Mật mã quản trị viên: 21081984 hoặc 1984
+    if (pinInput === '21081984' || pinInput === '1984') {
+      sessionStorage.setItem('SOVA_MASTER_ADMIN_UNLOCKED', 'true');
+      setAdminModeUnlocked(true);
+      setShowPinModal(false);
+      setPinInput('');
+      setPinError(false);
+      alert('Đã kích hoạt chế độ Quản Trị Tối Cao! Các công cụ sửa bài, đổi ảnh, xóa tin đã sẵn sàng.');
+    } else {
+      setPinError(true);
+    }
+  };
+
+  const handleLockAdminMode = () => {
+    sessionStorage.removeItem('SOVA_MASTER_ADMIN_UNLOCKED');
+    setAdminModeUnlocked(false);
+    alert('Đã khóa chế độ Quản Trị! Toàn bộ giao diện đã chuyển về góc nhìn người dùng chuẩn.');
+  };
 
   async function fetchCombinedWishes() {
     let serverItems: WishItem[] = [];
@@ -129,7 +165,6 @@ export default function HomePage() {
       return lower.includes('test wish') || lower.includes('kiểm tra gửi') || id === '0160532f-7480-4e73-8c95-e3df6839a897' || id === 'db4739ed-9ef1-4766-ba78-721a0648d679';
     };
 
-    // 1. Nạp items từ Local (Lọc bỏ tin đã xóa & suy luận danh mục)
     localItems.forEach(item => {
       if (isTestOrDeleted(item.id, item.title)) return;
       const override = updatedDict[item.id] || {};
@@ -143,7 +178,6 @@ export default function HomePage() {
       });
     });
 
-    // 2. Nạp items từ Server
     serverItems.forEach(item => {
       if (isTestOrDeleted(item.id, item.title)) return;
       const existing = mergedMap.get(item.id);
@@ -165,9 +199,10 @@ export default function HomePage() {
     setWishes(Array.from(mergedMap.values()));
   }
 
-  // Admin Xóa Nhanh 1-Chạm
+  // Admin Xóa Nhanh
   const handleAdminQuickDelete = async (e: React.MouseEvent, wishId: string) => {
     e.stopPropagation();
+    if (!adminModeUnlocked) return;
     if (!confirm('Quản trị viên: Bạn có chắc chắn muốn xóa vĩnh viễn tin này khỏi Cây Nguyện Ước?')) return;
     
     try {
@@ -192,9 +227,9 @@ export default function HomePage() {
     }
   };
 
-  // Admin Đổi Ảnh Nhanh trên Card (Có Nén Tự Động)
   const triggerQuickImageChange = (e: React.MouseEvent, wishId: string) => {
     e.stopPropagation();
+    if (!adminModeUnlocked) return;
     setQuickImageWishId(wishId);
     fileInputRef.current?.click();
   };
@@ -213,23 +248,21 @@ export default function HomePage() {
       localStorage.setItem('SOVA_UPDATED_WISH_DICT', JSON.stringify(updatedDict));
 
       setWishes(prev => prev.map(w => w.id === quickImageWishId ? { ...w, imageUrl: dataUrl } : w));
-      alert('Đã thay ảnh thành công! Ảnh đã được nén tối ưu hiển thị siêu tốc.');
+      alert('Đã thay đổi ảnh thành công!');
     } catch (err: any) {
-      alert('Không thể xử lý ảnh: ' + err.message);
+      alert('Lỗi nén ảnh: ' + err.message);
     } finally {
       setQuickImageWishId(null);
     }
   };
 
-  // Lưu Live CMS Banner
   const handleSaveCMS = () => {
     saveHeroCMS(editCMSForm);
     setHeroCMS(editCMSForm);
     setShowEditCMSModal(false);
-    alert('Đã lưu cấu hình giao diện thành công! Nội dung mới đã được phân phối toàn cầu.');
+    alert('Đã cập nhật giao diện Hero Banner thành công!');
   };
 
-  // Tải & nén ảnh Banner trong Modal CMS
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -313,6 +346,16 @@ export default function HomePage() {
     }, 1200);
   };
 
+  // Chia sẻ mạng xã hội
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://sova-give-100-app.pages.dev';
+  const shareTitle = "SOVA GIVE 100 • Nền Tảng Tuần Hoàn Sinh Kế & Tri Thức 0-VND";
+
+  const handleCopyShareLink = () => {
+    navigator.clipboard.writeText(shareUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2500);
+  };
+
   const filteredWishes = wishes.filter(item => {
     const title = item.title || '';
     const desc = item.reason || item.reason_description || '';
@@ -341,9 +384,8 @@ export default function HomePage() {
   });
 
   return (
-    <div className="space-y-16 max-w-6xl mx-auto">
+    <div className="space-y-16 max-w-6xl mx-auto pb-8">
       
-      {/* Input File ẩn dành cho Admin đổi ảnh nhanh */}
       <input 
         type="file" 
         accept="image/*" 
@@ -355,25 +397,61 @@ export default function HomePage() {
       {showBackToTop && (
         <button
           onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-          className="fixed bottom-20 right-6 z-40 p-3.5 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-float hover:scale-110 transition-all"
+          className="fixed bottom-20 right-6 z-40 p-3.5 rounded-full bg-brand-600 hover:bg-brand-700 text-white shadow-float hover:scale-110 transition-all cursor-pointer"
         >
           <ArrowUp className="w-5 h-5"/>
         </button>
       )}
 
-      {/* 1. HERO BANNER LIVE CMS (CÓ NÚT SỬA 1-CHẠM DÀNH CHO ADMIN) */}
+      {/* THANH ĐIỀU KHIỂN BẢO MẬT QUẢN TRỊ VIÊN (TOP BAR) */}
+      <div className="flex items-center justify-between bg-white border border-warm-200 px-4 py-2.5 rounded-2xl shadow-2xs">
+        <div className="flex items-center gap-2">
+          <div className={`w-2.5 h-2.5 rounded-full ${adminModeUnlocked ? 'bg-brand-500 animate-pulse' : 'bg-warm-400'}`}/>
+          <span className="text-xs font-bold text-warm-800">
+            {adminModeUnlocked ? (
+              <span className="text-brand-700 font-black">Chế Độ Quản Trị Tối Cao: ĐÃ MỞ KHÓA</span>
+            ) : (
+              <span>Chế Độ Người Dùng Chuẩn (Đã Khóa Chỉnh Sửa)</span>
+            )}
+          </span>
+        </div>
+
+        {adminModeUnlocked ? (
+          <button
+            onClick={handleLockAdminMode}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-800 text-[11px] font-bold transition-all cursor-pointer"
+          >
+            <Lock className="w-3.5 h-3.5 text-warm-700"/>
+            <span>Khóa Chế Độ Quản Trị</span>
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              setPinError(false);
+              setPinInput('');
+              setShowPinModal(true);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-800 text-[11px] font-black border border-brand-200 transition-all cursor-pointer"
+          >
+            <KeyRound className="w-3.5 h-3.5 text-brand-600"/>
+            <span>Nhập Master PIN Quản Trị</span>
+          </button>
+        )}
+      </div>
+
+      {/* 1. HERO BANNER LIVE CMS */}
       <section className="relative overflow-hidden bg-gradient-to-br from-brand-50 via-white to-sun-50 rounded-3xl border border-warm-200 p-6 sm:p-12 lg:p-14 shadow-soft">
         
-        {/* Nút Quản Trị Viên Sửa Banner Tại Chỗ */}
-        {isSuperAdmin && (
-          <div className="absolute top-4 right-4 z-20">
+        {/* Nút Sửa Banner: CHỈ HIỆN KHI ĐÃ MỞ KHÓA MASTER PIN */}
+        {adminModeUnlocked && (
+          <div className="absolute top-4 right-4 z-20 animate-in fade-in">
             <button
               onClick={() => {
                 setEditCMSForm(heroCMS);
                 setCompressStats(null);
                 setShowEditCMSModal(true);
               }}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-warm-900/90 hover:bg-brand-700 text-white text-xs font-black shadow-float transition-all backdrop-blur-sm"
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-warm-900/90 hover:bg-brand-700 text-white text-xs font-black shadow-float transition-all backdrop-blur-sm cursor-pointer"
             >
               <Edit3 className="w-3.5 h-3.5 text-sun-400"/>
               <span>Sửa Hero Banner & Khẩu Hiệu</span>
@@ -402,7 +480,7 @@ export default function HomePage() {
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
               <a 
                 href="#wishlist-section"
-                className="px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-sm shadow-float hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                className="px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-sm shadow-float hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Heart className="w-4 h-4 fill-white"/>
                 <span>Tôi Muốn Trao Đồ Tốt (Angel)</span>
@@ -418,7 +496,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* KHUNG HÌNH ẢNH KHÓA TỶ LỆ CHUẨN 16:10 - TUYỆT ĐỐI KHÔNG BỊ VỠ KHUNG */}
           <div className="lg:col-span-5 relative">
             <div className="relative mx-auto rounded-3xl overflow-hidden shadow-xl border-4 border-white aspect-[16/11] bg-warm-900">
               <img 
@@ -435,7 +512,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* 3 CHỈ SỐ CMS ĐỘNG */}
+        {/* 3 CHỈ SỐ CMS */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-10 pt-8 border-t border-warm-200/80">
           <div className="bg-white/90 p-4 rounded-2xl border border-warm-200 shadow-2xs flex items-center gap-3.5">
             <div className="w-12 h-12 rounded-xl bg-brand-100 text-brand-700 flex items-center justify-center shrink-0">
@@ -548,7 +625,7 @@ export default function HomePage() {
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all ${
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                       active ? 'bg-brand-600 text-white shadow-xs' : 'bg-warm-100 hover:bg-warm-200 text-warm-700'
                     }`}
                   >
@@ -564,7 +641,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* LƯỚI ĐIỀU ƯỚC: KHÓA TỶ LỆ ẢNH CHỐNG VỠ KHUNG & TÍCH HỢP ADMIN ACTIONS */}
+        {/* LƯỚI ĐIỀU ƯỚC: NÚT QUẢN TRỊ CHỈ HIỆN KHI ĐÃ MỞ KHÓA MASTER PIN */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredWishes.map(item => {
             const isUrgent = item.urgency === 'urgent' || item.urgency_level === 'urgent';
@@ -582,7 +659,6 @@ export default function HomePage() {
                 className="bg-white rounded-3xl border border-warm-200 overflow-hidden shadow-soft flex flex-col justify-between group hover:border-brand-500 hover:shadow-xl transition-all cursor-pointer relative"
                 onClick={() => setDetailWish(item)}
               >
-                {/* Khung ảnh cố định tỷ lệ 16:10 */}
                 <div className="relative aspect-[16/10] overflow-hidden bg-warm-100">
                   <img 
                     src={resolvedImg} 
@@ -590,7 +666,6 @@ export default function HomePage() {
                     className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
                   />
                   
-                  {/* Cụm huy hiệu & Nút Admin nhanh */}
                   <div className="absolute top-3 left-3 right-3 flex justify-between items-center gap-1.5">
                     <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-white/95 text-brand-800 uppercase shadow-2xs">
                       {badgeText}
@@ -608,19 +683,19 @@ export default function HomePage() {
                         </span>
                       )}
 
-                      {/* Công cụ Admin Quản Trị Tại Chỗ */}
-                      {isSuperAdmin && (
-                        <div className="flex gap-1 bg-black/60 backdrop-blur-xs p-1 rounded-xl">
+                      {/* CÁC NÚT ADMIN: CHỈ HIỂN THỊ KHI ĐÃ NHẬP MASTER PIN */}
+                      {adminModeUnlocked && (
+                        <div className="flex gap-1 bg-black/70 backdrop-blur-xs p-1 rounded-xl animate-in fade-in">
                           <button
                             onClick={(e) => triggerQuickImageChange(e, item.id)}
-                            className="p-1.5 rounded-lg bg-white/90 hover:bg-white text-warm-900 text-[10px] font-bold shadow-xs transition-all cursor-pointer"
+                            className="p-1.5 rounded-lg bg-white/90 hover:bg-white text-warm-900 text-[10px] font-bold shadow-xs cursor-pointer"
                             title="Đổi ảnh món quà này"
                           >
                             <Camera className="w-3 h-3 text-brand-600"/>
                           </button>
                           <button
                             onClick={(e) => handleAdminQuickDelete(e, item.id)}
-                            className="p-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold shadow-xs transition-all cursor-pointer"
+                            className="p-1.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[10px] font-bold shadow-xs cursor-pointer"
                             title="Xóa vĩnh viễn tin này"
                           >
                             <Trash2 className="w-3 h-3"/>
@@ -675,7 +750,134 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* MODAL SỬA HERO BANNER CMS (DÀNH RIÊNG CHO SUPER ADMIN) */}
+      {/* 3. CHÂN TRANG: KHU VỰC CHIA SẺ MẠNG XÃ HỘI (SOCIAL SHARE HUB) */}
+      <footer className="bg-gradient-to-br from-brand-50/80 via-white to-warm-50 rounded-3xl border-2 border-brand-200 p-8 sm:p-10 shadow-soft text-center space-y-6">
+        <div className="max-w-xl mx-auto space-y-2">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100 text-brand-800 text-xs font-black uppercase">
+            <Share2 className="w-3.5 h-3.5 text-brand-600"/>
+            <span>Lan Tỏa Tinh Thần 0-VND Đến Cộng Đồng</span>
+          </div>
+          <h3 className="text-xl sm:text-2xl font-black text-warm-900">
+            Một Lần Chia Sẻ • Một Tương Lai Được Thắp Sáng
+          </h3>
+          <p className="text-xs text-warm-700 leading-relaxed font-medium">
+            Hãy gửi đường link SOVA GIVE 100 tới người thân, bạn bè hoặc các hội nhóm thiện nguyện để những chiếc máy tính, xe đạp cũ tìm đúng người cần nhất.
+          </p>
+        </div>
+
+        {/* Các nút bấm chia sẻ MXH 1-chạm */}
+        <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+          {/* Facebook */}
+          <a
+            href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#1877F2] hover:bg-[#166fe5] text-white text-xs font-black shadow-xs transition-all hover:scale-105"
+          >
+            <span>Facebook</span>
+          </a>
+
+          {/* Zalo */}
+          <a
+            href={`https://zalo.me/share?url=${encodeURIComponent(shareUrl)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#0068FF] hover:bg-[#005cd4] text-white text-xs font-black shadow-xs transition-all hover:scale-105"
+          >
+            <span>Zalo</span>
+          </a>
+
+          {/* Telegram */}
+          <a
+            href={`https://t.me/share/url?url=${encodeURIComponent(shareUrl)}&text=${encodeURIComponent(shareTitle)}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-[#229ED9] hover:bg-[#1f8ec4] text-white text-xs font-black shadow-xs transition-all hover:scale-105"
+          >
+            <span>Telegram</span>
+          </a>
+
+          {/* Nút Sao Chép Link Trực Tiếp */}
+          <button
+            onClick={handleCopyShareLink}
+            className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white hover:bg-warm-100 text-warm-900 border-2 border-warm-300 text-xs font-black shadow-xs transition-all hover:scale-105 cursor-pointer"
+          >
+            {copiedLink ? (
+              <>
+                <Check className="w-4 h-4 text-brand-600"/>
+                <span className="text-brand-700">Đã Sao Chép Link!</span>
+              </>
+            ) : (
+              <>
+                <Copy className="w-4 h-4 text-warm-700"/>
+                <span>Sao Chép Liên Kết</span>
+              </>
+            )}
+          </button>
+        </div>
+
+        <div className="pt-4 border-t border-warm-200/60 flex flex-col sm:flex-row items-center justify-between text-[11px] text-warm-600 gap-2">
+          <span>© 2026 SOVA GIVE 100 • Hệ Thống Tuần Hoàn Sinh Kế Phi Thương Mại</span>
+          <span>Bảo mật danh dự công dân theo Nghị định 13/2023/NĐ-CP</span>
+        </div>
+      </footer>
+
+      {/* POPUP NHẬP MASTER PIN XÁC THỰC QUẢN TRỊ VIÊN */}
+      {showPinModal && (
+        <div className="fixed inset-0 z-50 bg-warm-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl border-2 border-brand-500 max-w-sm w-full p-6 shadow-2xl space-y-5 text-center">
+            <div className="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 mx-auto flex items-center justify-center ring-8 ring-brand-100">
+              <ShieldAlert className="w-7 h-7"/>
+            </div>
+
+            <div className="space-y-1.5">
+              <h3 className="text-lg font-black text-warm-900">Xác Thực Quản Trị Tối Cao</h3>
+              <p className="text-xs text-warm-700">
+                Nhập mã Master PIN để mở khóa quyền sửa nội dung, thay ảnh và xóa tin trên toàn bộ trang.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <input
+                type="password"
+                placeholder="Nhập mã PIN bí mật..."
+                value={pinInput}
+                onChange={e => {
+                  setPinInput(e.target.value);
+                  setPinError(false);
+                }}
+                onKeyDown={e => e.key === 'Enter' && handleVerifyPin()}
+                className={`w-full p-3 rounded-2xl border-2 text-center text-sm font-mono tracking-widest font-black focus:outline-none ${
+                  pinError ? 'border-red-500 bg-red-50/50' : 'border-warm-200 focus:border-brand-600'
+                }`}
+                autoFocus
+              />
+              {pinError && (
+                <p className="text-[11px] font-bold text-red-600">
+                  Mã PIN không chính xác! Vui lòng thử lại.
+                </p>
+              )}
+            </div>
+
+            <div className="flex gap-2.5 pt-1">
+              <button
+                onClick={() => setShowPinModal(false)}
+                className="flex-1 py-2.5 rounded-xl border border-warm-200 text-warm-700 text-xs font-bold hover:bg-warm-100 cursor-pointer"
+              >
+                Hủy Bỏ
+              </button>
+              <button
+                onClick={handleVerifyPin}
+                className="flex-1 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-xs cursor-pointer"
+              >
+                Mở Khóa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL SỬA HERO BANNER CMS */}
       {showEditCMSModal && (
         <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-warm-200 max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
@@ -730,7 +932,6 @@ export default function HomePage() {
                 />
               </div>
 
-              {/* MỤC THAY ẢNH BANNER CÓ NÉN TỰ ĐỘNG */}
               <div className="p-4 bg-brand-50/50 rounded-2xl border border-brand-200 space-y-3">
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-black text-brand-900 flex items-center gap-1.5">
@@ -753,7 +954,7 @@ export default function HomePage() {
                         ✅ Đã tối ưu từ <span className="line-through text-warm-700">{compressStats.orig}</span> về <strong className="text-brand-700">{compressStats.comp}</strong> (Tốc độ 10/10).
                       </p>
                     ) : (
-                      <p className="text-warm-700">Dù bạn tải ảnh 20MB, hệ thống tự động nén nhẹ dưới 90KB để web luôn mượt mà.</p>
+                      <p className="text-warm-700">Dù tải ảnh 20MB, hệ thống tự nén nhẹ dưới 90KB để web luôn mượt mà.</p>
                     )}
                   </div>
                 </div>
@@ -769,7 +970,6 @@ export default function HomePage() {
                 </div>
               </div>
 
-              {/* 3 Chỉ số */}
               <div className="grid grid-cols-3 gap-3">
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-warm-800">Vốn Karma:</label>
@@ -978,7 +1178,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* MODAL KHỚP NỐI TRAO TẶNG */}
+      {/* MODAL KHỚP NỐI */}
       {selectedWish && (
         <div className="fixed inset-0 z-50 bg-warm-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-warm-200 max-w-lg w-full p-6 sm:p-8 shadow-xl space-y-6">
