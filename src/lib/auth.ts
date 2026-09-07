@@ -27,7 +27,7 @@ export function buildUserProfile(sbUser: { id: string; email?: string; user_meta
     avatar: (sbUser.user_metadata?.full_name || (isSuperAdmin ? 'K' : 'U')).charAt(0).toUpperCase(),
     role: isSuperAdmin ? 'SUPER_ADMIN' : 'CITIZEN',
     karma: isSuperAdmin ? 200 : 100,
-    co2Saved: isSuperAdmin ? 130.5 : 85.5
+    co2Saved: isSuperAdmin ? 130.5 : 0
   };
 }
 
@@ -153,13 +153,19 @@ export async function signUpWithEmail(email: string, password: string, fullName:
       console.warn("Lưu hồ sơ profiles:", dbErr);
     }
 
-    // 2. Gửi email chúc mừng và cấp liên kết quản lý tài khoản + đặt lại mật khẩu
+    // 2. Gửi email chúc mừng trực tiếp từ Nguyenkhiemnet@gmail.com kèm 2 đường link
     try {
-      await supabase.auth.resetPasswordForEmail(email.trim(), {
-        redirectTo: `${redirectTarget}/profile`
-      });
+      fetch('/api/send-welcome-email/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: email.trim(),
+          fullName: fullName.trim(),
+          userId: userId
+        })
+      }).catch(e => console.warn("Lỗi gọi API gửi thư chào mừng:", e));
     } catch (mailErr) {
-      console.warn("Gửi email đặt lại mật khẩu:", mailErr);
+      console.warn("Lỗi gửi thư chào mừng:", mailErr);
     }
 
     // 3. Tự động đăng nhập ngay lập tức cho người dùng

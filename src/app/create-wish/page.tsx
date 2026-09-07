@@ -145,6 +145,7 @@ export default function CreateWishPage() {
       title: title.trim(),
       category,
       amount: 100,
+      authority: user.email?.trim().toLowerCase() || user.id,
       reason: reason.trim(),
       honor_commitment: combinedPledge,
       urgency,
@@ -166,6 +167,16 @@ export default function CreateWishPage() {
       
       // Lưu ảnh độc lập theo ID để không bao giờ bị ghi đè
       localStorage.setItem(`SOVA_WISH_IMG_${generatedId}`, chosenImage);
+
+      // Ghi nhận quyền sở hữu điều ước cho tài khoản hiện tại
+      try {
+        const userKey = `SOVA_MY_WISHES_${user.id}`;
+        const emailKey = `SOVA_MY_WISHES_${user.email?.toLowerCase()}`;
+        const curUserIds = JSON.parse(localStorage.getItem(userKey) || '[]');
+        if (!curUserIds.includes(generatedId)) curUserIds.push(generatedId);
+        localStorage.setItem(userKey, JSON.stringify(curUserIds));
+        localStorage.setItem(emailKey, JSON.stringify(curUserIds));
+      } catch {}
       
       const stored = localStorage.getItem('SOVA_OPTIMISTIC_WISHES');
       const list = stored ? JSON.parse(stored) : [];

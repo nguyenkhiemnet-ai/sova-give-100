@@ -7,11 +7,11 @@ import {
   VIETNAM_PROVINCES, getDistrictsByProvince, getDistrictNameSafe, 
   CATEGORY_FALLBACK_IMAGES, normalizeCategoryLabel, inferCategory 
 } from '@/lib/provinces';
-import { getActiveUser, ADMIN_USER, UserProfile } from '@/lib/auth';
+import { getActiveUser, ADMIN_USER, UserProfile, isSuperAdminEmail } from '@/lib/auth';
 import { 
   ArrowLeft, Award, Clock, BookOpen, ShieldCheck, 
   CheckCircle2, AlertCircle, Edit3, Trash2, Heart, 
-  MapPin, X, Save, Plus, Sparkles, Filter, Camera, AlertTriangle
+  MapPin, X, Save, Plus, Sparkles, Filter, Camera, AlertTriangle, UserCheck
 } from 'lucide-react';
 
 interface WishItem {
@@ -28,6 +28,7 @@ interface WishItem {
   province_code?: string;
   ward_code?: string;
   created_at?: string;
+  authority?: string;
 }
 
 export default function ProfilePage() {
@@ -53,25 +54,38 @@ export default function ProfilePage() {
   const [deletingWish, setDeletingWish] = useState<WishItem | null>(null);
   const [deletingProcess, setDeletingProcess] = useState(false);
 
-  const [timebank] = useState({
-    hoursDone: 6,
-    hoursRequired: 10,
-    tasks: [
-      { name: 'Dạy kèm Toán cấp 2 cho con em xóm trọ nghèo (2 buổi)', hours: 4 },
-      { name: 'Hỗ trợ dọn dẹp và phân loại sách tại Thư viện trường', hours: 2 }
-    ]
-  });
-
   useEffect(() => {
     const user = getActiveUser();
-    setCurrentUser(user || ADMIN_USER);
-    loadMyWishes();
+    setCurrentUser(user);
+    loadMyWishes(user);
   }, []);
 
-  async function loadMyWishes() {
-    setLoadingWishes(true);
-    let serverItems: WishItem[] = [];
+  async function loadMyWishes(userParam?: UserProfile | null) {
+    const user = userParam !== undefined ? userParam : (currentUser || getActiveUser());
+    if (!user) {
+      setMyWishes([]);
+      setLoadingWishes(false);
+      return;
+    }
 
+    setLoadingWishes(true);
+
+    const userEmail = (user.email || '').trim().toLowerCase();
+    const userId = user.id || '';
+    const isSuper = isSuperAdminEmail(userEmail);
+
+    // Lấy danh sách ID điều ước mà người dùng này đã tạo từ localStorage
+    let myLocalWishIds: string[] = [];
+    if (typeof window !== 'undefined') {
+      try {
+        const storedUser = localStorage.getItem(`SOVA_MY_WISHES_${userId}`);
+        const storedEmail = localStorage.getItem(`SOVA_MY_WISHES_${userEmail}`);
+        if (storedUser) myLocalWishIds = JSON.parse(storedUser);
+        else if (storedEmail) myLocalWishIds = JSON.parse(storedEmail);
+      } catch {}
+    }
+
+    let serverItems: WishItem[] = [];
     try {
       const { data } = await supabase
         .from('wishes')
@@ -104,9 +118,18 @@ export default function ProfilePage() {
       return lower.includes('test wish') || lower.includes('kiểm tra gửi') || id === '0160532f-7480-4e73-8c95-e3df6839a897' || id === 'db4739ed-9ef1-4766-ba78-721a0648d679';
     };
 
-    // 1. Nạp từ local (bỏ tin đã xóa)
+    // Kiểm tra xem điều ước có thuộc về người dùng hiện tại không
+    const belongsToMe = (item: any) => {
+      if (isSuper) return true; // SuperAdmin thấy tất cả để kiểm soát
+      if (myLocalWishIds.includes(item.id)) return true;
+      if (item.authority && (item.authority.toLowerCase() === userEmail || item.authority === userId)) return true;
+      return false;
+    };
+
+    // 1. Nạp từ local
     localItems.forEach(item => {
       if (isTestOrDeleted(item.id, item.title)) return;
+      if (!belongsToMe(item)) return;
       const savedImg = localStorage.getItem(`SOVA_WISH_IMG_${item.id}`);
       const override = updatedDict[item.id] || {};
       const merged = { ...item, ...override };
@@ -118,9 +141,10 @@ export default function ProfilePage() {
       });
     });
 
-    // 2. Nạp từ server (bỏ tin đã xóa)
+    // 2. Nạp từ server
     serverItems.forEach(item => {
       if (isTestOrDeleted(item.id, item.title)) return;
+      if (!belongsToMe(item)) return;
       const existing = map.get(item.id);
       const savedImg = localStorage.getItem(`SOVA_WISH_IMG_${item.id}`);
       const override = updatedDict[item.id] || {};
@@ -311,20 +335,36 @@ export default function ProfilePage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-6">
           <div className="flex items-center gap-4">
             <div className="w-20 h-20 rounded-3xl bg-brand-600 text-white font-black text-3xl flex items-center justify-center shadow-lg ring-4 ring-white">
-              {currentUser?.avatar || 'K'}
+              {currentUser?.avatar || (currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : 'U')}
             </div>
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <h1 className="text-2xl font-black text-warm-900">{currentUser?.name || 'NGUYEN KHIEM NET'}</h1>
-                <span className="px-2.5 py-0.5 rounded-lg bg-sun-100 text-sun-700 border border-sun-200 text-[11px] font-black uppercase flex items-center gap-1">
-                  <Award className="w-3.5 h-3.5 text-sun-600"/>
-                  Công Dân Danh Dự 6⭐
+                <h1 className="text-2xl font-black text-warm-900">{currentUser?.name || 'Công Dân SOVA 0-VND'}</h1>
+                <span className={`px-2.5 py-0.5 rounded-lg border text-[11px] font-black uppercase flex items-center gap-1 ${
+                  isSuperAdminEmail(currentUser?.email) 
+                    ? 'bg-amber-100 text-amber-900 border-amber-300' 
+                    : 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                }`}>
+                  <Award className="w-3.5 h-3.5 text-amber-600"/>
+                  <span>
+                    {isSuperAdminEmail(currentUser?.email) ? 'Trọng Tài Tối Cao 6⭐' : 'Thành Viên Mới 0-VND'}
+                  </span>
                 </span>
               </div>
-              <p className="text-xs text-warm-700">Mã định danh: <strong className="font-mono text-warm-900">SOVA-ID-2108-1984</strong></p>
+              <p className="text-xs text-warm-700">Mã định danh: <strong className="font-mono text-warm-900">
+                {isSuperAdminEmail(currentUser?.email)
+                  ? 'SOVA-ID-2108-1984'
+                  : currentUser?.id
+                    ? `SOVA-ID-${currentUser.id.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase()}`
+                    : 'SOVA-ID-NEW'}
+              </strong></p>
               <div className="flex items-center gap-1.5 text-[11px] text-brand-700 font-semibold pt-0.5">
                 <CheckCircle2 className="w-3.5 h-3.5 text-brand-600"/>
-                <span>Xác thực định danh sinh viên qua cổng đào tạo trường</span>
+                <span>
+                  {isSuperAdminEmail(currentUser?.email) 
+                    ? 'Tài khoản Quản Trị Viên đã bảo chứng sổ cái' 
+                    : 'Định danh công dân đã kích hoạt qua Email an toàn'}
+                </span>
               </div>
             </div>
           </div>
@@ -342,18 +382,24 @@ export default function ProfilePage() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-warm-200">
           <div className="bg-white p-4 rounded-2xl border border-warm-200 shadow-2xs">
             <span className="text-[11px] font-bold text-warm-700 uppercase">Vốn Xã Hội (Karma)</span>
-            <div className="text-2xl font-black text-warm-900 mt-1">{currentUser?.karma || 100} ⭐</div>
+            <div className="text-2xl font-black text-warm-900 mt-1">{currentUser?.karma ?? 100} ⭐</div>
             <span className="text-[10px] text-brand-600 font-medium">Được bảo chứng trên sổ cái</span>
           </div>
           <div className="bg-white p-4 rounded-2xl border border-warm-200 shadow-2xs">
             <span className="text-[11px] font-bold text-warm-700 uppercase">CO2 Đã Cắt Giảm</span>
-            <div className="text-2xl font-black text-sun-600 mt-1">{currentUser?.co2Saved || 85.5} kg</div>
-            <span className="text-[10px] text-warm-700 font-medium">~6.5 cây xanh quang hợp</span>
+            <div className="text-2xl font-black text-sun-600 mt-1">{currentUser?.co2Saved ?? 0} kg</div>
+            <span className="text-[10px] text-warm-700 font-medium">
+              {(currentUser?.co2Saved && currentUser.co2Saved > 0) ? `~${(currentUser.co2Saved / 13).toFixed(1)} cây xanh quang hợp` : 'Tuần hoàn vật phẩm để tích lũy'}
+            </span>
           </div>
           <div className="bg-white p-4 rounded-2xl border border-warm-200 shadow-2xs">
             <span className="text-[11px] font-bold text-warm-700 uppercase">Giờ Phụng Sự Xã Hội</span>
-            <div className="text-2xl font-black text-blue-900 mt-1">6 / 10 Giờ</div>
-            <span className="text-[10px] text-blue-600 font-medium">Đổi thiết bị bằng tri thức</span>
+            <div className="text-2xl font-black text-blue-900 mt-1">
+              {isSuperAdminEmail(currentUser?.email) ? '6 / 10 Giờ' : '0 / 10 Giờ'}
+            </div>
+            <span className="text-[10px] text-blue-600 font-medium">
+              {isSuperAdminEmail(currentUser?.email) ? 'Đổi thiết bị bằng tri thức' : 'Chưa có cam kết đổi giờ'}
+            </span>
           </div>
         </div>
       </section>
@@ -508,12 +554,23 @@ export default function ProfilePage() {
           <div className="space-y-2 p-4 bg-warm-50 rounded-2xl border border-warm-200">
             <div className="flex justify-between text-xs font-black">
               <span>Tiến độ hoàn thành:</span>
-              <span className="text-brand-700">{timebank.hoursDone} / {timebank.hoursRequired} Giờ (60%)</span>
+              <span className="text-brand-700">
+                {isSuperAdminEmail(currentUser?.email) ? '6 / 10 Giờ (60%)' : '0 / 10 Giờ (0%)'}
+              </span>
             </div>
             <div className="w-full h-3 bg-warm-200 rounded-full overflow-hidden">
-              <div className="h-full bg-brand-600 rounded-full" style={{ width: '60%' }}/>
+              <div 
+                className="h-full bg-brand-600 rounded-full" 
+                style={{ width: isSuperAdminEmail(currentUser?.email) ? '60%' : '0%' }}
+              />
             </div>
           </div>
+          {!isSuperAdminEmail(currentUser?.email) && (
+            <div className="p-4 rounded-2xl bg-warm-50 border border-warm-200 text-center space-y-1 text-xs">
+              <p className="font-bold text-warm-800">Bạn hiện chưa có cam kết đổi giờ công phụng sự.</p>
+              <p className="text-warm-600">Khi bạn được kết nối nhận thiết bị sinh kế 0-VND tại Trạm Bắt Tay, tiến độ 10 giờ chia sẻ tri thức sẽ hiển thị tại đây.</p>
+            </div>
+          )}
         </div>
       )}
 
@@ -726,8 +783,12 @@ export default function ProfilePage() {
                 HỆ SINH THÁI TUẦN HOÀN GIÁO DỤC 0-VND • SOVA GIVE 100
               </span>
               <h2 className="text-2xl sm:text-3xl font-black text-warm-900 uppercase">CHỨNG CHỈ CÔNG DÂN DANH DỰ</h2>
-              <div className="text-2xl font-black text-brand-700 uppercase">{currentUser?.name || 'NGUYEN KHIEM NET'}</div>
-              <p className="font-mono text-xs text-warm-700">Mã định danh: SOVA-ID-2108-1984</p>
+              <div className="text-2xl font-black text-brand-700 uppercase">{currentUser?.name || 'CÔNG DÂN SOVA 0-VND'}</div>
+              <p className="font-mono text-xs text-warm-700">
+                Mã định danh: {isSuperAdminEmail(currentUser?.email) 
+                  ? 'SOVA-ID-2108-1984' 
+                  : (currentUser?.id ? `SOVA-ID-${currentUser.id.replace(/[^a-zA-Z0-9]/g, '').slice(0, 8).toUpperCase()}` : 'SOVA-ID-CITIZEN')}
+              </p>
             </div>
           </div>
         </div>
