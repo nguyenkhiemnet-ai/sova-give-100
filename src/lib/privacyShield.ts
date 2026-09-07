@@ -1,4 +1,3 @@
-// Thuật toán ẩn danh hóa tên theo Nghị định 13/2023/NĐ-CP
 export function maskFullName(name: string): string {
   if (!name) return 'Công dân tử tế';
   const parts = name.trim().split(/\s+/);
@@ -10,24 +9,41 @@ export function maskFullName(name: string): string {
   return `${firstName} ${middleInitials} ${lastName[0]}.`;
 }
 
-// Tạo mã băm SHA-256 tượng trưng niêm phong Lời Cam Kết Danh Dự
-export async function generatePledgeHash(pledge: string, author: string): Promise<string> {
-  const data = `${author.trim()}::${pledge.trim()}::SOVA_HONOR_PLEDGE_2026`;
-  let hash = 0;
-  for (let i = 0; i < data.length; i++) {
-    const char = data.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  const hex = Math.abs(hash).toString(16).padStart(8, '0');
-  return `SHA256:7f8b9a${hex}e4d1c9`;
-}
-
-// Danh mục các điểm hẹn công cộng văn minh an toàn (<5km)
+// Danh bạ các Safe Hub công cộng 0-VND (Xóa sổ thuế cà phê 100%)
 export const SAFE_PUBLIC_MEETING_HUBS = [
-  { id: 'hub-1', name: 'Sảnh Thư viện Tạ Quang Bửu (ĐHBK Hà Nội)', district: 'Hai Bà Trưng', city: 'Hà Nội' },
-  { id: 'hub-2', name: 'Nhà Văn Hóa Sinh Viên - ĐHQG', district: 'Thủ Đức', city: 'TP. Hồ Chí Minh' },
-  { id: 'hub-3', name: 'Trung Tâm Học Liệu Đại Học Đà Nẵng', district: 'Hải Châu', city: 'Đà Nẵng' },
-  { id: 'hub-4', name: 'Bưu Cục Viettel Post Trung Tâm (Điểm Hẹn Ủy Thác)', district: 'Cầu Giấy', city: 'Hà Nội' },
-  { id: 'hub-5', name: 'Không Gian Sách Cộng Đồng Phố Đi Bộ', district: 'Hoàn Kiếm', city: 'Hà Nội' },
+  { 
+    id: 'hub-bk-hn', 
+    name: 'Sảnh Thư viện Tạ Quang Bửu (ĐHBK Hà Nội)', 
+    district: 'Hai Bà Trưng', 
+    city: 'Hà Nội',
+    note: 'Có ghế ngồi đàng hoàng, bảo vệ 24/7, không mất tiền nước'
+  },
+  { 
+    id: 'hub-nvh-hcm', 
+    name: 'Nhà Văn Hóa Sinh Viên - ĐHQG TP.HCM', 
+    district: 'Thủ Đức', 
+    city: 'TP. Hồ Chí Minh',
+    note: 'Khu vực tự học công cộng miễn phí, an ninh tuyệt đối'
+  },
+  { 
+    id: 'hub-hl-dn', 
+    name: 'Trung Tâm Học Liệu Đại Học Đà Nẵng', 
+    district: 'Hải Châu', 
+    city: 'Đà Nẵng',
+    note: 'Không gian mở văn minh cho sinh viên'
+  },
+  { 
+    id: 'hub-vt-cg', 
+    name: 'Điểm Hẹn Gửi Đồ Ủy Thác Bưu Cục Viettel Post', 
+    district: 'Cầu Giấy', 
+    city: 'Hà Nội',
+    note: 'Dành cho người trao muốn gửi máy lại quầy, sinh viên tự đến nhận'
+  }
 ];
+
+// Dữ liệu mẫu Timebanking (Phụng sự xã hội đổi thiết bị)
+export interface TimebankRecord {
+  hoursCompleted: number;
+  totalRequired: number;
+  tasks: string[];
+}

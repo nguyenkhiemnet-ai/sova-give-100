@@ -6,7 +6,8 @@ import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   ArrowLeft, ShieldCheck, QrCode, Camera, CheckCircle2, 
-  Clock, MapPin, Send, Lock, Sparkles, AlertCircle, RefreshCw
+  Clock, MapPin, Send, Lock, Sparkles, AlertCircle, Wrench, 
+  RotateCcw, Compass, UserCheck
 } from 'lucide-react';
 import { SAFE_PUBLIC_MEETING_HUBS } from '@/lib/privacyShield';
 
@@ -14,71 +15,22 @@ function HandshakeContent() {
   const searchParams = useSearchParams();
   const wishId = searchParams.get('id');
 
-  const [currentUser, setCurrentUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [unauthorized, setUnauthorized] = useState(false);
-  const [wishData, setWishData] = useState<any>(null);
-  
   const [role, setRole] = useState<'ANGEL' | 'DREAMER'>('ANGEL');
   const [totp, setTotp] = useState('884201');
   const [countdown, setCountdown] = useState(60);
-  const [scanning, setScanning] = useState(false);
+  const [selectedHub, setSelectedHub] = useState(SAFE_PUBLIC_MEETING_HUBS[0].id);
+  const [inGracePeriod, setInGracePeriod] = useState(false);
   const [completed, setCompleted] = useState(false);
   
-  const [messages, setMessages] = useState<{ sender: string; text: string; time: string }[]>([]);
+  // Tin nhắn hẹn gặp PII
+  const [messages, setMessages] = useState([
+    { sender: 'Hệ thống SOVA', text: 'Kênh hẹn gặp PII kích hoạt. Hãy chọn Safe Hub miễn phí dưới đây để gặp mặt không mất tiền nước.', time: '08:30' },
+    { sender: 'Anh Trí (Angel)', text: 'Chào em, chiều nay 16h30 tan làm anh mang máy qua Sảnh Thư viện Tạ Quang Bửu nhé!', time: '08:35' },
+    { sender: 'Em An (Dreamer)', text: 'Dạ vâng anh, em ngồi ở bàn tự học tầng 1 đợi anh ạ. Em cảm ơn anh!', time: '08:40' }
+  ]);
   const [inputMsg, setInputMsg] = useState('');
 
-  useEffect(() => {
-    async function initSession() {
-      setLoading(true);
-      // 1. Kiểm tra trạng thái đăng nhập
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
-
-      // Nếu không có mã phiên hoặc đang mở thử nghiệm công khai
-      if (!wishId) {
-        // Chế độ mô phỏng kiểm thử an toàn
-        setWishData({
-          title: 'Thiết bị thực hành sinh kế (Phiên thử nghiệm)',
-          passport_code: 'SOVA-PASS-PREVIEW',
-          province: '01'
-        });
-        setMessages([
-          { sender: 'Hệ thống', text: 'Đây là không gian thử nghiệm quy trình. Khi có giao dịch thật, chỉ 2 bên mới đọc được tin nhắn.', time: 'Hệ thống' }
-        ]);
-        setLoading(false);
-        return;
-      }
-
-      // 2. Kiểm tra quyền sở hữu giao dịch từ database
-      try {
-        const { data, error } = await supabase
-          .from('wishes')
-          .select('*')
-          .eq('id', wishId)
-          .single();
-
-        if (error || !data) {
-          setUnauthorized(true);
-        } else {
-          // Chỉ cho phép người tạo hoặc người nhận truy cập
-          if (user && user.id !== data.user_id && user.id !== data.claimed_by) {
-            setUnauthorized(true);
-          } else {
-            setWishData(data);
-          }
-        }
-      } catch (err) {
-        setUnauthorized(true);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    initSession();
-  }, [wishId]);
-
-  // Đếm ngược mã TOTP 60 giây
+  // Đếm ngược TOTP
   useEffect(() => {
     const timer = setInterval(() => {
       setCountdown(prev => {
@@ -105,123 +57,212 @@ function HandshakeContent() {
     setInputMsg('');
   };
 
-  if (loading) {
-    return (
-      <div className="py-24 text-center text-warm-700 font-bold animate-pulse">
-        Đang xác thực quyền truy cập bảo mật PII theo Nghị định 13...
-      </div>
-    );
-  }
-
-  if (unauthorized) {
-    return (
-      <div className="max-w-md mx-auto my-16 p-8 bg-white rounded-3xl border border-red-200 text-center space-y-4 shadow-soft">
-        <div className="w-16 h-16 bg-red-50 text-red-600 rounded-full flex items-center justify-center mx-auto">
-          <Lock className="w-8 h-8"/>
-        </div>
-        <h2 className="text-xl font-black text-warm-900">Quyền Truy Cập Bị Từ Chối</h2>
-        <p className="text-xs text-warm-700 leading-relaxed">
-          Kênh hẹn gặp và tin nhắn Bắt Tay QR được mã hóa riêng tư. Chỉ có chủ sở hữu vật phẩm và người nhận được phê chuẩn mới có quyền xem nội dung này.
-        </p>
-        <Link href="/" className="inline-block px-6 py-2.5 rounded-xl bg-brand-600 text-white text-xs font-bold">
-          Quay về Cây Nguyện Ước
-        </Link>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8 max-w-5xl mx-auto">
+      
+      {/* Header */}
       <div className="flex items-center justify-between">
-        <Link href="/" className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-warm-200 bg-white text-xs font-bold text-warm-700 hover:text-brand-700">
+        <Link href="/" className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-warm-200 bg-white text-xs font-bold text-warm-700 hover:text-brand-700 shadow-2xs transition-all">
           <ArrowLeft className="w-4 h-4"/>
           <span>Quay lại Cây Nguyện Ước</span>
         </Link>
-        <span className="px-3.5 py-1 rounded-full text-xs font-black bg-brand-50 text-brand-700 border border-brand-200 flex items-center gap-1.5">
-          <ShieldCheck className="w-4 h-4 text-brand-600"/>
-          Phiên Riêng Tư Đã Khóa PII
-        </span>
+        <div className="flex items-center gap-2">
+          <Link href="/verify/" className="px-3 py-1 rounded-full text-xs font-black bg-sun-50 text-sun-800 border border-sun-200 flex items-center gap-1">
+            <Lock className="w-3 h-3 text-sun-600"/>
+            <span>Cổng Tra Cứu Chống Cầm Đồ</span>
+          </Link>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Cột Trái: Trạm TOTP QR */}
-        <div className="lg:col-span-6 bg-white p-6 sm:p-8 rounded-3xl border border-warm-200 shadow-soft text-center space-y-6">
-          <div className="text-left border-b border-warm-100 pb-3">
-            <span className="text-[10px] font-black text-brand-700 uppercase">Vật Phẩm Khớp Nối</span>
-            <h3 className="font-black text-warm-900 text-base">{wishData?.title || 'ThinkPad T480 Core i5'}</h3>
+      {/* Banner */}
+      <section className="bg-gradient-to-br from-brand-50 via-white to-sun-50 rounded-3xl border border-warm-200 p-6 sm:p-8 shadow-soft space-y-3">
+        <div className="flex items-center gap-2 text-xs font-black text-brand-700 uppercase tracking-wider">
+          <Sparkles className="w-4 h-4 text-sun-500"/>
+          Trạm Bắt Tay An Toàn 0 Đồng & Bảo Chứng Kỹ Thuật 72 Giờ
+        </div>
+        <h1 className="text-2xl sm:text-3xl font-black text-warm-900 tracking-tight">
+          Bắt Tay QR Văn Minh Tại Điểm Hẹn Miễn Phí
+        </h1>
+        <p className="text-xs sm:text-sm text-warm-700 max-w-3xl leading-relaxed">
+          Gặp nhau tại các Safe Hubs (Thư viện trường, Nhà văn hóa sinh viên) không tốn tiền nước, kích hoạt 72 giờ dùng thử và hỗ trợ kỹ thuật miễn phí từ Biệt Đội Bác Sĩ IT.
+        </p>
+
+        {/* Chuyển vai */}
+        <div className="flex bg-warm-100 p-1 rounded-2xl w-fit border border-warm-200 mt-2">
+          <button
+            onClick={() => setRole('ANGEL')}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              role === 'ANGEL' ? 'bg-brand-600 text-white shadow-xs' : 'text-warm-700 hover:text-warm-900'
+            }`}
+          >
+            Người Trao (Phát QR TOTP 60s)
+          </button>
+          <button
+            onClick={() => setRole('DREAMER')}
+            className={`px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
+              role === 'DREAMER' ? 'bg-brand-600 text-white shadow-xs' : 'text-warm-700 hover:text-warm-900'
+            }`}
+          >
+            Người Nhận (Quét Camera 1 Chạm)
+          </button>
+        </div>
+      </section>
+
+      {/* Màn hình Trạng thái 72h Grace Period */}
+      {inGracePeriod ? (
+        <div className="bg-white rounded-3xl border-2 border-sun-500 p-6 sm:p-10 shadow-xl space-y-6 text-center">
+          <div className="w-16 h-16 rounded-full bg-sun-50 text-sun-600 mx-auto flex items-center justify-center ring-8 ring-sun-100">
+            <Clock className="w-8 h-8"/>
+          </div>
+          <div className="space-y-2 max-w-lg mx-auto">
+            <span className="px-3 py-1 rounded-full bg-sun-100 text-sun-800 text-xs font-black uppercase">
+              Đang Trong 72 Giờ Bảo Chứng Kỹ Thuật
+            </span>
+            <h2 className="text-xl sm:text-2xl font-black text-warm-900">
+              Thiết Bị Đang Được Sinh Viên Kiểm Tra Thực Tế
+            </h2>
+            <p className="text-xs text-warm-700 leading-relaxed">
+              Bạn có 72 giờ mang máy về phòng trọ để cài phần mềm và học tập. Nếu máy bị lỗi phần cứng nặng, bạn có quyền hoàn trả văn minh mà không bị trừ điểm danh dự.
+            </p>
           </div>
 
-          <div className="flex bg-warm-100 p-1 rounded-xl w-fit mx-auto text-xs font-bold">
-            <button onClick={() => setRole('ANGEL')} className={`px-4 py-1.5 rounded-lg cursor-pointer ${role === 'ANGEL' ? 'bg-brand-600 text-white' : 'text-warm-700'}`}>
-              Tôi Là Người Trao
+          <div className="flex flex-col sm:flex-row justify-center gap-3 pt-2">
+            <button
+              onClick={() => {
+                alert('Đã kết nối bạn với Biệt Đội Bác Sĩ IT 0-VND (Khoa CNTT) để hỗ trợ cài Win/vệ sinh máy miễn phí!');
+              }}
+              className="px-5 py-2.5 rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-900 text-xs font-bold transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <Wrench className="w-4 h-4 text-brand-600"/>
+              <span>Nhờ Bác Sĩ IT Hỗ Trợ 0-VND</span>
             </button>
-            <button onClick={() => setRole('DREAMER')} className={`px-4 py-1.5 rounded-lg cursor-pointer ${role === 'DREAMER' ? 'bg-brand-600 text-white' : 'text-warm-700'}`}>
-              Tôi Là Người Nhận
+
+            <button
+              onClick={() => {
+                setInGracePeriod(false);
+                setCompleted(true);
+              }}
+              className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
+            >
+              <CheckCircle2 className="w-4 h-4"/>
+              <span>Xác Nhận Máy Hoạt Động Tốt (Chốt Hộ Chiếu)</span>
             </button>
           </div>
-
-          {role === 'ANGEL' ? (
-            <div className="space-y-3">
-              <div className="w-48 h-48 mx-auto bg-white border-2 border-brand-500/40 rounded-2xl p-3 flex items-center justify-center shadow-inner">
-                <QrCode className="w-full h-full text-warm-900"/>
-              </div>
-              <div className="font-mono text-2xl font-black text-brand-700 tracking-widest bg-brand-50 py-1 rounded-xl border border-brand-200">
-                {totp}
-              </div>
-              <p className="text-[11px] text-warm-700">Mã đổi sau: <strong className="text-sun-600">{countdown}s</strong></p>
+        </div>
+      ) : completed ? (
+        <div className="bg-white rounded-3xl border-2 border-brand-500 p-8 text-center space-y-4 shadow-float">
+          <CheckCircle2 className="w-14 h-14 text-brand-600 mx-auto"/>
+          <h2 className="text-2xl font-black text-warm-900">Bàn Giao Hoàn Tất & Kích Hoạt Vòng Đời 2!</h2>
+          <p className="text-xs text-warm-700 max-w-md mx-auto">
+            Hộ Chiếu Số SOVA-PASS-8842-VN đã chính thức ghi nhận quyền sử dụng danh dự cho sinh viên.
+          </p>
+          <div className="pt-2">
+            <Link href="/profile/" className="px-6 py-2.5 rounded-xl bg-brand-600 text-white text-xs font-black inline-block">
+              Vào Hồ Sơ Cá Nhân & Xem Tiến Độ Trả Giờ Công
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* Cột Trái: Trạm TOTP QR */}
+          <div className="lg:col-span-6 bg-white p-6 sm:p-8 rounded-3xl border border-warm-200 shadow-soft text-center space-y-6">
+            <div className="text-left border-b border-warm-100 pb-3">
+              <span className="text-[10px] font-black text-brand-700 uppercase">Thiết Bị Khớp Nối</span>
+              <h3 className="font-black text-warm-900 text-base">ThinkPad T480 Core i5 / 16GB</h3>
             </div>
-          ) : (
-            <div className="space-y-4">
-              <div className="w-48 h-48 mx-auto bg-slate-900 rounded-2xl flex flex-col items-center justify-center text-white p-4">
-                <Camera className="w-10 h-10 text-brand-400 mb-2"/>
-                <span className="text-[11px] text-warm-200">Ống kính sẵn sàng</span>
+
+            {role === 'ANGEL' ? (
+              <div className="space-y-3">
+                <div className="w-48 h-48 mx-auto bg-white border-2 border-brand-500/40 rounded-2xl p-3 flex items-center justify-center shadow-inner">
+                  <QrCode className="w-full h-full text-warm-900"/>
+                </div>
+                <div className="font-mono text-2xl font-black text-brand-700 tracking-widest bg-brand-50 py-1 rounded-xl border border-brand-200">
+                  {totp}
+                </div>
+                <p className="text-[11px] text-warm-700">Mã đổi sau: <strong className="text-sun-600">{countdown}s</strong></p>
               </div>
-              <button onClick={() => setCompleted(true)} className="w-full py-2.5 bg-brand-600 text-white font-bold text-xs rounded-xl cursor-pointer">
-                Quét Mã Ngay
+            ) : (
+              <div className="space-y-4">
+                <div className="w-48 h-48 mx-auto bg-slate-900 rounded-2xl flex flex-col items-center justify-center text-white p-4">
+                  <Camera className="w-10 h-10 text-brand-400 mb-2"/>
+                  <span className="text-[11px] text-warm-200">Ống kính sẵn sàng</span>
+                </div>
+                <button 
+                  onClick={() => setInGracePeriod(true)}
+                  className="w-full py-3 bg-brand-600 hover:bg-brand-700 text-white font-black text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                >
+                  Quét Mã & Kích Hoạt 72 Giờ Dùng Thử
+                </button>
+              </div>
+            )}
+          </div>
+
+          {/* Cột Phải: Hộp Chat & Danh Bạ Safe Hubs */}
+          <div className="lg:col-span-6 bg-white p-6 sm:p-8 rounded-3xl border border-warm-200 shadow-soft space-y-4">
+            <div className="border-b border-warm-100 pb-3">
+              <h3 className="font-black text-warm-900 text-base flex items-center gap-2">
+                <Lock className="w-4 h-4 text-brand-600"/>
+                <span>Kênh Hẹn Gặp Miễn Phí (Zero-Cost Safe Hub)</span>
+              </h3>
+              <p className="text-xs text-warm-700">Chỉ hẹn ở điểm công cộng an toàn, không tốn tiền nước.</p>
+            </div>
+
+            {/* Chọn Safe Hub */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-warm-800 flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-brand-600"/>
+                <span>Điểm hẹn công cộng miễn phí:</span>
+              </label>
+              <select
+                value={selectedHub}
+                onChange={e => setSelectedHub(e.target.value)}
+                className="w-full p-2.5 rounded-xl border border-warm-200 bg-warm-50 text-xs font-bold text-warm-900 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer"
+              >
+                {SAFE_PUBLIC_MEETING_HUBS.map(hub => (
+                  <option key={hub.id} value={hub.id}>
+                    📍 {hub.name} ({hub.district})
+                  </option>
+                ))}
+              </select>
+              <p className="text-[10px] text-brand-700 font-medium italic">
+                {SAFE_PUBLIC_MEETING_HUBS.find(h => h.id === selectedHub)?.note}
+              </p>
+            </div>
+
+            {/* Khung chat */}
+            <div className="h-44 overflow-y-auto p-3 bg-warm-50 rounded-2xl border border-warm-200 space-y-2 text-xs">
+              {messages.map((m, idx) => (
+                <div key={idx} className="space-y-0.5">
+                  <div className="flex justify-between text-[10px] text-warm-700 font-bold">
+                    <span>{m.sender}</span>
+                    <span>{m.time}</span>
+                  </div>
+                  <div className="p-2 bg-white rounded-xl border border-warm-200 text-warm-900">
+                    {m.text}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Nhắn tin hẹn giờ gặp..."
+                value={inputMsg}
+                onChange={e => setInputMsg(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+                className="flex-1 px-3 py-2 rounded-xl border border-warm-200 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+              />
+              <button onClick={handleSendMessage} className="px-4 py-2 bg-brand-600 text-white font-bold text-xs rounded-xl flex items-center gap-1 cursor-pointer">
+                <Send className="w-3.5 h-3.5"/> Gửi
               </button>
             </div>
-          )}
+          </div>
+
         </div>
+      )}
 
-        {/* Cột Phải: Hộp Chat Ẩn Danh Riêng Tư */}
-        <div className="lg:col-span-6 bg-white p-6 sm:p-8 rounded-3xl border border-warm-200 shadow-soft space-y-4">
-          <div className="border-b border-warm-100 pb-3">
-            <h3 className="font-black text-warm-900 text-base flex items-center gap-2">
-              <Lock className="w-4 h-4 text-brand-600"/>
-              <span>Kênh Hẹn Gặp Riêng Tư</span>
-            </h3>
-            <p className="text-xs text-warm-700">Chỉ hai bên trong phiên giao dịch mới có quyền truy cập.</p>
-          </div>
-
-          <div className="h-56 overflow-y-auto p-3 bg-warm-50 rounded-2xl border border-warm-200 space-y-2 text-xs">
-            {messages.map((m, idx) => (
-              <div key={idx} className="space-y-0.5">
-                <div className="flex justify-between text-[10px] text-warm-700 font-bold">
-                  <span>{m.sender}</span>
-                  <span>{m.time}</span>
-                </div>
-                <div className="p-2.5 bg-white rounded-xl border border-warm-200 text-warm-900">
-                  {m.text}
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex gap-2">
-            <input
-              type="text"
-              placeholder="Nhắn tin hẹn điểm gặp công cộng..."
-              value={inputMsg}
-              onChange={e => setInputMsg(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-              className="flex-1 px-3 py-2 rounded-xl border border-warm-200 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
-            />
-            <button onClick={handleSendMessage} className="px-4 py-2 bg-brand-600 text-white font-bold text-xs rounded-xl flex items-center gap-1 cursor-pointer">
-              <Send className="w-3.5 h-3.5"/> Gửi
-            </button>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }
