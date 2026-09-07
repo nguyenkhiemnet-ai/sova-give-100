@@ -37,44 +37,7 @@ const CATEGORIES = [
   { id: 'livelihood_tools', label: 'Công cụ mưu sinh', icon: Wrench },
 ];
 
-const CURATED_WISHES: WishItem[] = [
-  {
-    id: 'a1111111-1111-1111-1111-111111111111',
-    title: 'Máy tính xách tay phục vụ học tập CNTT',
-    category: 'laptop',
-    imageUrl: CATEGORY_FALLBACK_IMAGES['laptop'],
-    reason: 'Em vừa đỗ đại học nhưng gia đình làm nông ở vùng bão lũ không đủ kinh phí sắm máy thực hành lập trình Web.',
-    honor_commitment: 'Em cam kết giữ gìn máy cẩn thận, học đạt loại giỏi và trao lại cho đàn em khóa sau khi ra trường.',
-    urgency: 'urgent',
-    province_code: '01',
-    ward_code: '01-03',
-    status: 'verified',
-  },
-  {
-    id: 'b2222222-2222-2222-2222-222222222222',
-    title: 'Xe đạp đến trường cho học sinh nghèo hiếu học',
-    category: 'bicycle',
-    imageUrl: CATEGORY_FALLBACK_IMAGES['bicycle'],
-    reason: 'Đoạn đường từ nhà tới trường cấp 3 dài 8km đường đồi núi hiểm trở, gia đình chưa có điều kiện mua xe cho em.',
-    honor_commitment: 'Em cam kết đi học chuyên cần, bảo dưỡng xích líp tốt và nhượng lại cho học sinh khó khăn khác khi tốt nghiệp.',
-    urgency: 'urgent',
-    province_code: '02',
-    ward_code: '02-01',
-    status: 'verified',
-  },
-  {
-    id: 'c3333333-3333-3333-3333-333333333333',
-    title: 'Máy may sinh kế cho mẹ đơn thân gia công tại nhà',
-    category: 'sewing_machine',
-    imageUrl: CATEGORY_FALLBACK_IMAGES['sewing_machine'],
-    reason: 'Cần máy may gia đình để nhận đồ may gia công kiếm thêm thu nhập trang trải tiền thuốc và nuôi hai con nhỏ ăn học.',
-    honor_commitment: 'Tôi cam kết dùng máy đúng mục đích mưu sinh và sẵn sàng hướng dẫn nghề may miễn phí cho chị em khó khăn trong xóm.',
-    urgency: 'normal',
-    province_code: '48',
-    ward_code: '48-ST',
-    status: 'verified',
-  }
-];
+const CURATED_WISHES: WishItem[] = []; // Đã gỡ bỏ toàn bộ dữ liệu mẫu gán cứng
 
 export default function HomePage() {
   const [wishes, setWishes] = useState<WishItem[]>(CURATED_WISHES);
@@ -180,6 +143,34 @@ export default function HomePage() {
     }
     setSelectedWish(item);
     setClaimSuccess(null);
+  };
+
+  // Hàm xóa nhanh dành cho Quản trị viên ngay tại Trang Chủ
+  const handleAdminQuickDelete = async (e: React.MouseEvent, wishId: string) => {
+    e.stopPropagation();
+    if (!confirm('Quản trị viên: Bạn có chắc chắn muốn xóa vĩnh viễn tin này khỏi trang chủ?')) return;
+    
+    try {
+      if (!wishId.startsWith('opt-')) {
+        await supabase.from('wishes').delete().eq('id', wishId);
+      }
+      let deletedIds: string[] = [];
+      try { deletedIds = JSON.parse(localStorage.getItem('SOVA_DELETED_WISH_IDS') || '[]'); } catch {}
+      if (!deletedIds.includes(wishId)) deletedIds.push(wishId);
+      localStorage.setItem('SOVA_DELETED_WISH_IDS', JSON.stringify(deletedIds));
+
+      const stored = localStorage.getItem('SOVA_OPTIMISTIC_WISHES');
+      if (stored) {
+        const list: any[] = JSON.parse(stored);
+        localStorage.setItem('SOVA_OPTIMISTIC_WISHES', JSON.stringify(list.filter(item => item.id !== wishId)));
+      }
+      localStorage.removeItem(`SOVA_WISH_IMG_${wishId}`);
+
+      setWishes(prev => prev.filter(w => w.id !== wishId));
+      alert('Đã xóa bài đăng thành công.');
+    } catch {
+      setWishes(prev => prev.filter(w => w.id !== wishId));
+    }
   };
 
   const handleConfirmClaim = async (wishId: string) => {
@@ -495,7 +486,14 @@ export default function HomePage() {
                     <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-white/95 text-brand-800 uppercase shadow-2xs">
                       {badgeText}
                     </span>
-                    <div className="flex gap-1.5">
+                    <div className="flex gap-1.5 items-center">
+                      <button
+                        onClick={(e) => handleAdminQuickDelete(e, item.id)}
+                        className="px-2 py-0.5 rounded-lg bg-red-600 hover:bg-red-700 text-white text-[10px] font-black shadow-2xs transition-all flex items-center gap-1 cursor-pointer"
+                        title="Xóa vĩnh viễn tin này khỏi hệ thống"
+                      >
+                        ✕ Xóa
+                      </button>
                       {isPending && (
                         <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-amber-500 text-white shadow-2xs">
                           Chờ Duyệt
