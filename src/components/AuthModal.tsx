@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { 
   X, Mail, Lock, User, Eye, EyeOff, KeyRound, 
-  ArrowRight, CheckCircle2, AlertCircle, RefreshCw 
+  ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Sparkles 
 } from 'lucide-react';
 import { loginWithGoogle, loginWithEmail, signUpWithEmail, resetPassword } from '@/lib/auth';
 
@@ -266,7 +266,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
                 </div>
               </div>
 
-              {/* Hàng Tiện Ích: Ghi nhớ (trái) + Quên mật khẩu (phải) trên cùng 1 dòng hài hòa */}
+              {/* Hàng Tiện Ích: Ghi nhớ (trái) + Quên mật khẩu (phải) nổi bật */}
               <div className="flex items-center justify-between pt-0.5">
                 <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-warm-600">
                   <input
@@ -280,9 +280,9 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
                 <button
                   type="button"
                   onClick={() => { setActiveTab('FORGOT'); setErrorMessage(''); }}
-                  className="text-xs font-medium text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
+                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs border border-emerald-200/80 transition-all hover:border-emerald-300 cursor-pointer shadow-2xs hover:shadow-xs active:scale-95"
                 >
-                  Quên mật khẩu?
+                  <span>Quên mật khẩu?</span>
                 </button>
               </div>
 
@@ -472,31 +472,33 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
           )}
         </div>
 
-        {/* Footer chuyển đổi Đăng nhập / Đăng ký dạng văn bản nhẹ nhàng thay vì Tab nặng nề */}
+        {/* Footer chuyển đổi Đăng nhập / Đăng ký nổi bật */}
         {activeTab !== 'FORGOT' && (
-          <div className="py-3 px-6 bg-warm-50/50 border-t border-warm-100 text-center text-xs text-warm-500">
+          <div className="py-3.5 px-6 bg-gradient-to-r from-emerald-50/90 via-emerald-100/50 to-teal-50/90 border-t border-emerald-200/70 text-center text-xs">
             {activeTab === 'LOGIN' ? (
-              <span>
-                Chưa có tài khoản?{' '}
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <span className="font-semibold text-warm-800">Chưa có tài khoản?</span>
                 <button
                   type="button"
                   onClick={() => { setActiveTab('REGISTER'); setErrorMessage(''); }}
-                  className="font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs shadow-xs hover:shadow-soft transition-all hover:scale-105 active:scale-95 cursor-pointer ring-2 ring-emerald-600/20"
                 >
-                  Đăng ký miễn phí
+                  <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
+                  <span>Đăng ký miễn phí</span>
                 </button>
-              </span>
+              </div>
             ) : (
-              <span>
-                Đã có tài khoản?{' '}
+              <div className="flex items-center justify-center gap-2 flex-wrap">
+                <span className="font-semibold text-warm-800">Đã có tài khoản?</span>
                 <button
                   type="button"
                   onClick={() => { setActiveTab('LOGIN'); setErrorMessage(''); }}
-                  className="font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-warm-800 hover:bg-warm-900 text-white font-black text-xs shadow-xs hover:shadow-soft transition-all hover:scale-105 active:scale-95 cursor-pointer"
                 >
-                  Đăng nhập ngay
+                  <span>Đăng nhập ngay</span>
+                  <ArrowRight className="w-3.5 h-3.5 text-warm-300" />
                 </button>
-              </span>
+              </div>
             )}
           </div>
         )}
