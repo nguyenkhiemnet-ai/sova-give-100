@@ -11,9 +11,9 @@ export interface UserProfile {
 }
 
 export const ADMIN_USER: UserProfile = {
-  id: 'usr-admin-01',
-  name: 'Nguyễn Khiêm (Sáng Lập)',
-  email: 'nguyenkhiemnet@gmail.com',
+  id: 'usr-admin-khiem',
+  name: 'Nguyễn Khiêm',
+  email: 'nguyenkhiem.net@gmail.com',
   avatar: 'K',
   role: 'SUPER_ADMIN',
   karma: 200,
@@ -41,32 +41,17 @@ export function setActiveUser(user: UserProfile | null): void {
   window.dispatchEvent(new Event('sova_auth_change'));
 }
 
-// Đăng nhập Google thật qua Supabase OAuth
+// Gọi cổng Google OAuth thật 100%
 export async function loginWithGoogle(): Promise<void> {
-  try {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: window.location.origin
-      }
-    });
-    if (error) throw error;
-  } catch (err: any) {
-    console.warn("Chuyển sang cơ chế đăng nhập xác thực nhanh:", err.message);
-    // Dự phòng khi Google Client ID chưa cấu hình trên Cloud: đăng nhập nhanh cho người dùng thật
-    const promptName = prompt("Nhập họ tên hoặc biệt danh của bạn để xác thực tư cách Người Trao (Angel):", "Công Dân Tử Tế");
-    if (promptName && promptName.trim()) {
-      const newUser: UserProfile = {
-        id: 'usr-' + Date.now(),
-        name: promptName.trim(),
-        email: promptName.toLowerCase().replace(/\s+/g, '') + '@gmail.com',
-        avatar: promptName.trim().charAt(0).toUpperCase(),
-        role: promptName.includes('Khiêm') ? 'SUPER_ADMIN' : 'CITIZEN',
-        karma: promptName.includes('Khiêm') ? 200 : 100,
-        co2Saved: promptName.includes('Khiêm') ? 130.5 : 85.5
-      };
-      setActiveUser(newUser);
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo: window.location.origin
     }
+  });
+  if (error) {
+    console.error("Lỗi khởi tạo phiên Google OAuth:", error.message);
+    alert("Đang chuyển hướng tới cổng đăng nhập Google: " + error.message);
   }
 }
 
