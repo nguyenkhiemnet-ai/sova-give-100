@@ -14,7 +14,7 @@ import {
   Clock, Repeat, AlertCircle, ShieldCheck, CheckCircle2,
   Laptop, Bike, Scissors, BookOpen, Wrench, Navigation,
   ArrowUp, Lock, MessageSquare, Send, X, ExternalLink,
-  Share2, Check, Copy
+  Share2, Check, Copy, PackageSearch
 } from 'lucide-react';
 
 interface WishItem {
@@ -272,20 +272,42 @@ export default function HomePage() {
     setTimeout(() => setCopiedLink(false), 2500);
   };
 
+  // Tự động cuộn mượt đến Cây Nguyện Ước khi chọn danh mục hoặc tìm kiếm
+  const handleSelectCategory = (catId: string, e?: React.MouseEvent<HTMLButtonElement>) => {
+    setSelectedCategory(catId);
+
+    // 1. Tự động đưa nút danh mục vào giữa tầm mắt theo chiều ngang (trải nghiệm tuyệt hảo trên mobile)
+    if (e?.currentTarget) {
+      e.currentTarget.scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest'
+      });
+    }
+
+    // 2. Tự động chuyển màn hình mượt mà đến khu vực "Những Ước Mơ Cần Bạn Tiếp Sức Hôm Nay"
+    const wishlistEl = document.getElementById('wishlist-section');
+    if (wishlistEl) {
+      const isMobile = window.innerWidth < 768;
+      const navOffset = isMobile ? 112 : 80;
+      const elementTop = wishlistEl.getBoundingClientRect().top + window.pageYOffset;
+      const targetScroll = Math.max(0, elementTop - navOffset);
+
+      window.scrollTo({
+        top: targetScroll,
+        behavior: 'smooth'
+      });
+    }
+  };
+
   const filteredWishes = wishes.filter(item => {
     const title = item.title || '';
     const desc = item.reason || item.reason_description || '';
     const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           desc.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const cat = (item.category || '').toLowerCase();
-    let matchesCat = selectedCategory === 'ALL';
-    if (!matchesCat) {
-      if (selectedCategory === 'bicycle') matchesCat = (cat === 'bicycle' || cat === 'commute' || title.toLowerCase().includes('xe'));
-      else if (selectedCategory === 'laptop') matchesCat = (cat === 'laptop' || cat === 'study_device' || title.toLowerCase().includes('máy tính') || title.toLowerCase().includes('laptop'));
-      else if (selectedCategory === 'sewing_machine') matchesCat = (cat === 'sewing_machine' || cat === 'vocational_tool' || title.toLowerCase().includes('may'));
-      else matchesCat = (cat === selectedCategory.toLowerCase());
-    }
+    const effectiveCat = inferCategory(item.title, item.category);
+    const matchesCat = selectedCategory === 'ALL' || effectiveCat === selectedCategory;
     
     const prov = item.province_code || '48';
     const matchesProv = selectedProvince === 'ALL' || 
@@ -434,7 +456,7 @@ export default function HomePage() {
                 return (
                   <button
                     key={cat.id}
-                    onClick={() => setSelectedCategory(cat.id)}
+                    onClick={(e) => handleSelectCategory(cat.id, e)}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
                       active 
                         ? 'bg-brand-600 text-white shadow-soft scale-[1.02]' 
@@ -464,117 +486,172 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Băng thông báo tìm kiếm đang kích hoạt */}
-        {searchQuery && (
-          <div className="flex items-center justify-between bg-brand-50/80 border border-brand-200 px-4 py-2.5 rounded-2xl text-xs animate-in fade-in shadow-2xs">
-            <span className="font-bold text-brand-950 flex items-center gap-1.5">
-              <Search className="w-3.5 h-3.5 text-brand-600 shrink-0"/>
-              <span>Đang lọc theo từ khóa: <strong className="text-brand-700 font-black">"{searchQuery}"</strong> ({filteredWishes.length} hoàn cảnh)</span>
-            </span>
+        {/* Băng thông báo bộ lọc đang kích hoạt */}
+        {(searchQuery || selectedCategory !== 'ALL') && (
+          <div className="flex flex-wrap items-center justify-between gap-2 bg-brand-50/90 border border-brand-200/90 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-2xl text-xs animate-in fade-in shadow-2xs">
+            <div className="flex items-center gap-2 flex-wrap">
+              {searchQuery && (
+                <span className="font-bold text-brand-950 flex items-center gap-1.5">
+                  <Search className="w-3.5 h-3.5 text-brand-600 shrink-0"/>
+                  <span>Từ khóa: <strong className="text-brand-700 font-black">"{searchQuery}"</strong></span>
+                </span>
+              )}
+              {selectedCategory !== 'ALL' && (
+                <span className="font-bold text-brand-950 flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-brand-600 shrink-0"/>
+                  <span>Danh mục: <strong className="text-brand-700 font-black">{CATEGORIES.find(c => c.id === selectedCategory)?.label || selectedCategory}</strong></span>
+                </span>
+              )}
+              <span className="text-warm-700 font-semibold">({filteredWishes.length} hoàn cảnh phù hợp)</span>
+            </div>
+
             <button
               onClick={() => {
                 setSearchQuery('');
+                setSelectedCategory('ALL');
                 if (typeof window !== 'undefined') {
                   window.dispatchEvent(new CustomEvent('sova_global_search_change', {
                     detail: { query: '', province: selectedProvince }
                   }));
                 }
               }}
-              className="text-xs font-black text-brand-700 hover:text-brand-900 underline ml-2 cursor-pointer shrink-0"
+              className="text-xs font-black text-brand-700 hover:text-brand-900 underline cursor-pointer shrink-0 ml-auto"
             >
-              Xóa bộ lọc
+              Xóa tất cả bộ lọc
             </button>
           </div>
         )}
 
-        {/* LƯỚI ĐIỀU ƯỚC: 2 CỘT CHUẨN TRÊN MOBILE, 3 CỘT TRÊN DESKTOP */}
-        <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4 md:gap-6">
-          {filteredWishes.map(item => {
-            const isUrgent = item.urgency === 'urgent' || item.urgency_level === 'urgent';
-            const isPending = item.status === 'pending';
-            const reasonText = item.reason || item.reason_description || 'Hoàn cảnh khó khăn cần hỗ trợ thiết bị.';
-            const pledgeText = item.honor_commitment || item.commitment_pledge || 'Cam kết bảo quản tốt và trao lại.';
-            const provName = VIETNAM_PROVINCES.find(p => p.code === item.province_code)?.name || 'Đà Nẵng';
-            const effectiveCat = inferCategory(item.title, item.category);
-            const badgeText = normalizeCategoryLabel(effectiveCat);
-            const resolvedImg = item.imageUrl || CATEGORY_FALLBACK_IMAGES[effectiveCat] || CATEGORY_FALLBACK_IMAGES['bicycle'];
+        {/* LƯỚI ĐIỀU ƯỚC: 2 CỘT TRÊN MOBILE, 3 CỘT TRÊN DESKTOP HOẶC EMPTY STATE */}
+        {filteredWishes.length > 0 ? (
+          <div key={selectedCategory + searchQuery} className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4 md:gap-6 animate-in fade-in duration-300">
+            {filteredWishes.map(item => {
+              const isUrgent = item.urgency === 'urgent' || item.urgency_level === 'urgent';
+              const isPending = item.status === 'pending';
+              const reasonText = item.reason || item.reason_description || 'Hoàn cảnh khó khăn cần hỗ trợ thiết bị.';
+              const pledgeText = item.honor_commitment || item.commitment_pledge || 'Cam kết bảo quản tốt và trao lại.';
+              const provName = VIETNAM_PROVINCES.find(p => p.code === item.province_code)?.name || 'Đà Nẵng';
+              const effectiveCat = inferCategory(item.title, item.category);
+              const badgeText = normalizeCategoryLabel(effectiveCat);
+              const resolvedImg = item.imageUrl || CATEGORY_FALLBACK_IMAGES[effectiveCat] || CATEGORY_FALLBACK_IMAGES['bicycle'];
 
-            return (
-              <div 
-                key={item.id} 
-                className="bg-white rounded-2xl sm:rounded-3xl border border-warm-200 overflow-hidden shadow-soft flex flex-col justify-between group hover:border-brand-500 hover:shadow-xl transition-all cursor-pointer relative"
-                onClick={() => setDetailWish(item)}
+              return (
+                <div 
+                  key={item.id} 
+                  className="bg-white rounded-2xl sm:rounded-3xl border border-warm-200 overflow-hidden shadow-soft flex flex-col justify-between group hover:border-brand-500 hover:shadow-xl transition-all cursor-pointer relative"
+                  onClick={() => setDetailWish(item)}
+                >
+                  <div className="relative aspect-[4/3] sm:aspect-[16/10] overflow-hidden bg-warm-100">
+                    <img 
+                      src={resolvedImg} 
+                      alt={item.title} 
+                      className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                    />
+                    
+                    <div className="absolute top-2 left-2 right-2 sm:top-3 sm:left-3 sm:right-3 flex justify-between items-center gap-1">
+                      <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-black bg-white/95 text-brand-800 uppercase shadow-2xs backdrop-blur-xs">
+                        {badgeText}
+                      </span>
+
+                      <div className="flex gap-1 items-center">
+                        {isPending && (
+                          <span className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-black bg-amber-500 text-white shadow-2xs">
+                            Chờ Duyệt
+                          </span>
+                        )}
+                        {isUrgent && (
+                          <span className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-black bg-red-600 text-white shadow-2xs">
+                            <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3"/> 
+                            <span className="hidden xs:inline">Cấp Thiết</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="p-2.5 sm:p-5 space-y-2 sm:space-y-3 flex-1 flex flex-col justify-between">
+                    <div className="space-y-1">
+                      <h3 className="font-black text-warm-900 text-xs sm:text-base leading-snug group-hover:text-brand-700 line-clamp-2">
+                        {item.title}
+                      </h3>
+                      <p className="text-[11px] sm:text-xs text-warm-700 line-clamp-2 leading-relaxed">{reasonText}</p>
+                    </div>
+
+                    <div className="p-2 sm:p-3 bg-brand-50/50 rounded-xl sm:rounded-2xl border border-brand-100 text-[10px] sm:text-xs space-y-0.5">
+                      <span className="text-[8px] sm:text-[10px] font-extrabold uppercase text-brand-800 block">Lời Cam Kết Danh Dự:</span>
+                      <p className="italic text-brand-950 text-[10px] sm:text-[11px] line-clamp-1 sm:line-clamp-2">"{pledgeText}"</p>
+                    </div>
+
+                    <div className="pt-2 sm:pt-3 border-t border-warm-100 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2" onClick={e => e.stopPropagation()}>
+                      <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-warm-700 truncate">
+                        <Navigation className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-brand-600 shrink-0"/>
+                        <span className="truncate">{provName}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end">
+                        <button
+                          onClick={() => openChatModal(item)}
+                          className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-800 text-xs font-bold transition-all cursor-pointer"
+                          title="Nhắn tin trao đổi trước"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-700"/>
+                        </button>
+
+                        <button
+                          onClick={() => handleOpenClaimModal(item)}
+                          className="flex-1 sm:flex-none px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-[11px] sm:text-xs font-bold shadow-xs flex items-center justify-center gap-1 shrink-0 cursor-pointer"
+                        >
+                          <Heart className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current"/>
+                          <span>Trao Tặng</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <div className="bg-white rounded-3xl border-2 border-dashed border-warm-300 p-8 sm:p-12 text-center space-y-4 shadow-soft animate-in fade-in">
+            <div className="w-16 h-16 rounded-2xl bg-warm-100 text-warm-500 mx-auto flex items-center justify-center">
+              <PackageSearch className="w-8 h-8 text-warm-400" />
+            </div>
+            <div className="max-w-md mx-auto space-y-1">
+              <h3 className="text-base sm:text-lg font-black text-warm-900">
+                Chưa có ước nguyện nào thuộc danh mục này
+              </h3>
+              <p className="text-xs sm:text-sm text-warm-600 leading-relaxed font-medium">
+                {selectedCategory !== 'ALL'
+                  ? `Hiện tại danh mục "${CATEGORIES.find(c => c.id === selectedCategory)?.label}" chưa có hồ sơ nào đang chờ tiếp sức.`
+                  : `Không tìm thấy kết quả phù hợp với từ khóa "${searchQuery}".`}
+              </p>
+            </div>
+            <div className="flex flex-wrap items-center justify-center gap-3 pt-2">
+              <button
+                onClick={() => {
+                  setSelectedCategory('ALL');
+                  setSearchQuery('');
+                  if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('sova_global_search_change', {
+                      detail: { query: '', province: 'ALL' }
+                    }));
+                  }
+                  handleSelectCategory('ALL');
+                }}
+                className="px-4 py-2 rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-800 text-xs font-bold transition-all cursor-pointer"
               >
-                <div className="relative aspect-[4/3] sm:aspect-[16/10] overflow-hidden bg-warm-100">
-                  <img 
-                    src={resolvedImg} 
-                    alt={item.title} 
-                    className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
-                  />
-                  
-                  <div className="absolute top-2 left-2 right-2 sm:top-3 sm:left-3 sm:right-3 flex justify-between items-center gap-1">
-                    <span className="px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-black bg-white/95 text-brand-800 uppercase shadow-2xs backdrop-blur-xs">
-                      {badgeText}
-                    </span>
-
-                    <div className="flex gap-1 items-center">
-                      {isPending && (
-                        <span className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-black bg-amber-500 text-white shadow-2xs">
-                          Chờ Duyệt
-                        </span>
-                      )}
-                      {isUrgent && (
-                        <span className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-black bg-red-600 text-white shadow-2xs">
-                          <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3"/> 
-                          <span className="hidden xs:inline">Cấp Thiết</span>
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="p-2.5 sm:p-5 space-y-2 sm:space-y-3 flex-1 flex flex-col justify-between">
-                  <div className="space-y-1">
-                    <h3 className="font-black text-warm-900 text-xs sm:text-base leading-snug group-hover:text-brand-700 line-clamp-2">
-                      {item.title}
-                    </h3>
-                    <p className="text-[11px] sm:text-xs text-warm-700 line-clamp-2 leading-relaxed">{reasonText}</p>
-                  </div>
-
-                  <div className="p-2 sm:p-3 bg-brand-50/50 rounded-xl sm:rounded-2xl border border-brand-100 text-[10px] sm:text-xs space-y-0.5">
-                    <span className="text-[8px] sm:text-[10px] font-extrabold uppercase text-brand-800 block">Lời Cam Kết Danh Dự:</span>
-                    <p className="italic text-brand-950 text-[10px] sm:text-[11px] line-clamp-1 sm:line-clamp-2">"{pledgeText}"</p>
-                  </div>
-
-                  <div className="pt-2 sm:pt-3 border-t border-warm-100 flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 sm:gap-2" onClick={e => e.stopPropagation()}>
-                    <div className="flex items-center gap-1 text-[10px] sm:text-[11px] font-bold text-warm-700 truncate">
-                      <Navigation className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-brand-600 shrink-0"/>
-                      <span className="truncate">{provName}</span>
-                    </div>
-
-                    <div className="flex items-center gap-1.5 w-full sm:w-auto justify-end">
-                      <button
-                        onClick={() => openChatModal(item)}
-                        className="p-1.5 sm:p-2 rounded-lg sm:rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-800 text-xs font-bold transition-all cursor-pointer"
-                        title="Nhắn tin trao đổi trước"
-                      >
-                        <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-brand-700"/>
-                      </button>
-
-                      <button
-                        onClick={() => handleOpenClaimModal(item)}
-                        className="flex-1 sm:flex-none px-2.5 py-1.5 sm:px-4 sm:py-2 rounded-lg sm:rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-[11px] sm:text-xs font-bold shadow-xs flex items-center justify-center gap-1 shrink-0 cursor-pointer"
-                      >
-                        <Heart className="w-3 h-3 sm:w-3.5 sm:h-3.5 fill-current"/>
-                        <span>Trao Tặng</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                Xem tất cả ước nguyện
+              </button>
+              <Link
+                href="/create-wish/"
+                className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-soft transition-all inline-flex items-center gap-1.5"
+              >
+                <Sparkles className="w-3.5 h-3.5"/>
+                <span>Gửi ước nguyện đầu tiên</span>
+              </Link>
+            </div>
+          </div>
+        )}
       </section>
 
       {/* 3. CHÂN TRANG: CHIA SẺ MẠNG XÃ HỘI (CMS ĐỒNG BỘ) */}

@@ -60,16 +60,30 @@ export default function Navbar() {
     };
   }, []);
 
-  // Phát tín hiệu tìm kiếm toàn cục & tự động cuộn đến Cây Nguyện Ước
-  const handleSearchFocus = () => {
+  // Cuộn trang mượt mà đến Cây Nguyện Ước với độ lệch trừ thanh Header chuẩn xác
+  const scrollToWishlist = () => {
     if (pathname !== '/') {
       router.push('/#wishlist-section');
       return;
     }
     const el = document.getElementById('wishlist-section');
     if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const isMobile = window.innerWidth < 768;
+      const navOffset = isMobile ? 112 : 80;
+      const elementTop = el.getBoundingClientRect().top + window.pageYOffset;
+      const targetScroll = Math.max(0, elementTop - navOffset);
+
+      if (Math.abs(window.pageYOffset - targetScroll) > 40) {
+        window.scrollTo({
+          top: targetScroll,
+          behavior: 'smooth'
+        });
+      }
     }
+  };
+
+  const handleSearchFocus = () => {
+    scrollToWishlist();
   };
 
   const handleSearchChange = (val: string) => {
@@ -79,15 +93,7 @@ export default function Navbar() {
         detail: { query: val, province: selectedProvince }
       }));
     }
-    if (pathname === '/') {
-      const el = document.getElementById('wishlist-section');
-      if (el) {
-        const rect = el.getBoundingClientRect();
-        if (rect.top > 250) {
-          el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }
-    }
+    scrollToWishlist();
   };
 
   const handleClearSearch = () => {
