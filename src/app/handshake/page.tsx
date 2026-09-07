@@ -14,6 +14,7 @@ import { SAFE_PUBLIC_MEETING_HUBS } from '@/lib/privacyShield';
 function HandshakeContent() {
   const searchParams = useSearchParams();
   const wishId = searchParams.get('id');
+  const paramPassport = searchParams.get('passport');
 
   const [role, setRole] = useState<'ANGEL' | 'DREAMER'>('ANGEL');
   const [totp, setTotp] = useState('884201');
@@ -21,6 +22,46 @@ function HandshakeContent() {
   const [selectedHub, setSelectedHub] = useState(SAFE_PUBLIC_MEETING_HUBS[0].id);
   const [inGracePeriod, setInGracePeriod] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [passportCode, setPassportCode] = useState(paramPassport || 'SOVA-PASS-8842-VN');
+  const [wishDetails, setWishDetails] = useState<{ title: string; category?: string; imageUrl?: string } | null>(null);
+
+  useEffect(() => {
+    if (paramPassport) setPassportCode(paramPassport);
+    if (!wishId) return;
+
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('SOVA_OPTIMISTIC_WISHES');
+      if (stored) {
+        try {
+          const list = JSON.parse(stored);
+          const found = list.find((item: any) => item.id === wishId);
+          if (found) {
+            const savedImg = localStorage.getItem(`SOVA_WISH_IMG_${found.id}`);
+            setWishDetails({
+              title: found.title,
+              category: found.category,
+              imageUrl: savedImg || found.imageUrl
+            });
+            return;
+          }
+        } catch {}
+      }
+    }
+
+    (async () => {
+      try {
+        const { data } = await supabase.from('wishes').select('*').eq('id', wishId).single();
+        if (data) {
+          const savedImg = typeof window !== 'undefined' ? localStorage.getItem(`SOVA_WISH_IMG_${data.id}`) : null;
+          setWishDetails({
+            title: data.title,
+            category: data.category,
+            imageUrl: savedImg || data.image_url
+          });
+        }
+      } catch {}
+    })();
+  }, [wishId, paramPassport]);
   
   // Tin nhắn hẹn gặp PII
   const [messages, setMessages] = useState([
@@ -154,7 +195,7 @@ function HandshakeContent() {
           <CheckCircle2 className="w-14 h-14 text-brand-600 mx-auto"/>
           <h2 className="text-2xl font-black text-warm-900">Bàn Giao Hoàn Tất & Kích Hoạt Vòng Đời 2!</h2>
           <p className="text-xs text-warm-700 max-w-md mx-auto">
-            Hộ Chiếu Số SOVA-PASS-8842-VN đã chính thức ghi nhận quyền sử dụng danh dự cho sinh viên.
+            Hộ Chiếu Số <strong className="font-mono text-brand-700">{passportCode}</strong> đã chính thức ghi nhận quyền sử dụng danh dự cho sinh viên.
           </p>
           <div className="pt-2">
             <Link href="/profile/" className="px-6 py-2.5 rounded-xl bg-brand-600 text-white text-xs font-black inline-block">
@@ -167,9 +208,20 @@ function HandshakeContent() {
           
           {/* Cột Trái: Trạm TOTP QR */}
           <div className="lg:col-span-6 bg-white p-6 sm:p-8 rounded-3xl border border-warm-200 shadow-soft text-center space-y-6">
-            <div className="text-left border-b border-warm-100 pb-3">
-              <span className="text-[10px] font-black text-brand-700 uppercase">Thiết Bị Khớp Nối</span>
-              <h3 className="font-black text-warm-900 text-base">ThinkPad T480 Core i5 / 16GB</h3>
+            <div className="text-left border-b border-warm-100 pb-3 flex items-center gap-3">
+              {wishDetails?.imageUrl && (
+                <img 
+                  src={wishDetails.imageUrl} 
+                  alt={wishDetails.title} 
+                  className="w-12 h-12 rounded-xl object-cover border border-warm-200 shrink-0"
+                />
+              )}
+              <div className="flex-1 min-w-0">
+                <span className="text-[10px] font-black text-brand-700 uppercase block">Thiết Bị Khớp Nối</span>
+                <h3 className="font-black text-warm-900 text-base truncate">
+                  {wishDetails?.title || 'ThinkPad T480 Core i5 / 16GB'}
+                </h3>
+              </div>
             </div>
 
             {role === 'ANGEL' ? (

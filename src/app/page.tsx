@@ -718,7 +718,7 @@ export default function HomePage() {
                 </p>
                 <div className="pt-3">
                   <Link 
-                    href="/handshake/"
+                    href={`/handshake?id=${selectedWish.id}&passport=${claimSuccess}`}
                     className="inline-block px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-xs"
                   >
                     Mở Trạm Bắt Tay QR Ngay
