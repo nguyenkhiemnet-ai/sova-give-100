@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
-import { VIETNAM_PROVINCES, getDistrictsByProvince, CATEGORY_FALLBACK_IMAGES } from '@/lib/provinces';
+import { VIETNAM_PROVINCES, getDistrictsByProvince, CATEGORY_FALLBACK_IMAGES, normalizeCategoryLabel } from '@/lib/provinces';
 import { getActiveUser, loginWithGoogle } from '@/lib/auth';
 import { 
   Sparkles, Heart, Search, MapPin, Filter, Leaf, 
@@ -30,8 +30,8 @@ interface WishItem {
 
 const CATEGORIES = [
   { id: 'ALL', label: 'Tất cả ước nguyện', icon: Sparkles },
-  { id: 'laptop', label: 'Máy tính học tập', icon: Laptop },
   { id: 'bicycle', label: 'Xe đạp đến trường', icon: Bike },
+  { id: 'laptop', label: 'Máy tính học tập', icon: Laptop },
   { id: 'sewing_machine', label: 'Máy may sinh kế', icon: Scissors },
   { id: 'study_tools', label: 'Dụng cụ tri thức', icon: BookOpen },
   { id: 'livelihood_tools', label: 'Công cụ mưu sinh', icon: Wrench },
@@ -47,7 +47,7 @@ const CURATED_WISHES: WishItem[] = [
     honor_commitment: 'Em cam kết giữ gìn máy cẩn thận, học đạt loại giỏi và trao lại cho đàn em khóa sau khi ra trường.',
     urgency: 'urgent',
     province_code: '01',
-    ward_code: '01-05',
+    ward_code: '01-03',
     status: 'verified',
   },
   {
@@ -123,8 +123,31 @@ export default function HomePage() {
     }
 
     const mergedMap = new Map<string, WishItem>();
-    localItems.forEach(item => mergedMap.set(item.id, item));
-    serverItems.forEach(item => mergedMap.set(item.id, item));
+
+    // 1. Nạp items từ Local
+    localItems.forEach(item => {
+      const savedImg = typeof window !== 'undefined' ? localStorage.getItem(`SOVA_WISH_IMG_${item.id}`) : null;
+      mergedMap.set(item.id, {
+        ...item,
+        imageUrl: savedImg || item.imageUrl || CATEGORY_FALLBACK_IMAGES[item.category] || CATEGORY_FALLBACK_IMAGES['bicycle']
+      });
+    });
+
+    // 2. Nạp items từ Server mà không làm mất ảnh cục bộ
+    serverItems.forEach(item => {
+      const existing = mergedMap.get(item.id);
+      const savedImg = typeof window !== 'undefined' ? localStorage.getItem(`SOVA_WISH_IMG_${item.id}`) : null;
+      const resolvedImg = savedImg || existing?.imageUrl || item.imageUrl || CATEGORY_FALLBACK_IMAGES[item.category] || CATEGORY_FALLBACK_IMAGES['bicycle'];
+      
+      mergedMap.set(item.id, {
+        ...item,
+        imageUrl: resolvedImg,
+        province_code: item.province_code || existing?.province_code,
+        ward_code: item.ward_code || existing?.ward_code
+      });
+    });
+
+    // 3. Nạp curated
     CURATED_WISHES.forEach(item => {
       if (!mergedMap.has(item.id)) mergedMap.set(item.id, item);
     });
@@ -159,6 +182,7 @@ export default function HomePage() {
     }
   };
 
+  // Kênh chat lưu bền vững trong LocalStorage theo ID điều ước
   const openChatModal = (item: WishItem) => {
     const currentUser = getActiveUser();
     if (!currentUser) {
@@ -166,38 +190,65 @@ export default function HomePage() {
       return;
     }
     setChatWish(item);
-    setChatMessages([
+    const storageKey = `SOVA_CHAT_WISH_${item.id}`;
+    const saved = localStorage.getItem(storageKey);
+    if (saved) {
+      try {
+        setChatMessages(JSON.parse(saved));
+        return;
+      } catch {}
+    }
+    const initial = [
       { sender: 'Hệ thống SOVA', text: 'Kênh trao đổi PII được mã hóa. Hãy hỏi thăm người nhận về thông số vật phẩm (chiều cao, kích cỡ, cấu hình) trước khi quyết định trao quà.' },
       { sender: 'Người Nhận', text: `Chào bạn! Cảm ơn bạn đã quan tâm đến ước nguyện "${item.title}". Mình sẵn sàng giải đáp mọi câu hỏi ạ!` }
-    ]);
+    ];
+    setChatMessages(initial);
+    localStorage.setItem(storageKey, JSON.stringify(initial));
   };
 
   const sendChatMessage = () => {
-    if (!chatInput.trim()) return;
-    setChatMessages(prev => [
-      ...prev,
-      { sender: 'Bạn (Angel)', text: chatInput.trim() }
-    ]);
+    if (!chatInput.trim() || !chatWish) return;
+    const storageKey = `SOVA_CHAT_WISH_${chatWish.id}`;
+    const newMsg = { sender: 'Bạn (Angel)', text: chatInput.trim() };
+    const updated = [...chatMessages, newMsg];
+    setChatMessages(updated);
+    localStorage.setItem(storageKey, JSON.stringify(updated));
     setChatInput('');
+
+    // Giả lập phản hồi tự động sau 1.2s
+    setTimeout(() => {
+      const reply = { sender: 'Người Nhận', text: 'Dạ em đã nhận được tin nhắn của anh/chị rồi ạ! Em cảm ơn tấm lòng của anh/chị rất nhiều!' };
+      const withReply = [...updated, reply];
+      setChatMessages(withReply);
+      localStorage.setItem(storageKey, JSON.stringify(withReply));
+    }, 1200);
   };
 
-  // Thuật toán so khớp thông minh: Hỗ trợ cả mã code lẫn tên tiếng Việt
+  // Thuật toán so khớp thông minh: Lọc cả Tỉnh lẫn Quận/Huyện
   const filteredWishes = wishes.filter(item => {
     const title = item.title || '';
     const desc = item.reason || item.reason_description || '';
     const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           desc.toLowerCase().includes(searchQuery.toLowerCase());
     
+    // So khớp danh mục thông minh (hỗ trợ cả mã cũ commute/study_device)
     const cat = (item.category || '').toLowerCase();
-    const matchesCat = selectedCategory === 'ALL' || cat === selectedCategory.toLowerCase();
+    let matchesCat = selectedCategory === 'ALL';
+    if (!matchesCat) {
+      if (selectedCategory === 'bicycle') matchesCat = (cat === 'bicycle' || cat === 'commute' || title.toLowerCase().includes('xe đạp') || title.toLowerCase().includes('xe dap'));
+      else if (selectedCategory === 'laptop') matchesCat = (cat === 'laptop' || cat === 'study_device' || title.toLowerCase().includes('máy tính') || title.toLowerCase().includes('laptop'));
+      else if (selectedCategory === 'sewing_machine') matchesCat = (cat === 'sewing_machine' || cat === 'vocational_tool' || title.toLowerCase().includes('may'));
+      else matchesCat = (cat === selectedCategory.toLowerCase());
+    }
     
-    // So khớp tỉnh thành: chấp nhận cả mã '48' và tên 'Đà Nẵng'
+    // So khớp Tỉnh Thành
     const prov = item.province_code || '48';
     const matchesProv = selectedProvince === 'ALL' || 
                         prov === selectedProvince || 
-                        (selectedProvince === '48' && (prov.includes('Đà Nẵng') || prov.includes('Da Nang') || prov === '48'));
+                        (selectedProvince === '48' && (prov.includes('Đà Nẵng') || prov.includes('Da Nang') || prov === '48')) ||
+                        (selectedProvince === '01' && (prov.includes('Hà Nội') || prov.includes('Ha Noi') || prov === '01'));
 
-    // So khớp quận huyện
+    // So khớp Quận Huyện
     const ward = item.ward_code || '';
     const matchesDistrict = selectedDistrict === 'ALL' || ward === selectedDistrict || ward.includes(selectedDistrict);
 
@@ -216,7 +267,7 @@ export default function HomePage() {
         </button>
       )}
 
-      {/* 1. HERO SECTION */}
+      {/* 1. HERO BANNER */}
       <section className="relative overflow-hidden bg-gradient-to-br from-brand-50 via-white to-sun-50 rounded-3xl border border-warm-200 p-6 sm:p-12 lg:p-14 shadow-soft">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
           <div className="lg:col-span-7 space-y-6">
@@ -330,7 +381,6 @@ export default function HomePage() {
         <div className="sticky top-16 z-30 bg-white/95 backdrop-blur-md p-3.5 sm:p-4 rounded-3xl border-2 border-brand-500/30 shadow-float space-y-3">
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
             
-            {/* Ô tìm kiếm */}
             <div className="relative flex-1">
               <Search className="w-5 h-5 text-brand-600 absolute left-3.5 top-1/2 -translate-y-1/2"/>
               <input 
@@ -360,7 +410,7 @@ export default function HomePage() {
               </select>
             </div>
 
-            {/* Lọc Quận/Huyện (Xuất hiện khi chọn tỉnh cụ thể) */}
+            {/* Lọc Quận/Huyện */}
             {selectedProvince !== 'ALL' && (
               <div className="relative min-w-[180px]">
                 <Filter className="w-4 h-4 text-brand-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"/>
@@ -405,7 +455,7 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* LƯỚI ĐIỀU ƯỚC: CLICK VÀO CARD ĐỂ MỞ CHI TIẾT */}
+        {/* LƯỚI ĐIỀU ƯỚC */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredWishes.map(item => {
             const isUrgent = item.urgency === 'urgent' || item.urgency_level === 'urgent';
@@ -413,8 +463,7 @@ export default function HomePage() {
             const reasonText = item.reason || item.reason_description || 'Hoàn cảnh khó khăn cần hỗ trợ thiết bị.';
             const pledgeText = item.honor_commitment || item.commitment_pledge || 'Cam kết bảo quản tốt và trao lại.';
             const provName = VIETNAM_PROVINCES.find(p => p.code === item.province_code)?.name || 'Đà Nẵng';
-            
-            // Lấy ảnh đúng danh mục
+            const badgeText = normalizeCategoryLabel(item.category);
             const resolvedImg = item.imageUrl || CATEGORY_FALLBACK_IMAGES[item.category] || CATEGORY_FALLBACK_IMAGES['bicycle'];
 
             return (
@@ -427,7 +476,7 @@ export default function HomePage() {
                   <img src={resolvedImg} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
                   <div className="absolute top-3 left-3 right-3 flex justify-between items-center">
                     <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-white/95 text-brand-800 uppercase shadow-2xs">
-                      {item.category === 'bicycle' ? 'Xe Đạp' : item.category === 'laptop' ? 'Laptop' : item.category === 'sewing_machine' ? 'Máy May' : item.category}
+                      {badgeText}
                     </span>
                     <div className="flex gap-1.5">
                       {isPending && (
@@ -488,14 +537,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. MODAL XEM CHI TIẾT ƯỚC NGUYỆN (CLICK TO VIEW FULL) */}
+      {/* 3. MODAL CHI TIẾT ƯỚC NGUYỆN */}
       {detailWish && (
         <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-warm-200 max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-start">
               <div className="space-y-1">
                 <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-brand-50 text-brand-700 border border-brand-200 uppercase">
-                  {detailWish.category === 'bicycle' ? 'Xe Đạp Đến Trường' : detailWish.category === 'laptop' ? 'Máy Tính Học Tập' : detailWish.category}
+                  {normalizeCategoryLabel(detailWish.category)}
                 </span>
                 <h2 className="text-2xl font-black text-warm-900 mt-1">{detailWish.title}</h2>
                 <p className="text-xs text-warm-700 flex items-center gap-1">
@@ -506,7 +555,6 @@ export default function HomePage() {
               <button onClick={() => setDetailWish(null)} className="w-8 h-8 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center font-bold">✕</button>
             </div>
 
-            {/* Ảnh To */}
             <div className="h-64 rounded-2xl overflow-hidden border border-warm-200">
               <img 
                 src={detailWish.imageUrl || CATEGORY_FALLBACK_IMAGES[detailWish.category] || CATEGORY_FALLBACK_IMAGES['bicycle']} 
@@ -515,15 +563,13 @@ export default function HomePage() {
               />
             </div>
 
-            {/* Hoàn cảnh chi tiết */}
             <div className="p-4 bg-warm-50 rounded-2xl border border-warm-200 space-y-2">
-              <h4 className="text-xs font-black uppercase text-warm-900">Chia Sẻ Về Hoàn Cảnh & Mục Tiêu Tự Lập:</h4>
+              <h4 className="text-xs font-black uppercase text-warm-900">Chia Sẻ Hoàn Cảnh & Mục Tiêu Sử Dụng:</h4>
               <p className="text-xs text-warm-800 leading-relaxed font-medium">
                 {detailWish.reason || detailWish.reason_description}
               </p>
             </div>
 
-            {/* Cam kết danh dự */}
             <div className="p-4 bg-brand-50/60 rounded-2xl border border-brand-200 space-y-2">
               <h4 className="text-xs font-black uppercase text-brand-900 flex items-center gap-1.5">
                 <Heart className="w-4 h-4 text-brand-600 fill-brand-600"/>
@@ -534,7 +580,6 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* 2 Nút hành động */}
             <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <button
                 onClick={() => {
@@ -564,7 +609,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 4. MODAL NHẮN TIN TRAO ĐỔI TRƯỚC (PRE-HANDSHAKE INQUIRY) */}
+      {/* 4. MODAL NHẮN TIN TRAO ĐỔI LƯU BỀN VỮNG */}
       {chatWish && (
         <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-warm-200 max-w-lg w-full p-6 shadow-2xl space-y-4">
@@ -621,7 +666,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 5. MODAL YÊU CẦU ĐĂNG NHẬP XÁC THỰC (AUTH GATE) */}
+      {/* 5. MODAL YÊU CẦU ĐĂNG NHẬP XÁC THỰC */}
       {showAuthGateModal && (
         <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border-2 border-brand-500 max-w-md w-full p-6 sm:p-8 shadow-2xl text-center space-y-5">
@@ -650,7 +695,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* 6. MODAL XÁC NHẬN KHỚP NỐI TRAO TẶNG */}
+      {/* 6. MODAL XÁC NHẬN KHỚP NỐI */}
       {selectedWish && (
         <div className="fixed inset-0 z-50 bg-warm-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-warm-200 max-w-lg w-full p-6 sm:p-8 shadow-xl space-y-6">

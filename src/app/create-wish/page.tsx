@@ -11,8 +11,8 @@ import {
 } from 'lucide-react';
 
 const CATEGORIES = [
-  { id: 'laptop', label: 'Máy tính học tập', desc: 'Laptop, PC cho học sinh - sinh viên', icon: Laptop },
   { id: 'bicycle', label: 'Xe đạp đến trường', desc: 'Phương tiện đi lại cho học sinh nghèo', icon: Bike },
+  { id: 'laptop', label: 'Máy tính học tập', desc: 'Laptop, PC cho học sinh - sinh viên', icon: Laptop },
   { id: 'sewing_machine', label: 'Máy may sinh kế', desc: 'Dụng cụ may vá cho mẹ đơn thân', icon: Scissors },
   { id: 'study_tools', label: 'Dụng cụ tri thức', desc: 'Sách vở, bàn học, máy tính cầm tay', icon: BookOpen },
   { id: 'livelihood_tools', label: 'Công cụ mưu sinh', desc: 'Đồ nghề sửa xe, làm mộc, làm nông', icon: Wrench },
@@ -26,11 +26,11 @@ const DEFAULT_PLEDGES = [
 
 export default function CreateWishPage() {
   const [step, setStep] = useState(1);
-  const [category, setCategory] = useState('bicycle'); // Mặc định xe đạp
+  const [category, setCategory] = useState('bicycle');
   const [title, setTitle] = useState('');
   const [reason, setReason] = useState('');
-  const [provinceCode, setProvinceCode] = useState('48'); // Mặc định Đà Nẵng
-  const [districtCode, setDistrictCode] = useState('48-ST'); // Mặc định Quận Sơn Trà
+  const [provinceCode, setProvinceCode] = useState('48');
+  const [districtCode, setDistrictCode] = useState('48-ST');
   const [urgency, setUrgency] = useState('urgent');
   
   const [selectedPledges, setSelectedPledges] = useState<string[]>([DEFAULT_PLEDGES[0], DEFAULT_PLEDGES[1]]);
@@ -41,13 +41,13 @@ export default function CreateWishPage() {
   const [submitting, setSubmitting] = useState(false);
   const [createdPassport, setCreatedPassport] = useState<string | null>(null);
 
-  // Tự động nhận diện danh mục khi gõ tiêu đề
+  // Tự động nhận diện danh mục theo từ khóa
   const handleTitleChange = (val: string) => {
     setTitle(val);
     const low = val.toLowerCase();
-    if (low.includes('xe đạp') || low.includes('xe dap') || low.includes('xe') || low.includes('bike')) {
+    if (low.includes('xe') || low.includes('đạp') || low.includes('dap') || low.includes('bike')) {
       setCategory('bicycle');
-    } else if (low.includes('laptop') || low.includes('máy tính') || low.includes('pc') || low.includes('máy')) {
+    } else if (low.includes('laptop') || low.includes('máy tính') || low.includes('pc')) {
       setCategory('laptop');
     } else if (low.includes('may') || low.includes('khâu')) {
       setCategory('sewing_machine');
@@ -60,12 +60,33 @@ export default function CreateWishPage() {
     );
   };
 
+  // Nén ảnh trực tiếp qua Canvas để chống tràn bộ nhớ localStorage
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDim = 600;
+          let w = img.width;
+          let h = img.height;
+          if (w > h && w > maxDim) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else if (h > maxDim) {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, w, h);
+          const compressed = canvas.toDataURL('image/jpeg', 0.8);
+          setImagePreview(compressed);
+        };
+        img.src = event.target?.result as string;
       };
       reader.readAsDataURL(file);
     }
@@ -93,7 +114,8 @@ export default function CreateWishPage() {
     }
     const combinedPledge = finalCommitments.join(' | ');
 
-    // Chuẩn bị payload chuẩn xác
+    const chosenImage = imagePreview || CATEGORY_FALLBACK_IMAGES[category] || CATEGORY_FALLBACK_IMAGES['bicycle'];
+
     const newWish = {
       title: title.trim(),
       category,
@@ -108,14 +130,17 @@ export default function CreateWishPage() {
 
     try {
       const { data } = await supabase.from('wishes').insert([newWish]).select();
+      const generatedId = (data && data[0]?.id) || 'opt-' + Date.now();
       
-      const chosenImage = imagePreview || CATEGORY_FALLBACK_IMAGES[category] || CATEGORY_FALLBACK_IMAGES['bicycle'];
       const localItem = {
-        id: (data && data[0]?.id) || 'opt-' + Date.now(),
+        id: generatedId,
         ...newWish,
         imageUrl: chosenImage,
         created_at: new Date().toISOString()
       };
+      
+      // Lưu ảnh độc lập theo ID để không bao giờ bị ghi đè
+      localStorage.setItem(`SOVA_WISH_IMG_${generatedId}`, chosenImage);
       
       const stored = localStorage.getItem('SOVA_OPTIMISTIC_WISHES');
       const list = stored ? JSON.parse(stored) : [];
@@ -144,7 +169,7 @@ export default function CreateWishPage() {
 
       <div className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-10 shadow-soft space-y-8">
         
-        {/* Progress */}
+        {/* Progress Bar */}
         <div className="flex items-center justify-between border-b border-warm-200 pb-5">
           <div className="flex items-center gap-2">
             <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-black ${
@@ -225,7 +250,7 @@ export default function CreateWishPage() {
           </div>
         )}
 
-        {/* BƯỚC 2: TẢI ẢNH */}
+        {/* BƯỚC 2: HÌNH ẢNH */}
         {step === 2 && (
           <div className="space-y-6">
             <div>
@@ -234,14 +259,14 @@ export default function CreateWishPage() {
                 Hình Ảnh Minh Chứng (Dignity Shield)
               </div>
               <p className="text-xs text-warm-700 mt-1">
-                Tải ảnh phương tiện hoặc góc học tập để người trao dễ dàng tiếp sức.
+                Tải ảnh phương tiện hoặc đồ dùng bạn cần để người trao hình dung rõ nhất.
               </p>
             </div>
 
             <div className="border-2 border-dashed border-warm-200 rounded-3xl p-8 text-center space-y-4 hover:border-brand-500 transition-colors bg-warm-50/50">
               {imagePreview ? (
                 <div className="relative inline-block">
-                  <img src={imagePreview} alt="Preview" className="max-h-56 rounded-2xl shadow-md mx-auto object-cover"/>
+                  <img src={imagePreview} alt="Preview" className="max-h-64 rounded-2xl shadow-md mx-auto object-cover"/>
                   <button
                     onClick={() => setImagePreview(null)}
                     className="absolute -top-2 -right-2 w-7 h-7 bg-red-600 text-white rounded-full text-xs font-bold shadow-md"
@@ -255,10 +280,10 @@ export default function CreateWishPage() {
                     <Camera className="w-7 h-7"/>
                   </div>
                   <div>
-                    <p className="text-xs font-black text-warm-900">Chụp hoặc tải ảnh xe đạp / máy tính của bạn</p>
-                    <p className="text-[11px] text-warm-700 mt-0.5">Nếu không tải ảnh, hệ thống sẽ tự động gán ảnh chuẩn tương ứng với danh mục.</p>
+                    <p className="text-xs font-black text-warm-900">Chụp hoặc tải ảnh phương tiện bạn mong muốn</p>
+                    <p className="text-[11px] text-warm-700 mt-0.5">Hệ thống sẽ tự động tối ưu hóa kích thước ảnh bảo đảm tải siêu tốc.</p>
                   </div>
-                  <label className="inline-block px-4 py-2 rounded-xl bg-white border border-warm-200 text-xs font-bold text-warm-900 shadow-2xs hover:bg-warm-50 cursor-pointer">
+                  <label className="inline-block px-5 py-2.5 rounded-xl bg-brand-600 text-white text-xs font-bold shadow-xs hover:bg-brand-700 cursor-pointer">
                     <span>Chọn Ảnh Từ Thiết Bị</span>
                     <input type="file" accept="image/*" onChange={handleImageChange} className="hidden"/>
                   </label>
@@ -285,7 +310,7 @@ export default function CreateWishPage() {
           </div>
         )}
 
-        {/* BƯỚC 3: CAM KẾT & ĐỊA BÀN CHI TIẾT */}
+        {/* BƯỚC 3: LỜI NGỎ, CAM KẾT & ĐỊA BÀN */}
         {step === 3 && (
           <div className="space-y-6">
             <div className="space-y-4">
@@ -304,7 +329,7 @@ export default function CreateWishPage() {
                 <label className="text-xs font-bold text-warm-800">Chia sẻ chân thực về hoàn cảnh & mục tiêu sử dụng:</label>
                 <textarea
                   rows={3}
-                  placeholder="Nói rõ hoàn cảnh thực tế, đoạn đường đi học, hoặc chiều cao của bé để chọn xe phù hợp..."
+                  placeholder="Nói rõ hoàn cảnh gia đình, chiều cao của người nhận hoặc cấu hình mong muốn..."
                   value={reason}
                   onChange={e => setReason(e.target.value)}
                   className="w-full p-3 rounded-2xl border-2 border-warm-200 text-xs font-medium text-warm-900 focus:border-brand-600 focus:outline-none"
@@ -312,7 +337,7 @@ export default function CreateWishPage() {
               </div>
             </div>
 
-            {/* CHECKLIST CAM KẾT */}
+            {/* CHECKLIST CAM KẾT DANH DỰ */}
             <div className="space-y-2.5 pt-2">
               <label className="text-xs font-black text-warm-900 flex items-center gap-1.5">
                 <Heart className="w-4 h-4 text-brand-600 fill-brand-600"/>
@@ -363,7 +388,7 @@ export default function CreateWishPage() {
               </div>
             </div>
 
-            {/* ĐỊA BÀN: ĐÀ NẴNG -> SƠN TRÀ */}
+            {/* CHỌN ĐỊA BÀN PHÂN CẤP */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-warm-800 flex items-center gap-1">
@@ -395,7 +420,6 @@ export default function CreateWishPage() {
               </div>
             </div>
 
-            {/* Nút Submit */}
             <div className="pt-4 flex justify-between items-center">
               <button
                 type="button"
