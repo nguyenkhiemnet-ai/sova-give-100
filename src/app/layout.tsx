@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import './globals.css';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
+import BroadcastBanner from '@/components/BroadcastBanner';
 import { Sparkles, PlusCircle, QrCode, Compass, UserCheck, ShieldCheck } from 'lucide-react';
 
 export const metadata: Metadata = {
@@ -16,8 +17,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi" className="scroll-smooth">
-      <body className="min-h-screen flex flex-col bg-warm-50 text-warm-900 selection:bg-brand-100 selection:text-brand-900 pb-20 md:pb-0">
+      <body className="min-h-screen flex flex-col bg-warm-50 text-warm-900 selection:bg-brand-100 selection:text-brand-900 pb-28 md:pb-0">
         
+        {/* GLOBAL BROADCAST BANNER */}
+        <BroadcastBanner />
+
         {/* DYNAMIC NAVBAR */}
         <Navbar />
 

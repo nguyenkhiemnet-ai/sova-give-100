@@ -57,6 +57,20 @@ export default function HomePage() {
   const heroCMS = siteCMS.hero;
   const footerCMS = siteCMS.footer;
 
+  const dynamicCategories = [
+    { id: 'ALL', label: 'Tất cả ước nguyện', shortLabel: 'Tất cả', icon: Sparkles },
+    ...((siteCMS.categories && siteCMS.categories.length > 0) ? siteCMS.categories : DEFAULT_FULL_CMS.categories).map(cat => ({
+      id: cat.id,
+      label: cat.label,
+      shortLabel: cat.shortLabel || cat.label,
+      icon: cat.id === 'laptop' ? Laptop :
+            cat.id === 'bicycle' ? Bike :
+            cat.id === 'sewing_machine' ? Scissors :
+            cat.id === 'study_tools' ? BookOpen :
+            cat.id === 'livelihood_tools' ? Wrench : Sparkles
+    }))
+  ];
+
   // Modal Chi Tiết & Trao Đổi
   const [detailWish, setDetailWish] = useState<WishItem | null>(null);
   const [chatWish, setChatWish] = useState<WishItem | null>(null);
@@ -468,7 +482,7 @@ export default function HomePage() {
         <div className="sticky top-[106px] md:top-20 z-30 bg-white/95 backdrop-blur-md py-2 px-2 sm:px-3 rounded-2xl border border-warm-200/90 shadow-soft">
           <div className="relative flex items-center justify-between gap-2">
             <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar scroll-smooth pr-6 sm:pr-0 flex-1">
-              {CATEGORIES.map(cat => {
+              {dynamicCategories.map(cat => {
                 const Icon = cat.icon;
                 const active = selectedCategory === cat.id;
                 const count = cat.id === 'ALL' 
@@ -521,7 +535,7 @@ export default function HomePage() {
               {selectedCategory !== 'ALL' && (
                 <span className="font-bold text-brand-950 flex items-center gap-1.5">
                   <span className="w-2 h-2 rounded-full bg-brand-600 shrink-0"/>
-                  <span>Danh mục: <strong className="text-brand-700 font-black">{CATEGORIES.find(c => c.id === selectedCategory)?.label || selectedCategory}</strong></span>
+                  <span>Danh mục: <strong className="text-brand-700 font-black">{dynamicCategories.find(c => c.id === selectedCategory)?.label || selectedCategory}</strong></span>
                 </span>
               )}
               <span className="text-warm-700 font-semibold">({filteredWishes.length} hoàn cảnh phù hợp)</span>
@@ -550,6 +564,8 @@ export default function HomePage() {
             {filteredWishes.map(item => {
               const isUrgent = item.urgency === 'urgent' || item.urgency_level === 'urgent';
               const isPending = item.status === 'pending';
+              const isVerified = item.status === 'verified';
+              const isCompleted = item.status === 'completed';
               const reasonText = item.reason || item.reason_description || 'Hoàn cảnh khó khăn cần hỗ trợ thiết bị.';
               const pledgeText = item.honor_commitment || item.commitment_pledge || 'Cam kết bảo quản tốt và trao lại.';
               const provName = VIETNAM_PROVINCES.find(p => p.code === item.province_code)?.name || 'Đà Nẵng';
@@ -575,14 +591,26 @@ export default function HomePage() {
                         {badgeText}
                       </span>
 
-                      <div className="flex gap-1 items-center">
+                      <div className="flex gap-1 items-center flex-wrap justify-end">
+                        {isVerified && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-md text-[9px] sm:text-[10px] font-black bg-emerald-600 text-white shadow-2xs">
+                            <CheckCircle2 className="w-2.5 h-2.5 sm:w-3 sm:h-3"/>
+                            <span>Đã Xác Thực</span>
+                          </span>
+                        )}
+                        {isCompleted && (
+                          <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-md text-[9px] sm:text-[10px] font-black bg-teal-600 text-white shadow-2xs">
+                            <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3"/>
+                            <span>Đã Trao Quà</span>
+                          </span>
+                        )}
                         {isPending && (
-                          <span className="px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-black bg-amber-500 text-white shadow-2xs">
+                          <span className="px-1.5 py-0.5 sm:px-2 sm:py-0.5 rounded-md text-[9px] sm:text-[10px] font-black bg-amber-500 text-white shadow-2xs">
                             Chờ Duyệt
                           </span>
                         )}
                         {isUrgent && (
-                          <span className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 py-0.5 sm:px-2.5 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-black bg-red-600 text-white shadow-2xs">
+                          <span className="inline-flex items-center gap-0.5 sm:gap-1 px-1.5 py-0.5 sm:px-2 sm:py-1 rounded-md sm:rounded-lg text-[9px] sm:text-[10px] font-black bg-red-600 text-white shadow-2xs">
                             <AlertCircle className="w-2.5 h-2.5 sm:w-3 sm:h-3"/> 
                             <span className="hidden xs:inline">Cấp Thiết</span>
                           </span>
@@ -644,7 +672,7 @@ export default function HomePage() {
               </h3>
               <p className="text-xs sm:text-sm text-warm-600 leading-relaxed font-medium">
                 {selectedCategory !== 'ALL'
-                  ? `Hiện tại danh mục "${CATEGORIES.find(c => c.id === selectedCategory)?.label}" chưa có hồ sơ nào đang chờ tiếp sức.`
+                  ? `Hiện tại danh mục "${dynamicCategories.find(c => c.id === selectedCategory)?.label || selectedCategory}" chưa có hồ sơ nào đang chờ tiếp sức.`
                   : `Không tìm thấy kết quả phù hợp với từ khóa "${searchQuery}".`}
               </p>
             </div>

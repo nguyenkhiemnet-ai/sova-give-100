@@ -9,14 +9,14 @@ import {
 } from '@/lib/provinces';
 import { 
   getFullSiteCMS, saveFullSiteCMS, FullSiteCMS, DEFAULT_FULL_CMS, 
-  compressImageToWebP 
+  compressImageToWebP, DynamicCategoryItem 
 } from '@/lib/cms';
 import { 
   ShieldCheck, CheckCircle2, AlertTriangle, XCircle, 
   Trash2, RefreshCw, Search, MapPin, Sparkles, 
   Camera, Edit3, KeyRound, Lock, Save, ShieldAlert, 
   Clock, Award, Layout, FileText, Share2, LogIn, ArrowLeft,
-  Users, Mail
+  Users, Mail, Tag, Database, Compass, Bell, Download, FileSpreadsheet, Plus, Check
 } from 'lucide-react';
 import { 
   getActiveUser, isSuperAdminEmail, buildUserProfile, 
@@ -47,8 +47,145 @@ export default function DedicatedAdminPortal() {
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
 
-  // 5 Tabs Quản Trị
-  const [adminTab, setAdminTab] = useState<'HERO' | 'FOOTER' | 'SUBPAGES' | 'WISHES' | 'USERS'>('HERO');
+  // 8 Phân Hệ Quản Trị Tối Cao
+  const [adminTab, setAdminTab] = useState<'HERO' | 'FOOTER' | 'SUBPAGES' | 'WISHES' | 'USERS' | 'CATEGORIES' | 'PASSPORTS' | 'SYSTEM'>('HERO');
+
+  // Quản lý Danh mục động (Categories)
+  const [newCatId, setNewCatId] = useState('');
+  const [newCatLabel, setNewCatLabel] = useState('');
+  const [newCatShort, setNewCatShort] = useState('');
+  const [newCatDesc, setNewCatDesc] = useState('');
+
+  const handleAddCategory = () => {
+    if (!newCatId.trim() || !newCatLabel.trim()) {
+      alert('Vui lòng điền mã ID và tên danh mục!');
+      return;
+    }
+    const cleanId = newCatId.trim().toLowerCase().replace(/\s+/g, '_');
+    const existing = fullCMS.categories || DEFAULT_FULL_CMS.categories;
+    if (existing.some(c => c.id === cleanId)) {
+      alert('Mã danh mục này đã tồn tại!');
+      return;
+    }
+    const newCategory: DynamicCategoryItem = {
+      id: cleanId,
+      label: newCatLabel.trim(),
+      shortLabel: newCatShort.trim() || newCatLabel.trim(),
+      desc: newCatDesc.trim() || `Tài trợ ${newCatLabel.trim()} 0-VND`,
+      iconName: 'Tag'
+    };
+    const updatedCategories = [...existing, newCategory];
+    setFullCMS(prev => ({ ...prev, categories: updatedCategories }));
+    setNewCatId('');
+    setNewCatLabel('');
+    setNewCatShort('');
+    setNewCatDesc('');
+    alert('Đã thêm danh mục mới vào danh sách. Hãy bấm "Lưu Toàn Trang (Cần Mật Mã)" để áp dụng!');
+  };
+
+  const handleDeleteCategory = (catId: string) => {
+    const existing = fullCMS.categories || DEFAULT_FULL_CMS.categories;
+    if (existing.length <= 1) {
+      alert('Hệ thống cần ít nhất 1 danh mục hoạt động!');
+      return;
+    }
+    const updatedCategories = existing.filter(c => c.id !== catId);
+    setFullCMS(prev => ({ ...prev, categories: updatedCategories }));
+  };
+
+  // Quản lý Sổ cái Hộ chiếu & Bắt tay (Passports)
+  const [passportsList, setPassportsList] = useState<any[]>([]);
+  const [passportFilter, setPassportFilter] = useState<'ALL' | 'ACTIVE' | 'TRANSFERRED'>('ALL');
+  const [passportSearch, setPassportSearch] = useState('');
+
+  const loadPassports = () => {
+    if (typeof window === 'undefined') return;
+    try {
+      const stored = localStorage.getItem('SOVA_PASSPORTS_LEDGER');
+      if (stored) {
+        setPassportsList(JSON.parse(stored));
+        return;
+      }
+    } catch {}
+
+    const defaults = [
+      { code: 'SOVA-PASS-8842-VN', title: 'Laptop ThinkPad T480 Core i5 / 16GB SSD', category: 'laptop', cycleCount: 2, status: 'ACTIVE', actor: 'Lê Thu Hằng', created_at: '2026-03-01' },
+      { code: 'SOVA-PASS-4921-VN', title: 'Xe đạp cào cào Asama 26 inch', category: 'bicycle', cycleCount: 1, status: 'ACTIVE', actor: 'Trần Văn Tuấn', created_at: '2026-02-15' },
+      { code: 'SOVA-PASS-3118-VN', title: 'Máy may công nghiệp Juki điện tử', category: 'sewing_machine', cycleCount: 3, status: 'TRANSFERRED', actor: 'Chị Nguyễn Thị Mai', created_at: '2026-01-20' },
+      { code: 'SOVA-PASS-7729-VN', title: 'Bộ đồ nghề cơ khí sửa xe máy lưu động', category: 'livelihood_tools', cycleCount: 1, status: 'ACTIVE', actor: 'Nguyễn Quốc Cường', created_at: '2026-03-05' }
+    ];
+    setPassportsList(defaults);
+    localStorage.setItem('SOVA_PASSPORTS_LEDGER', JSON.stringify(defaults));
+  };
+
+  const handleUpdatePassportStatus = (code: string, newStatus: string) => {
+    const updated = passportsList.map(p => p.code === code ? { ...p, status: newStatus } : p);
+    setPassportsList(updated);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('SOVA_PASSPORTS_LEDGER', JSON.stringify(updated));
+    }
+  };
+
+  // Sao lưu & Xuất dữ liệu
+  const [backupNotice, setBackupNotice] = useState('');
+
+  const exportFullBackupJSON = () => {
+    const backupData = {
+      version: 'SOVA-ENTERPRISE-10.0',
+      exported_at: new Date().toISOString(),
+      admin_operator: 'Nguyenkhiemnet@gmail.com',
+      cms: fullCMS,
+      users: users,
+      wishes: wishes,
+      passports: passportsList
+    };
+
+    const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `SOVA_BACKUP_FULL_${new Date().toISOString().slice(0, 10)}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setBackupNotice('Đã xuất file sao lưu toàn bộ hệ thống JSON thành công!');
+    setTimeout(() => setBackupNotice(''), 4000);
+  };
+
+  const exportUsersCSV = () => {
+    let csv = 'ID,Ho_Va_Ten,Email,Vai_Tro,Karma,CO2_Giam_kg,Ngay_Dang_Ky\n';
+    users.forEach(u => {
+      const name = `"${(u.full_name || '').replace(/"/g, '""')}"`;
+      const email = `"${(u.email || '').replace(/"/g, '""')}"`;
+      const role = u.role || 'USER';
+      const karma = u.karma || 100;
+      const co2 = u.co2_saved || 0;
+      const date = u.created_at || '';
+      csv += `${u.id},${name},${email},${role},${karma},${co2},${date}\n`;
+    });
+
+    const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `SOVA_USERS_LIST_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    setBackupNotice('Đã xuất danh sách thành viên CSV thành công!');
+    setTimeout(() => setBackupNotice(''), 4000);
+  };
+
+  const purgeClientCache = () => {
+    if (typeof window === 'undefined') return;
+    sessionStorage.removeItem('SOVA_ADMIN_PORTAL_UNLOCKED');
+    localStorage.removeItem('SOVA_OPTIMISTIC_WISHES');
+    localStorage.removeItem('SOVA_DELETED_WISHES');
+    setBackupNotice('Đã dọn sạch toàn bộ cache tạm thời trên máy. Dữ liệu Supabase được bảo toàn nguyên vẹn.');
+    setTimeout(() => setBackupNotice(''), 4000);
+  };
 
   // Quản lý thành viên (Users)
   const [users, setUsers] = useState<any[]>([]);
@@ -488,41 +625,41 @@ export default function DedicatedAdminPortal() {
         </div>
       </div>
 
-      {/* CỤM 5 TABS CMS QUẢN LÝ TOÀN BỘ WEBSITE */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 bg-warm-100 p-1.5 rounded-2xl border border-warm-200">
+      {/* CỤM 8 PHÂN HỆ QUẢN TRỊ TỐI CAO */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-2 bg-warm-100 p-2 rounded-2xl border border-warm-200">
         <button
           onClick={() => setAdminTab('HERO')}
-          className={`py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+          className={`py-2.5 px-2 rounded-xl text-[11px] font-black transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
             adminTab === 'HERO' ? 'bg-white text-brand-700 shadow-xs' : 'text-warm-700 hover:text-warm-900'
           }`}
         >
           <Layout className="w-4 h-4"/>
-          <span>1. Hero Banner & Chỉ Số</span>
+          <span>1. Hero Banner</span>
         </button>
 
         <button
           onClick={() => setAdminTab('FOOTER')}
-          className={`py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+          className={`py-2.5 px-2 rounded-xl text-[11px] font-black transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
             adminTab === 'FOOTER' ? 'bg-white text-brand-700 shadow-xs' : 'text-warm-700 hover:text-warm-900'
           }`}
         >
           <Share2 className="w-4 h-4"/>
-          <span>2. Chân Trang & MXH</span>
+          <span>2. Chân Trang</span>
         </button>
 
         <button
           onClick={() => setAdminTab('SUBPAGES')}
-          className={`py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+          className={`py-2.5 px-2 rounded-xl text-[11px] font-black transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
             adminTab === 'SUBPAGES' ? 'bg-white text-brand-700 shadow-xs' : 'text-warm-700 hover:text-warm-900'
           }`}
         >
-          <FileText className="w-4 h-4"/>
-          <span>3. Trang Con & Quy Tắc</span>
+          <Bell className="w-4 h-4"/>
+          <span>3. Bản Tin Khẩn</span>
         </button>
 
         <button
           onClick={() => setAdminTab('WISHES')}
-          className={`py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+          className={`py-2.5 px-2 rounded-xl text-[11px] font-black transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
             adminTab === 'WISHES' ? 'bg-white text-brand-700 shadow-xs' : 'text-warm-700 hover:text-warm-900'
           }`}
         >
@@ -535,12 +672,45 @@ export default function DedicatedAdminPortal() {
             setAdminTab('USERS');
             loadUsers();
           }}
-          className={`py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+          className={`py-2.5 px-2 rounded-xl text-[11px] font-black transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
             adminTab === 'USERS' ? 'bg-white text-brand-700 shadow-xs' : 'text-warm-700 hover:text-warm-900'
           }`}
         >
           <Users className="w-4 h-4"/>
           <span>5. Thành Viên ({users.length})</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab('CATEGORIES')}
+          className={`py-2.5 px-2 rounded-xl text-[11px] font-black transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+            adminTab === 'CATEGORIES' ? 'bg-white text-brand-700 shadow-xs' : 'text-warm-700 hover:text-warm-900'
+          }`}
+        >
+          <Tag className="w-4 h-4"/>
+          <span>6. Danh Mục ({fullCMS.categories?.length || 5})</span>
+        </button>
+
+        <button
+          onClick={() => {
+            setAdminTab('PASSPORTS');
+            loadPassports();
+          }}
+          className={`py-2.5 px-2 rounded-xl text-[11px] font-black transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+            adminTab === 'PASSPORTS' ? 'bg-white text-brand-700 shadow-xs' : 'text-warm-700 hover:text-warm-900'
+          }`}
+        >
+          <Compass className="w-4 h-4"/>
+          <span>7. Sổ Hộ Chiếu</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab('SYSTEM')}
+          className={`py-2.5 px-2 rounded-xl text-[11px] font-black transition-all flex flex-col items-center justify-center gap-1 cursor-pointer ${
+            adminTab === 'SYSTEM' ? 'bg-white text-brand-700 shadow-xs' : 'text-warm-700 hover:text-warm-900'
+          }`}
+        >
+          <Database className="w-4 h-4"/>
+          <span>8. Sao Lưu Data</span>
         </button>
       </div>
 
@@ -748,45 +918,134 @@ export default function DedicatedAdminPortal() {
         </div>
       )}
 
-      {/* TAB 3: SUBPAGES CMS */}
+      {/* TAB 3: SUBPAGES & BROADCAST CMS */}
       {adminTab === 'SUBPAGES' && (
-        <div className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-8 shadow-soft space-y-6">
-          <div className="flex justify-between items-center border-b border-warm-100 pb-4">
+        <div className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-8 shadow-soft space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-warm-100 pb-4">
             <div>
-              <h2 className="text-base font-black text-warm-900">Quản Trị Nội Dung Các Trang Con</h2>
-              <p className="text-xs text-warm-700">Tùy chỉnh thông báo và quy định tại trang Gửi Điều Ước và Trạm Bắt Tay.</p>
+              <h2 className="text-base font-black text-warm-900">Bản Tin Khẩn Cấp Toàn Dân & Quy Định Trang Con</h2>
+              <p className="text-xs text-warm-700">Kiểm soát dải thông báo khẩn cấp (Broadcast Banner) chạy dọc trên đầu trang web và quy định các trang con.</p>
             </div>
             <button
               onClick={() => requestActionWithPin(executeSaveFullCMS)}
-              className="px-6 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-float flex items-center gap-1.5 cursor-pointer"
+              className="px-6 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-float flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
             >
               <Save className="w-4 h-4"/>
-              <span>Lưu Trang Con (Cần Mật Mã)</span>
+              <span>Lưu Cấu Hình (Cần Mật Mã)</span>
             </button>
           </div>
 
-          <div className="space-y-5 max-w-3xl">
+          {/* KHỐI 1: BẢN TIN KHẨN CẤP TOÀN DÂN (BROADCAST BANNER) */}
+          <div className="p-5 bg-gradient-to-br from-amber-500/10 via-brand-500/5 to-transparent rounded-3xl border-2 border-brand-200 space-y-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Bell className="w-5 h-5 text-brand-600 shrink-0" />
+                <h3 className="font-black text-warm-900 text-sm">1. Bản Tin Khẩn Cấp Toàn Hệ Thống (Broadcast Banner)</h3>
+              </div>
+              <label className="flex items-center gap-2 cursor-pointer select-none bg-white px-3 py-1.5 rounded-xl border border-warm-200">
+                <input
+                  type="checkbox"
+                  checked={fullCMS.broadcast?.enabled ?? true}
+                  onChange={e => setFullCMS({
+                    ...fullCMS,
+                    broadcast: { ...(fullCMS.broadcast || DEFAULT_FULL_CMS.broadcast), enabled: e.target.checked }
+                  })}
+                  className="w-4 h-4 accent-brand-600 rounded cursor-pointer"
+                />
+                <span className="text-xs font-black text-brand-800">
+                  {fullCMS.broadcast?.enabled ? '🟢 Đang Kích Hoạt' : '⚪ Đã Tắt'}
+                </span>
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-warm-800">Cấp độ thông báo:</label>
+                <select
+                  value={fullCMS.broadcast?.type || 'info'}
+                  onChange={e => setFullCMS({
+                    ...fullCMS,
+                    broadcast: { ...(fullCMS.broadcast || DEFAULT_FULL_CMS.broadcast), type: e.target.value as any }
+                  })}
+                  className="w-full p-2.5 rounded-xl border border-warm-300 text-xs font-bold text-warm-900 bg-white"
+                >
+                  <option value="info">🔵 Thông Tin (Màu Xanh Biển)</option>
+                  <option value="alert">🟠 Cảnh Báo Khẩn (Màu Cam / Hổ Phách)</option>
+                  <option value="success">🟢 Tin Vui / Thành Công (Màu Xanh Ngọc)</option>
+                </select>
+              </div>
+
+              <div className="sm:col-span-2 space-y-1">
+                <label className="text-xs font-bold text-warm-800">Nội dung thông điệp khẩn cấp:</label>
+                <input
+                  type="text"
+                  value={fullCMS.broadcast?.text || ''}
+                  onChange={e => setFullCMS({
+                    ...fullCMS,
+                    broadcast: { ...(fullCMS.broadcast || DEFAULT_FULL_CMS.broadcast), text: e.target.value }
+                  })}
+                  placeholder="Ví dụ: 📢 Chiến dịch Trạm Bắt Tay 0-VND mùa tựu trường đang mở..."
+                  className="w-full p-2.5 rounded-xl border border-warm-300 text-xs font-bold text-warm-900 bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-warm-800">Chữ trên nút liên kết (Tùy chọn):</label>
+                <input
+                  type="text"
+                  value={fullCMS.broadcast?.linkText || ''}
+                  onChange={e => setFullCMS({
+                    ...fullCMS,
+                    broadcast: { ...(fullCMS.broadcast || DEFAULT_FULL_CMS.broadcast), linkText: e.target.value }
+                  })}
+                  placeholder="Ví dụ: Đăng ký nhận xe ngay →"
+                  className="w-full p-2.5 rounded-xl border border-warm-300 text-xs font-medium bg-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-warm-800">Đường dẫn liên kết (URL):</label>
+                <input
+                  type="text"
+                  value={fullCMS.broadcast?.linkUrl || ''}
+                  onChange={e => setFullCMS({
+                    ...fullCMS,
+                    broadcast: { ...(fullCMS.broadcast || DEFAULT_FULL_CMS.broadcast), linkUrl: e.target.value }
+                  })}
+                  placeholder="Ví dụ: /create-wish hoặc /handshake"
+                  className="w-full p-2.5 rounded-xl border border-warm-300 text-xs font-medium bg-white"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* KHỐI 2: NỘI DUNG TRANG CON */}
+          <div className="space-y-4">
+            <h3 className="font-black text-warm-900 text-sm">2. Quy Định và Thông Báo Các Trang Con</h3>
+
             <div className="p-4 bg-warm-50 rounded-2xl border border-warm-200 space-y-2">
               <label className="text-xs font-black text-warm-900 block">
-                1. Thông báo quy chuẩn trên Trang Gửi Điều Ước (/create-wish):
+                Thông báo quy chuẩn trên Trang Gửi Điều Ước (/create-wish):
               </label>
               <textarea
                 rows={2}
                 value={fullCMS.subpages.createWishNotice}
                 onChange={e => setFullCMS({ ...fullCMS, subpages: { ...fullCMS.subpages, createWishNotice: e.target.value } })}
-                className="w-full p-2.5 rounded-xl border border-warm-300 text-xs font-medium"
+                className="w-full p-2.5 rounded-xl border border-warm-300 text-xs font-medium bg-white"
               />
             </div>
 
             <div className="p-4 bg-warm-50 rounded-2xl border border-warm-200 space-y-2">
               <label className="text-xs font-black text-warm-900 block">
-                2. Quy tắc an toàn Safe Hub trên Trang Trạm Bắt Tay (/handshake):
+                Quy tắc an toàn Safe Hub trên Trang Trạm Bắt Tay (/handshake):
               </label>
               <textarea
                 rows={2}
                 value={fullCMS.subpages.handshakeRules}
                 onChange={e => setFullCMS({ ...fullCMS, subpages: { ...fullCMS.subpages, handshakeRules: e.target.value } })}
-                className="w-full p-2.5 rounded-xl border border-warm-300 text-xs font-medium"
+                className="w-full p-2.5 rounded-xl border border-warm-300 text-xs font-medium bg-white"
               />
             </div>
           </div>
@@ -1188,6 +1447,339 @@ export default function DedicatedAdminPortal() {
                 })()}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 6: DYNAMIC CATEGORIES */}
+      {adminTab === 'CATEGORIES' && (
+        <div className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-8 shadow-soft space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-warm-100 pb-4">
+            <div>
+              <h2 className="text-base font-black text-warm-900 flex items-center gap-2">
+                <Tag className="w-5 h-5 text-brand-600"/>
+                <span>Quản Lý Phân Loại Danh Mục Động</span>
+              </h2>
+              <p className="text-xs text-warm-700">Thêm, bớt và chỉnh sửa các danh mục vật phẩm hiển thị trên trang chủ và bộ lọc toàn sàn.</p>
+            </div>
+            <button
+              onClick={() => requestActionWithPin(executeSaveFullCMS)}
+              className="px-6 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-float flex items-center justify-center gap-1.5 cursor-pointer shrink-0"
+            >
+              <Save className="w-4 h-4"/>
+              <span>Lưu Danh Mục (Cần Mật Mã)</span>
+            </button>
+          </div>
+
+          {/* Form Thêm Danh Mục Mới */}
+          <div className="p-5 bg-warm-50 rounded-3xl border border-warm-200 space-y-4">
+            <h3 className="text-xs font-black text-warm-900 uppercase tracking-wider flex items-center gap-1.5">
+              <Plus className="w-4 h-4 text-brand-600" />
+              <span>Thêm Danh Mục Vật Phẩm Mới</span>
+            </h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-warm-800">Mã Danh Mục (Slug ID):</label>
+                <input
+                  type="text"
+                  placeholder="vidu: books, medical..."
+                  value={newCatId}
+                  onChange={e => setNewCatId(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-warm-300 text-xs font-bold text-warm-900 bg-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-warm-800">Tên Đầy Đủ (Hiển thị):</label>
+                <input
+                  type="text"
+                  placeholder="Sách Giáo Khoa & Tri Thức"
+                  value={newCatLabel}
+                  onChange={e => setNewCatLabel(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-warm-300 text-xs font-bold text-warm-900 bg-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-warm-800">Tên Ngắn Gọn (Nút lọc):</label>
+                <input
+                  type="text"
+                  placeholder="Sách giáo khoa"
+                  value={newCatShort}
+                  onChange={e => setNewCatShort(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-warm-300 text-xs font-bold text-warm-900 bg-white"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[11px] font-bold text-warm-800">Mô Tả Sinh Kế 0-VND:</label>
+                <input
+                  type="text"
+                  placeholder="Sách học tập cho học sinh nghèo"
+                  value={newCatDesc}
+                  onChange={e => setNewCatDesc(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-warm-300 text-xs font-medium text-warm-900 bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                onClick={handleAddCategory}
+                className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-xs flex items-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Thêm Vào Danh Sách</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Danh Sách Danh Mục Hiện Tại */}
+          <div className="overflow-x-auto rounded-2xl border border-warm-200">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-warm-100/75 border-b border-warm-200 text-warm-700 font-black">
+                  <th className="py-3 px-4">Mã ID</th>
+                  <th className="py-3 px-4">Tên Hiển Thị</th>
+                  <th className="py-3 px-4">Tên Nút Bấm</th>
+                  <th className="py-3 px-4">Mô Tả</th>
+                  <th className="py-3 px-4 text-right">Thao Tác</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-warm-100">
+                {(fullCMS.categories || DEFAULT_FULL_CMS.categories).map(cat => (
+                  <tr key={cat.id} className="hover:bg-warm-50/70 transition-colors">
+                    <td className="py-3 px-4 font-mono font-bold text-brand-700">
+                      {cat.id}
+                    </td>
+                    <td className="py-3 px-4 font-black text-warm-900">
+                      {cat.label}
+                    </td>
+                    <td className="py-3 px-4 font-bold text-warm-700">
+                      {cat.shortLabel}
+                    </td>
+                    <td className="py-3 px-4 text-warm-600 font-medium">
+                      {cat.desc || '—'}
+                    </td>
+                    <td className="py-3 px-4 text-right">
+                      <button
+                        onClick={() => handleDeleteCategory(cat.id)}
+                        className="px-2.5 py-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-bold text-[11px] transition-colors cursor-pointer"
+                      >
+                        Xóa
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 7: PASSPORTS LEDGER */}
+      {adminTab === 'PASSPORTS' && (
+        <div className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-8 shadow-soft space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-warm-100 pb-4">
+            <div>
+              <h2 className="text-base font-black text-warm-900 flex items-center gap-2">
+                <Compass className="w-5 h-5 text-brand-600"/>
+                <span>Sổ Hộ Chiếu Sinh Kế & Nhật Ký Luân Chuyển 0-VND</span>
+              </h2>
+              <p className="text-xs text-warm-700">Theo dõi toàn bộ vòng đời thiết bị, số lần tuần hoàn trao tặng và người đang bảo hộ.</p>
+            </div>
+            <button
+              onClick={loadPassports}
+              className="px-4 py-2 rounded-xl border border-warm-200 hover:bg-warm-50 text-warm-800 text-xs font-black flex items-center gap-1.5 cursor-pointer shrink-0"
+            >
+              <RefreshCw className="w-4 h-4"/>
+              <span>Làm Mới Sổ Cái</span>
+            </button>
+          </div>
+
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-warm-400 absolute left-3.5 top-1/2 -translate-y-1/2"/>
+              <input
+                type="text"
+                placeholder="Tìm hộ chiếu theo mã, tên thiết bị hoặc người nắm giữ..."
+                value={passportSearch}
+                onChange={e => setPassportSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2.5 rounded-2xl border-2 border-warm-200 text-xs font-bold text-warm-900 focus:outline-none focus:border-brand-600"
+              />
+            </div>
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setPassportFilter('ALL')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer ${passportFilter === 'ALL' ? 'bg-warm-900 text-white' : 'bg-warm-100 text-warm-700'}`}
+              >
+                Tất cả ({passportsList.length})
+              </button>
+              <button
+                onClick={() => setPassportFilter('ACTIVE')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer ${passportFilter === 'ACTIVE' ? 'bg-emerald-600 text-white' : 'bg-warm-100 text-warm-700'}`}
+              >
+                Đang dùng
+              </button>
+              <button
+                onClick={() => setPassportFilter('TRANSFERRED')}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold cursor-pointer ${passportFilter === 'TRANSFERRED' ? 'bg-blue-600 text-white' : 'bg-warm-100 text-warm-700'}`}
+              >
+                Đã luân chuyển
+              </button>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto rounded-2xl border border-warm-200">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-warm-100/75 border-b border-warm-200 text-warm-700 font-black">
+                  <th className="py-3 px-4">Mã Hộ Chiếu</th>
+                  <th className="py-3 px-4">Vật Phẩm / Thiết Bị</th>
+                  <th className="py-3 px-4">Vòng Tuần Hoàn</th>
+                  <th className="py-3 px-4">Người Bảo Hộ Hiện Tại</th>
+                  <th className="py-3 px-4">Trạng Thái</th>
+                  <th className="py-3 px-4 text-right">Chuyển Giao 0-VND</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-warm-100">
+                {passportsList
+                  .filter(p => {
+                    const matchText = (p.code || '').toLowerCase().includes(passportSearch.toLowerCase()) ||
+                                      (p.title || '').toLowerCase().includes(passportSearch.toLowerCase()) ||
+                                      (p.actor || '').toLowerCase().includes(passportSearch.toLowerCase());
+                    if (passportFilter === 'ACTIVE') return matchText && p.status === 'ACTIVE';
+                    if (passportFilter === 'TRANSFERRED') return matchText && p.status === 'TRANSFERRED';
+                    return matchText;
+                  })
+                  .map(p => (
+                    <tr key={p.code} className="hover:bg-warm-50/70 transition-colors">
+                      <td className="py-3 px-4 font-mono font-black text-brand-700">
+                        {p.code}
+                      </td>
+                      <td className="py-3 px-4 font-black text-warm-900">
+                        {p.title}
+                      </td>
+                      <td className="py-3 px-4 font-bold text-amber-700">
+                        🔄 Vòng {p.cycleCount}
+                      </td>
+                      <td className="py-3 px-4 text-warm-800 font-bold">
+                        {p.actor}
+                      </td>
+                      <td className="py-3 px-4">
+                        {p.status === 'ACTIVE' ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-800 font-black text-[10px] border border-emerald-200">
+                            <CheckCircle2 className="w-3 h-3 text-emerald-600"/>
+                            <span>Đang Phục Vụ</span>
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full bg-blue-50 text-blue-800 font-black text-[10px] border border-blue-200">
+                            <Award className="w-3 h-3 text-blue-600"/>
+                            <span>Đã Trao Chuyền</span>
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4 text-right">
+                        <button
+                          onClick={() => handleUpdatePassportStatus(p.code, p.status === 'ACTIVE' ? 'TRANSFERRED' : 'ACTIVE')}
+                          className={`px-3 py-1.5 rounded-xl font-bold text-[11px] transition-colors cursor-pointer ${
+                            p.status === 'ACTIVE' 
+                              ? 'bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200' 
+                              : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'
+                          }`}
+                        >
+                          {p.status === 'ACTIVE' ? 'Kích Hoạt Luân Chuyển' : 'Đặt Đang Dùng'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 8: SYSTEM BACKUP & DATA AUDIT */}
+      {adminTab === 'SYSTEM' && (
+        <div className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-8 shadow-soft space-y-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-warm-100 pb-4">
+            <div>
+              <h2 className="text-base font-black text-warm-900 flex items-center gap-2">
+                <Database className="w-5 h-5 text-brand-600"/>
+                <span>Trung Tâm Sao Lưu & Bảo Mật Dữ Liệu Tối Cao</span>
+              </h2>
+              <p className="text-xs text-warm-700">Xuất dữ liệu dự phòng 1 chạm cho quản trị viên và làm sạch cache máy trạm.</p>
+            </div>
+          </div>
+
+          {backupNotice && (
+            <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs font-black flex items-center gap-2 animate-in fade-in">
+              <Check className="w-4 h-4 shrink-0 text-emerald-600" />
+              <span>{backupNotice}</span>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+            {/* Card 1: Full JSON Backup */}
+            <div className="p-6 rounded-3xl border-2 border-brand-200 bg-brand-50/30 space-y-4 flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="w-12 h-12 rounded-2xl bg-brand-100 text-brand-700 flex items-center justify-center font-black">
+                  <Download className="w-6 h-6" />
+                </div>
+                <h3 className="text-sm font-black text-warm-900">1. Sao Lưu Toàn Bộ Hệ Thống (JSON)</h3>
+                <p className="text-xs text-warm-600 leading-relaxed font-medium">
+                  Tải về bản snapshot đầy đủ gồm CMS, thành viên, điều ước và sổ hộ chiếu. Phục hồi tức thì mọi lúc.
+                </p>
+              </div>
+              <button
+                onClick={exportFullBackupJSON}
+                className="w-full py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-float flex items-center justify-center gap-2 cursor-pointer transition-all"
+              >
+                <Download className="w-4 h-4" />
+                <span>Tải Bản Sao Lưu JSON</span>
+              </button>
+            </div>
+
+            {/* Card 2: Export CSV Users */}
+            <div className="p-6 rounded-3xl border-2 border-emerald-200 bg-emerald-50/30 space-y-4 flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center font-black">
+                  <FileSpreadsheet className="w-6 h-6" />
+                </div>
+                <h3 className="text-sm font-black text-warm-900">2. Xuất Danh Sách Thành Viên (CSV)</h3>
+                <p className="text-xs text-warm-600 leading-relaxed font-medium">
+                  Xuất file Excel / Google Sheets chuẩn UTF-8 chứa đầy đủ thông tin: Họ tên, Email, Karma, CO2 và ngày đăng ký.
+                </p>
+              </div>
+              <button
+                onClick={exportUsersCSV}
+                className="w-full py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black shadow-float flex items-center justify-center gap-2 cursor-pointer transition-all"
+              >
+                <FileSpreadsheet className="w-4 h-4" />
+                <span>Xuất File CSV Thành Viên</span>
+              </button>
+            </div>
+
+            {/* Card 3: Cache purge */}
+            <div className="p-6 rounded-3xl border-2 border-amber-200 bg-amber-50/30 space-y-4 flex flex-col justify-between">
+              <div className="space-y-2">
+                <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center font-black">
+                  <RefreshCw className="w-6 h-6" />
+                </div>
+                <h3 className="text-sm font-black text-warm-900">3. Làm Sạch Bộ Nhớ Đệm Trình Duyệt</h3>
+                <p className="text-xs text-warm-600 leading-relaxed font-medium">
+                  Giải phóng dữ liệu đệm cục bộ của máy hiện tại. Toàn bộ dữ liệu gốc lưu trên Supabase luôn an toàn 100%.
+                </p>
+              </div>
+              <button
+                onClick={purgeClientCache}
+                className="w-full py-3 rounded-2xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black shadow-float flex items-center justify-center gap-2 cursor-pointer transition-all"
+              >
+                <RefreshCw className="w-4 h-4" />
+                <span>Dọn Sạch Cache Cục Bộ</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

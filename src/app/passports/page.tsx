@@ -178,7 +178,7 @@ export default function PassportsPage() {
   };
 
   return (
-    <div className="space-y-10 max-w-6xl mx-auto">
+    <div className="space-y-10 max-w-6xl mx-auto pb-28 md:pb-12">
       
       {/* Header & Nút Quay Lại */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

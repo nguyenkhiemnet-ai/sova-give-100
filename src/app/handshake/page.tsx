@@ -105,7 +105,7 @@ function HandshakeContent() {
   };
 
   return (
-    <div className="space-y-8 max-w-5xl mx-auto">
+    <div className="space-y-8 max-w-5xl mx-auto pb-28 md:pb-12">
       
       {/* Header */}
       <div className="flex items-center justify-between">

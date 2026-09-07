@@ -23,10 +23,28 @@ export interface SubpagesCMSData {
   handshakeRules: string;
 }
 
+export interface BroadcastBannerData {
+  enabled: boolean;
+  text: string;
+  type: 'info' | 'alert' | 'success';
+  linkText?: string;
+  linkUrl?: string;
+}
+
+export interface DynamicCategoryItem {
+  id: string;
+  label: string;
+  shortLabel: string;
+  iconName?: string;
+  desc?: string;
+}
+
 export interface FullSiteCMS {
   hero: HeroCMSData;
   footer: FooterCMSData;
   subpages: SubpagesCMSData;
+  broadcast: BroadcastBannerData;
+  categories: DynamicCategoryItem[];
 }
 
 export const DEFAULT_FULL_CMS: FullSiteCMS = {
@@ -51,14 +69,41 @@ export const DEFAULT_FULL_CMS: FullSiteCMS = {
   subpages: {
     createWishNotice: "Hồ sơ của bạn được bảo vệ danh dự theo Nghị định 13/2023/NĐ-CP. Tuyệt đối không giao dịch tiền mặt.",
     handshakeRules: "Quy tắc trạm an toàn: Giao dịch 100% bằng hiện vật 0 đồng tại Safe Hub. Nghiêm cấm nhận tiền bồi dưỡng."
-  }
+  },
+  broadcast: {
+    enabled: true,
+    text: "🔥 CHỦ TRƯƠNG 0-VND TOÀN QUỐC: Nghiêm cấm nhận hoặc đưa tiền mặt dưới mọi hình thức khi tiếp sức sinh kế!",
+    type: "info",
+    linkText: "Xem Quy Chuẩn",
+    linkUrl: "/handshake/"
+  },
+  categories: [
+    { id: 'bicycle', label: 'Xe đạp đến trường', shortLabel: 'Xe đạp', iconName: 'Bike', desc: 'Phương tiện đi lại cho học sinh nghèo' },
+    { id: 'laptop', label: 'Máy tính học tập', shortLabel: 'Máy tính', iconName: 'Laptop', desc: 'Laptop, PC cho học sinh - sinh viên' },
+    { id: 'sewing_machine', label: 'Máy may sinh kế', shortLabel: 'Máy may', iconName: 'Scissors', desc: 'Dụng cụ may vá cho mẹ đơn thân' },
+    { id: 'study_tools', label: 'Dụng cụ tri thức', shortLabel: 'Sách & Dụng cụ', iconName: 'BookOpen', desc: 'Sách vở, bàn học, máy tính cầm tay' },
+    { id: 'livelihood_tools', label: 'Công cụ mưu sinh', shortLabel: 'Nghề mưu sinh', iconName: 'Wrench', desc: 'Đồ nghề sửa xe, làm mộc, làm nông' }
+  ]
 };
 
 export function getFullSiteCMS(): FullSiteCMS {
   if (typeof window === 'undefined') return DEFAULT_FULL_CMS;
   try {
     const stored = localStorage.getItem('SOVA_FULL_SITE_CMS');
-    if (stored) return { ...DEFAULT_FULL_CMS, ...JSON.parse(stored) };
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      return {
+        ...DEFAULT_FULL_CMS,
+        ...parsed,
+        hero: { ...DEFAULT_FULL_CMS.hero, ...(parsed.hero || {}) },
+        footer: { ...DEFAULT_FULL_CMS.footer, ...(parsed.footer || {}) },
+        subpages: { ...DEFAULT_FULL_CMS.subpages, ...(parsed.subpages || {}) },
+        broadcast: { ...DEFAULT_FULL_CMS.broadcast, ...(parsed.broadcast || {}) },
+        categories: parsed.categories && Array.isArray(parsed.categories) && parsed.categories.length > 0 
+          ? parsed.categories 
+          : DEFAULT_FULL_CMS.categories
+      };
+    }
   } catch {}
   return DEFAULT_FULL_CMS;
 }
