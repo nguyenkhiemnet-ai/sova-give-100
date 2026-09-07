@@ -15,8 +15,9 @@ import {
   ShieldCheck, CheckCircle2, AlertTriangle, XCircle, 
   Trash2, RefreshCw, Search, MapPin, Sparkles, 
   Camera, Edit3, KeyRound, Lock, Save, ShieldAlert, 
-  Clock, Award, Layout, FileText, Share2
+  Clock, Award, Layout, FileText, Share2, LogIn, ArrowLeft
 } from 'lucide-react';
+import { getActiveUser, isSuperAdminEmail, buildUserProfile, SUPER_ADMIN_EMAIL, UserProfile, loginWithGoogle } from '@/lib/auth';
 
 interface WishItem {
   id: string;
@@ -35,6 +36,8 @@ interface WishItem {
 }
 
 export default function DedicatedAdminPortal() {
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
@@ -77,12 +80,20 @@ export default function DedicatedAdminPortal() {
 
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const unlocked = sessionStorage.getItem('SOVA_ADMIN_PORTAL_UNLOCKED') === 'true';
-      setIsUnlocked(unlocked);
-      if (unlocked) {
-        setFullCMS(getFullSiteCMS());
-        loadWishes();
-      }
+      supabase.auth.getUser().then(({ data: { user: sbUser } }) => {
+        const user = sbUser ? buildUserProfile(sbUser) : getActiveUser();
+        setCurrentUser(user);
+        setAuthChecked(true);
+
+        const unlocked = sessionStorage.getItem('SOVA_ADMIN_PORTAL_UNLOCKED') === 'true';
+        if (unlocked && isSuperAdminEmail(user?.email)) {
+          setIsUnlocked(true);
+          setFullCMS(getFullSiteCMS());
+          loadWishes();
+        } else {
+          setIsUnlocked(false);
+        }
+      });
     }
   }, []);
 
@@ -94,6 +105,10 @@ export default function DedicatedAdminPortal() {
   };
 
   const handleUnlockPortal = () => {
+    if (!isSuperAdminEmail(currentUser?.email)) {
+      alert("Chỉ tài khoản Trọng Tài Tối Cao (" + SUPER_ADMIN_EMAIL + ") mới được phép mở khóa Bàn Quản Trị!");
+      return;
+    }
     const currentPin = getMasterPin();
     if (pinInput === currentPin || pinInput === '21081984' || pinInput === '1984') {
       sessionStorage.setItem('SOVA_ADMIN_PORTAL_UNLOCKED', 'true');
@@ -291,6 +306,51 @@ export default function DedicatedAdminPortal() {
       setEditingWish(null);
     }
   };
+
+  // 1. Nếu chưa kiểm tra xong Auth, hiện màn hình tải nhẹ
+  if (!authChecked) {
+    return (
+      <div className="min-h-[70vh] flex items-center justify-center p-4">
+        <div className="flex items-center gap-3 text-warm-600 font-bold text-sm">
+          <RefreshCw className="w-5 h-5 animate-spin text-brand-600" />
+          <span>Đang xác minh phân quyền quản trị...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // 2. Chặn toàn bộ người dùng không phải nguyenkhiemnet@gmail.com
+  if (!isSuperAdminEmail(currentUser?.email)) {
+    return (
+      <div className="min-h-[75vh] flex items-center justify-center p-4">
+        <div className="bg-white rounded-3xl border border-warm-200 max-w-md w-full p-8 shadow-xl space-y-6 text-center animate-in fade-in zoom-in-95">
+          <div className="w-16 h-16 rounded-3xl bg-amber-50 text-amber-600 mx-auto flex items-center justify-center ring-8 ring-amber-100">
+            <ShieldAlert className="w-8 h-8"/>
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-black text-warm-900">Khu Vực Bàn Quản Trị Tối Cao</h2>
+            <p className="text-xs text-warm-600 leading-relaxed font-medium">
+              Chỉ duy nhất địa chỉ email <span className="font-black text-brand-700">{SUPER_ADMIN_EMAIL}</span> mới có quyền quản trị hệ thống. Tất cả các tài khoản khác đều là công dân sinh kế thường.
+            </p>
+          </div>
+
+          <div className="p-3 bg-warm-50 rounded-2xl border border-warm-200 text-xs font-bold text-warm-700">
+            Tài khoản hiện tại: <span className="text-warm-900 font-black">{currentUser?.email || 'Chưa đăng nhập'}</span>
+          </div>
+
+          <div className="pt-2 flex flex-col gap-2.5">
+            <Link
+              href="/"
+              className="w-full py-2.5 px-4 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black transition-all shadow-sm flex items-center justify-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              <span>Quay Lại Trang Chủ</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (!isUnlocked) {
     return (

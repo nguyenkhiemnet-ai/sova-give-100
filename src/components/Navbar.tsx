@@ -5,11 +5,12 @@ import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import { 
   Sparkles, Search, MapPin, HeartHandshake, ShieldCheck, 
-  User, LogOut, ChevronDown, ExternalLink, X
+  User, LogOut, ChevronDown, ExternalLink, X, KeyRound
 } from 'lucide-react';
-import { getActiveUser, setActiveUser, loginWithGoogle, logout, UserProfile } from '@/lib/auth';
+import { getActiveUser, setActiveUser, loginWithGoogle, logout, UserProfile, buildUserProfile, isSuperAdminEmail } from '@/lib/auth';
 import { VIETNAM_PROVINCES } from '@/lib/provinces';
 import { supabase } from '@/lib/supabaseClient';
+import AuthModal from '@/components/AuthModal';
 
 export default function Navbar() {
   const router = useRouter();
@@ -18,23 +19,20 @@ export default function Navbar() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedProvince, setSelectedProvince] = useState('ALL');
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showLoginMenu, setShowLoginMenu] = useState(false);
+  const [showMobileLoginMenu, setShowMobileLoginMenu] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileDropdownRef = useRef<HTMLDivElement>(null);
+  const loginDropdownRef = useRef<HTMLDivElement>(null);
+  const mobileLoginDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // 1. Đồng bộ session tức thì khi Supabase nhận OAuth Token từ URL
+    // 1. Đồng bộ session tức thì khi Supabase nhận OAuth Token từ URL hoặc đăng nhập
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        const sbUser = session.user;
-        const profile: UserProfile = {
-          id: sbUser.id,
-          name: sbUser.user_metadata?.full_name || sbUser.email?.split('@')[0] || 'Công Dân Tử Tế',
-          email: sbUser.email || '',
-          avatar: (sbUser.user_metadata?.full_name || 'U').charAt(0).toUpperCase(),
-          role: sbUser.email?.includes('nguyenkhiem') ? 'SUPER_ADMIN' : 'CITIZEN',
-          karma: 100,
-          co2Saved: 85.5
-        };
+        const profile = buildUserProfile(session.user);
         setActiveUser(profile);
         setCurrentUser(profile);
 
@@ -48,15 +46,7 @@ export default function Navbar() {
     // 2. Kiểm tra session hiện hành từ Supabase Auth
     supabase.auth.getUser().then(({ data: { user: sbUser } }) => {
       if (sbUser) {
-        const profile: UserProfile = {
-          id: sbUser.id,
-          name: sbUser.user_metadata?.full_name || sbUser.email?.split('@')[0] || 'Công Dân Tử Tế',
-          email: sbUser.email || '',
-          avatar: (sbUser.user_metadata?.full_name || 'U').charAt(0).toUpperCase(),
-          role: sbUser.email?.includes('nguyenkhiem') ? 'SUPER_ADMIN' : 'CITIZEN',
-          karma: 100,
-          co2Saved: 85.5
-        };
+        const profile = buildUserProfile(sbUser);
         setActiveUser(profile);
         setCurrentUser(profile);
       } else {
@@ -73,6 +63,13 @@ export default function Navbar() {
         mobileDropdownRef.current && !mobileDropdownRef.current.contains(e.target as Node)
       ) {
         setShowUserMenu(false);
+      }
+      if (
+        loginDropdownRef.current && !loginDropdownRef.current.contains(e.target as Node) &&
+        mobileLoginDropdownRef.current && !mobileLoginDropdownRef.current.contains(e.target as Node)
+      ) {
+        setShowLoginMenu(false);
+        setShowMobileLoginMenu(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -281,14 +278,16 @@ export default function Navbar() {
                     <span>Trạm Bắt Tay QR</span>
                   </Link>
 
-                  <Link
-                    href="/admin/"
-                    onClick={() => setShowUserMenu(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-900 bg-amber-50/80 hover:bg-amber-100 transition-colors"
-                  >
-                    <ShieldCheck className="w-4 h-4 text-amber-600"/>
-                    <span>Bàn Quản Trị Tối Cao</span>
-                  </Link>
+                  {currentUser.role === 'SUPER_ADMIN' && (
+                    <Link
+                      href="/admin/"
+                      onClick={() => setShowUserMenu(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-bold text-amber-900 bg-amber-50/80 hover:bg-amber-100 transition-colors"
+                    >
+                      <ShieldCheck className="w-4 h-4 text-amber-600"/>
+                      <span>Bàn Quản Trị Tối Cao</span>
+                    </Link>
+                  )}
 
                   <div className="border-t border-warm-100 my-1"/>
 
@@ -307,18 +306,72 @@ export default function Navbar() {
               )}
             </div>
           ) : (
-            <button
-              onClick={loginWithGoogle}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl border-2 border-warm-200 bg-white hover:bg-brand-50 hover:border-brand-500 text-xs font-black text-warm-900 transition-all shadow-2xs cursor-pointer"
-            >
-              <svg className="w-4 h-4" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-              </svg>
-              <span>Đăng Nhập Google</span>
-            </button>
+            <div className="relative" ref={loginDropdownRef}>
+              <button
+                onClick={() => setShowLoginMenu(!showLoginMenu)}
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded-2xl border-2 border-warm-200 bg-white hover:bg-brand-50 hover:border-brand-500 text-xs font-black text-warm-900 transition-all shadow-2xs cursor-pointer group"
+              >
+                <div className="w-5 h-5 rounded-full bg-brand-50 flex items-center justify-center text-brand-700">
+                  <User className="w-3.5 h-3.5" />
+                </div>
+                <span>Đăng Nhập</span>
+                <ChevronDown className={`w-3.5 h-3.5 text-warm-500 transition-transform duration-200 ${showLoginMenu ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showLoginMenu && (
+                <div className="absolute right-0 mt-2 w-72 bg-white rounded-3xl border border-warm-200 shadow-2xl p-2.5 z-50 animate-in fade-in zoom-in-95 space-y-1.5">
+                  <div className="px-3 py-2 border-b border-warm-100">
+                    <p className="text-xs font-black text-warm-900">Chọn phương thức</p>
+                    <p className="text-[10px] text-warm-500 font-medium">Truy cập SOVAHUB.org an toàn</p>
+                  </div>
+
+                  {/* Lựa chọn 1: Google 1 chạm */}
+                  <button
+                    onClick={() => {
+                      setShowLoginMenu(false);
+                      loginWithGoogle();
+                    }}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-brand-50/80 border border-warm-100 hover:border-brand-200 transition-all text-left cursor-pointer group"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-white border border-warm-200 flex items-center justify-center shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
+                      <svg className="w-5 h-5" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                      </svg>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-warm-900">Tiếp tục với Google</span>
+                        <span className="px-1.5 py-0.2 rounded-full bg-emerald-100 text-emerald-700 text-[9px] font-black">1 chạm</span>
+                      </div>
+                      <p className="text-[10px] text-warm-500 truncate">Đăng nhập nhanh qua Google</p>
+                    </div>
+                  </button>
+
+                  {/* Lựa chọn 2: Email & Mật khẩu */}
+                  <button
+                    onClick={() => {
+                      setShowLoginMenu(false);
+                      setShowAuthModal(true);
+                    }}
+                    className="w-full flex items-center gap-3 p-2.5 rounded-2xl hover:bg-brand-50/80 border border-warm-100 hover:border-brand-200 transition-all text-left cursor-pointer group"
+                  >
+                    <div className="w-9 h-9 rounded-xl bg-brand-50 border border-brand-200 text-brand-700 flex items-center justify-center shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
+                      <KeyRound className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-black text-warm-900">Email & Mật Khẩu</span>
+                        <span className="px-1.5 py-0.2 rounded-full bg-blue-100 text-blue-700 text-[9px] font-black">Cá nhân</span>
+                      </div>
+                      <p className="text-[10px] text-warm-500 truncate">Tự lưu & khôi phục mật khẩu</p>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
           )}
         </div>
 
@@ -369,14 +422,16 @@ export default function Navbar() {
                       <span>Hồ Sơ Của Tôi</span>
                     </Link>
 
-                    <Link
-                      href="/admin/"
-                      onClick={() => setShowUserMenu(false)}
-                      className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-amber-900 bg-amber-50"
-                    >
-                      <ShieldCheck className="w-4 h-4 text-amber-600"/>
-                      <span>Bàn Quản Trị</span>
-                    </Link>
+                    {currentUser.role === 'SUPER_ADMIN' && (
+                      <Link
+                        href="/admin/"
+                        onClick={() => setShowUserMenu(false)}
+                        className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold text-amber-900 bg-amber-50"
+                      >
+                        <ShieldCheck className="w-4 h-4 text-amber-600"/>
+                        <span>Bàn Quản Trị</span>
+                      </Link>
+                    )}
 
                     <button
                       onClick={() => {
@@ -393,19 +448,57 @@ export default function Navbar() {
                 )}
               </div>
             ) : (
+            <div className="relative" ref={mobileLoginDropdownRef}>
               <button
-                onClick={loginWithGoogle}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-warm-200 bg-white active:bg-warm-50 text-xs font-black text-warm-900 shadow-2xs"
-                title="Đăng nhập Google"
+                onClick={() => setShowMobileLoginMenu(!showMobileLoginMenu)}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-warm-200 bg-white active:bg-warm-50 text-xs font-black text-warm-900 shadow-2xs cursor-pointer"
               >
-                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
-                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
-                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
-                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
-                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
-                </svg>
+                <User className="w-3.5 h-3.5 text-brand-600" />
                 <span>Đăng nhập</span>
+                <ChevronDown className={`w-3 h-3 text-warm-500 transition-transform ${showMobileLoginMenu ? 'rotate-180' : ''}`} />
               </button>
+
+              {showMobileLoginMenu && (
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-3xl border border-warm-200 shadow-2xl p-2 z-50 animate-in fade-in space-y-1">
+                  <button
+                    onClick={() => {
+                      setShowMobileLoginMenu(false);
+                      loginWithGoogle();
+                    }}
+                    className="w-full flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-warm-50 text-left cursor-pointer transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-white border border-warm-200 flex items-center justify-center shrink-0">
+                      <svg className="w-4 h-4" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                        <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                        <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                        <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                      </svg>
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-warm-900 block">Google 1 chạm</span>
+                      <span className="text-[10px] text-warm-500">Nhanh chóng & an toàn</span>
+                    </div>
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      setShowMobileLoginMenu(false);
+                      setShowAuthModal(true);
+                    }}
+                    className="w-full flex items-center gap-2.5 p-2.5 rounded-2xl hover:bg-warm-50 text-left cursor-pointer transition-colors"
+                  >
+                    <div className="w-8 h-8 rounded-xl bg-brand-50 border border-brand-200 flex items-center justify-center text-brand-700 shrink-0">
+                      <KeyRound className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-black text-warm-900 block">Email & Mật khẩu</span>
+                      <span className="text-[10px] text-warm-500">Tự lưu & khôi phục</span>
+                    </div>
+                  </button>
+                </div>
+              )}
+            </div>
             )}
           </div>
         </div>
@@ -464,6 +557,12 @@ export default function Navbar() {
           </div>
         </div>
       </div>
+
+      {/* MODAL ĐĂNG NHẬP / ĐĂNG KÝ / KHÔI PHỤC MẬT KHẨU HIỆN ĐẠI */}
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+      />
     </header>
   );
 }
