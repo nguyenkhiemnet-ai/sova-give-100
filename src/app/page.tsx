@@ -94,9 +94,16 @@ export default function HomePage() {
       try { updatedDict = JSON.parse(localStorage.getItem('SOVA_UPDATED_WISH_DICT') || '{}'); } catch {}
     }
 
+    const isTestOrDeleted = (id: string, title?: string) => {
+      if (deletedIds.includes(id)) return true;
+      if (!title) return false;
+      const lower = title.toLowerCase();
+      return lower.includes('test wish') || lower.includes('kiểm tra gửi') || id === '0160532f-7480-4e73-8c95-e3df6839a897' || id === 'db4739ed-9ef1-4766-ba78-721a0648d679';
+    };
+
     // 1. Nạp items từ Local (Lọc bỏ tin đã xóa & suy luận danh mục)
     localItems.forEach(item => {
-      if (deletedIds.includes(item.id)) return;
+      if (isTestOrDeleted(item.id, item.title)) return;
       const override = updatedDict[item.id] || {};
       const merged = { ...item, ...override };
       const savedImg = typeof window !== 'undefined' ? localStorage.getItem(`SOVA_WISH_IMG_${item.id}`) : null;
@@ -110,7 +117,7 @@ export default function HomePage() {
 
     // 2. Nạp items từ Server mà không làm mất ảnh cục bộ
     serverItems.forEach(item => {
-      if (deletedIds.includes(item.id)) return;
+      if (isTestOrDeleted(item.id, item.title)) return;
       const existing = mergedMap.get(item.id);
       const override = updatedDict[item.id] || {};
       const merged = { ...item, ...existing, ...override };

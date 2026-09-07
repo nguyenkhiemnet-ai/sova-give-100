@@ -97,9 +97,16 @@ export default function ProfilePage() {
 
     const map = new Map<string, WishItem>();
 
+    const isTestOrDeleted = (id: string, title?: string) => {
+      if (deletedIds.includes(id)) return true;
+      if (!title) return false;
+      const lower = title.toLowerCase();
+      return lower.includes('test wish') || lower.includes('kiểm tra gửi') || id === '0160532f-7480-4e73-8c95-e3df6839a897' || id === 'db4739ed-9ef1-4766-ba78-721a0648d679';
+    };
+
     // 1. Nạp từ local (bỏ tin đã xóa)
     localItems.forEach(item => {
-      if (deletedIds.includes(item.id)) return;
+      if (isTestOrDeleted(item.id, item.title)) return;
       const savedImg = localStorage.getItem(`SOVA_WISH_IMG_${item.id}`);
       const override = updatedDict[item.id] || {};
       const merged = { ...item, ...override };
@@ -113,7 +120,7 @@ export default function ProfilePage() {
 
     // 2. Nạp từ server (bỏ tin đã xóa)
     serverItems.forEach(item => {
-      if (deletedIds.includes(item.id)) return;
+      if (isTestOrDeleted(item.id, item.title)) return;
       const existing = map.get(item.id);
       const savedImg = localStorage.getItem(`SOVA_WISH_IMG_${item.id}`);
       const override = updatedDict[item.id] || {};
