@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   X, Mail, Lock, User, Eye, EyeOff, KeyRound, 
-  ArrowRight, Sparkles, CheckCircle2, AlertCircle, RefreshCw 
+  ArrowRight, CheckCircle2, AlertCircle, RefreshCw 
 } from 'lucide-react';
 import { loginWithGoogle, loginWithEmail, signUpWithEmail, resetPassword } from '@/lib/auth';
 
@@ -70,8 +70,12 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password) {
-      setErrorMessage('Vui lòng điền đầy đủ email và mật khẩu.');
+    if (!email.trim()) {
+      setErrorMessage('Vui lòng nhập địa chỉ email của bạn.');
+      return;
+    }
+    if (!password) {
+      setErrorMessage('Vui lòng nhập mật khẩu tài khoản.');
       return;
     }
 
@@ -85,11 +89,11 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
       localStorage.removeItem('SOVA_SAVED_EMAIL');
     }
 
-    const res = await loginWithEmail(email, password);
+    const res = await loginWithEmail(email.trim(), password);
     setLoading(false);
 
     if (res.success) {
-      setSuccessMessage('Đăng nhập thành công!');
+      setSuccessMessage('Đăng nhập thành công! Đang chuyển hướng...');
       setTimeout(() => {
         onClose();
       }, 500);
@@ -100,11 +104,18 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password || !fullName) {
-      setErrorMessage('Vui lòng điền đầy đủ họ tên, email và mật khẩu.');
+    if (!fullName.trim()) {
+      setErrorMessage('Vui lòng nhập họ và tên của bạn.');
       return;
     }
-
+    if (!email.trim()) {
+      setErrorMessage('Vui lòng nhập địa chỉ email.');
+      return;
+    }
+    if (!password) {
+      setErrorMessage('Vui lòng tạo mật khẩu bảo vệ.');
+      return;
+    }
     if (password.length < 6) {
       setErrorMessage('Mật khẩu cần tối thiểu 6 ký tự.');
       return;
@@ -114,23 +125,23 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
     setErrorMessage('');
     setSuccessMessage('');
 
-    const res = await signUpWithEmail(email, password, fullName);
+    const res = await signUpWithEmail(email.trim(), password, fullName.trim());
     setLoading(false);
 
     if (res.success) {
-      setSuccessMessage(res.message || 'Đăng ký thành công!');
+      setSuccessMessage(res.message || 'Đăng ký thành công! Chào mừng bạn gia nhập SOVAHUB.');
       setTimeout(() => {
         onClose();
-      }, 1000);
+      }, 900);
     } else {
-      setErrorMessage(res.error || 'Không thể tạo tài khoản.');
+      setErrorMessage(res.error || 'Không thể tạo tài khoản, vui lòng thử lại.');
     }
   };
 
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) {
-      setErrorMessage('Vui lòng nhập địa chỉ email của bạn.');
+    if (!email.trim()) {
+      setErrorMessage('Vui lòng nhập địa chỉ email để khôi phục.');
       return;
     }
 
@@ -138,7 +149,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
     setErrorMessage('');
     setSuccessMessage('');
 
-    const res = await resetPassword(email);
+    const res = await resetPassword(email.trim());
     setLoading(false);
 
     if (res.success) {
@@ -151,169 +162,139 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
   return (
     <div 
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-warm-900/60 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-warm-950/50 backdrop-blur-sm animate-in fade-in duration-200"
     >
       <div 
         ref={modalRef}
-        className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-warm-200 overflow-hidden animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-sm bg-white rounded-2xl shadow-xl border border-warm-100 overflow-hidden animate-in zoom-in-95 duration-200"
       >
-        {/* Nút đóng X nổi bật */}
+        {/* Nút đóng X tối giản */}
         <button
           type="button"
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 w-9 h-9 rounded-full bg-warm-100 hover:bg-warm-200 text-warm-600 hover:text-warm-900 flex items-center justify-center transition-colors cursor-pointer"
+          className="absolute top-3.5 right-3.5 z-10 w-8 h-8 rounded-full text-warm-400 hover:text-warm-700 hover:bg-warm-100 flex items-center justify-center transition-colors cursor-pointer"
+          aria-label="Đóng"
           title="Đóng (Esc)"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
 
-        {/* Header Modal */}
-        <div className="pt-7 pb-4 px-6 text-center border-b border-warm-100 bg-gradient-to-b from-brand-50/50 to-transparent">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-brand-600 text-white shadow-soft mb-3">
-            <KeyRound className="w-6 h-6" />
+        {/* Header tinh gọn, nhẹ nhàng */}
+        <div className="pt-6 pb-2 px-6 text-center">
+          <div className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100 mb-2.5">
+            <KeyRound className="w-5 h-5" />
           </div>
-          <h2 className="text-xl font-black text-warm-900 tracking-tight">
-            {activeTab === 'LOGIN' && 'Đăng Nhập SOVAHUB'}
+          <h2 className="text-lg font-bold text-warm-900 tracking-tight">
+            {activeTab === 'LOGIN' && 'Đăng Nhập'}
             {activeTab === 'REGISTER' && 'Tạo Tài Khoản Mới'}
             {activeTab === 'FORGOT' && 'Khôi Phục Mật Khẩu'}
           </h2>
-          <p className="text-xs text-warm-500 font-medium mt-1">
-            {activeTab === 'LOGIN' && 'Mạng Lưới Trao Cơ Hội & Giữ Danh Dự 0-VND'}
-            {activeTab === 'REGISTER' && 'Tham gia cộng đồng tuần hoàn sinh kế tử tế'}
-            {activeTab === 'FORGOT' && 'Nhập email để nhận liên kết đặt lại mật khẩu an toàn'}
+          <p className="text-xs text-warm-500 mt-0.5">
+            {activeTab === 'LOGIN' && 'Mạng lưới trao cơ hội & tuần hoàn tử tế'}
+            {activeTab === 'REGISTER' && 'Gia nhập cộng đồng cho & nhận văn minh'}
+            {activeTab === 'FORGOT' && 'Nhập email để nhận liên kết đặt lại mật khẩu'}
           </p>
         </div>
 
-        {/* Tab Switcher (Chỉ hiện khi LOGIN hoặc REGISTER) */}
-        {activeTab !== 'FORGOT' && (
-          <div className="flex border-b border-warm-100 px-6 pt-2 bg-warm-50/50">
-            <button
-              type="button"
-              onClick={() => { setActiveTab('LOGIN'); setErrorMessage(''); }}
-              className={`flex-1 pb-3 text-xs font-black transition-all border-b-2 cursor-pointer ${
-                activeTab === 'LOGIN' 
-                  ? 'border-brand-600 text-brand-700' 
-                  : 'border-transparent text-warm-500 hover:text-warm-800'
-              }`}
-            >
-              Đăng Nhập
-            </button>
-            <button
-              type="button"
-              onClick={() => { setActiveTab('REGISTER'); setErrorMessage(''); }}
-              className={`flex-1 pb-3 text-xs font-black transition-all border-b-2 cursor-pointer ${
-                activeTab === 'REGISTER' 
-                  ? 'border-brand-600 text-brand-700' 
-                  : 'border-transparent text-warm-500 hover:text-warm-800'
-              }`}
-            >
-              Đăng Ký Tài Khoản
-            </button>
-          </div>
-        )}
-
-        {/* Nội dung Form */}
-        <div className="p-6 space-y-4">
-          {/* Thông báo lỗi / Thành công */}
+        {/* Nội dung Form - noValidate triệt tiêu popup đen của browser */}
+        <div className="px-6 py-4 space-y-4">
+          {/* Thông báo lỗi / Thành công tinh gọn */}
           {errorMessage && (
-            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-red-50 border border-red-200 text-red-700 text-xs font-bold animate-in fade-in">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-red-600" />
-              <span>{errorMessage}</span>
+            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-rose-50 border border-rose-100 text-rose-700 text-xs font-medium animate-in fade-in">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-500" />
+              <span className="leading-snug">{errorMessage}</span>
             </div>
           )}
 
           {successMessage && (
-            <div className="flex items-start gap-2.5 p-3 rounded-2xl bg-green-50 border border-green-200 text-green-700 text-xs font-bold animate-in fade-in">
-              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-green-600" />
-              <span>{successMessage}</span>
+            <div className="flex items-start gap-2 p-2.5 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs font-medium animate-in fade-in">
+              <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-500" />
+              <span className="leading-snug">{successMessage}</span>
             </div>
           )}
 
           {/* TAB 1: ĐĂNG NHẬP */}
           {activeTab === 'LOGIN' && (
-            <form onSubmit={handleLogin} autoComplete="on" className="space-y-4">
+            <form onSubmit={handleLogin} noValidate autoComplete="on" className="space-y-3.5">
               <div>
-                <label className="block text-xs font-black text-warm-800 mb-1">
-                  Địa Chỉ Email
+                <label className="block text-xs font-semibold text-warm-700 mb-1">
+                  Email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400 pointer-events-none" />
                   <input
                     type="email"
                     name="email"
                     autoComplete="username"
-                    required
                     placeholder="nguyenvana@gmail.com"
                     value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 bg-warm-50/80 border border-warm-200 rounded-2xl text-xs font-bold text-warm-900 focus:outline-none focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 transition-all"
+                    onChange={e => { setEmail(e.target.value); if (errorMessage) setErrorMessage(''); }}
+                    className="w-full pl-9 pr-3 py-2 bg-warm-50/60 border border-warm-200 rounded-xl text-xs font-medium text-warm-900 placeholder:text-warm-400 focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="text-xs font-black text-warm-800">
-                    Mật Khẩu
-                  </label>
-                  <button
-                    type="button"
-                    onClick={() => { setActiveTab('FORGOT'); setErrorMessage(''); }}
-                    className="text-[11px] font-bold text-brand-600 hover:text-brand-800 hover:underline cursor-pointer"
-                  >
-                    Quên mật khẩu?
-                  </button>
-                </div>
+                <label className="block text-xs font-semibold text-warm-700 mb-1">
+                  Mật Khẩu
+                </label>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400 pointer-events-none" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     autoComplete="current-password"
-                    required
                     placeholder="Nhập mật khẩu..."
                     value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 bg-warm-50/80 border border-warm-200 rounded-2xl text-xs font-bold text-warm-900 focus:outline-none focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 transition-all"
+                    onChange={e => { setPassword(e.target.value); if (errorMessage) setErrorMessage(''); }}
+                    className="w-full pl-9 pr-9 py-2 bg-warm-50/60 border border-warm-200 rounded-xl text-xs font-medium text-warm-900 placeholder:text-warm-400 focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-warm-400 hover:text-warm-700 cursor-pointer"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-warm-400 hover:text-warm-600 p-1 cursor-pointer"
+                    tabIndex={-1}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
 
-              {/* Tùy chọn ghi nhớ mật khẩu */}
-              <div className="flex items-center justify-between pt-1">
-                <label className="flex items-center gap-2 cursor-pointer select-none">
+              {/* Hàng Tiện Ích: Ghi nhớ (trái) + Quên mật khẩu (phải) trên cùng 1 dòng hài hòa */}
+              <div className="flex items-center justify-between pt-0.5">
+                <label className="flex items-center gap-1.5 cursor-pointer select-none text-xs text-warm-600">
                   <input
                     type="checkbox"
                     checked={rememberMe}
                     onChange={e => setRememberMe(e.target.checked)}
-                    className="w-4 h-4 rounded text-brand-600 border-warm-300 focus:ring-brand-500 cursor-pointer"
+                    className="w-3.5 h-3.5 rounded accent-emerald-600 text-emerald-600 border-warm-300 focus:ring-emerald-500 cursor-pointer"
                   />
-                  <span className="text-xs font-bold text-warm-700">Tự ghi nhớ đăng nhập</span>
+                  <span>Ghi nhớ</span>
                 </label>
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('FORGOT'); setErrorMessage(''); }}
+                  className="text-xs font-medium text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
+                >
+                  Quên mật khẩu?
+                </button>
               </div>
 
-              {/* Nút Submit Đăng nhập */}
+              {/* Nút Đăng Nhập Chính */}
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-soft flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 px-4 mt-1 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-50"
               >
                 {loading ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Đang xác thực...</span>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Đang kiểm tra...</span>
                   </>
                 ) : (
                   <>
-                    <span>Đăng Nhập Ngay</span>
-                    <ArrowRight className="w-4 h-4" />
+                    <span>Đăng Nhập</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </>
                 )}
               </button>
@@ -322,67 +303,65 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
 
           {/* TAB 2: ĐĂNG KÝ */}
           {activeTab === 'REGISTER' && (
-            <form onSubmit={handleRegister} autoComplete="on" className="space-y-4">
+            <form onSubmit={handleRegister} noValidate autoComplete="on" className="space-y-3.5">
               <div>
-                <label className="block text-xs font-black text-warm-800 mb-1">
+                <label className="block text-xs font-semibold text-warm-700 mb-1">
                   Họ và Tên
                 </label>
                 <div className="relative">
-                  <User className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400" />
+                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400 pointer-events-none" />
                   <input
                     type="text"
                     name="name"
                     autoComplete="name"
-                    required
                     placeholder="Nguyễn Văn A"
                     value={fullName}
-                    onChange={e => setFullName(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 bg-warm-50/80 border border-warm-200 rounded-2xl text-xs font-bold text-warm-900 focus:outline-none focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 transition-all"
+                    onChange={e => { setFullName(e.target.value); if (errorMessage) setErrorMessage(''); }}
+                    className="w-full pl-9 pr-3 py-2 bg-warm-50/60 border border-warm-200 rounded-xl text-xs font-medium text-warm-900 placeholder:text-warm-400 focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-black text-warm-800 mb-1">
-                  Địa Chỉ Email
+                <label className="block text-xs font-semibold text-warm-700 mb-1">
+                  Email
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400 pointer-events-none" />
                   <input
                     type="email"
                     name="email"
                     autoComplete="username"
-                    required
                     placeholder="nguyenvana@gmail.com"
                     value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 bg-warm-50/80 border border-warm-200 rounded-2xl text-xs font-bold text-warm-900 focus:outline-none focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 transition-all"
+                    onChange={e => { setEmail(e.target.value); if (errorMessage) setErrorMessage(''); }}
+                    className="w-full pl-9 pr-3 py-2 bg-warm-50/60 border border-warm-200 rounded-xl text-xs font-medium text-warm-900 placeholder:text-warm-400 focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 transition-all"
                   />
                 </div>
               </div>
 
               <div>
-                <label className="block text-xs font-black text-warm-800 mb-1">
-                  Mật Khẩu (Tối thiểu 6 ký tự)
+                <label className="block text-xs font-semibold text-warm-700 mb-1">
+                  Mật Khẩu (từ 6 ký tự)
                 </label>
                 <div className="relative">
-                  <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400" />
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400 pointer-events-none" />
                   <input
                     type={showPassword ? 'text' : 'password'}
                     name="password"
                     autoComplete="new-password"
-                    required
-                    placeholder="Tạo mật khẩu an toàn..."
+                    placeholder="Mật khẩu của bạn..."
                     value={password}
-                    onChange={e => setPassword(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 bg-warm-50/80 border border-warm-200 rounded-2xl text-xs font-bold text-warm-900 focus:outline-none focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 transition-all"
+                    onChange={e => { setPassword(e.target.value); if (errorMessage) setErrorMessage(''); }}
+                    className="w-full pl-9 pr-9 py-2 bg-warm-50/60 border border-warm-200 rounded-xl text-xs font-medium text-warm-900 placeholder:text-warm-400 focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 transition-all"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-1/2 -translate-y-1/2 text-warm-400 hover:text-warm-700 cursor-pointer"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-warm-400 hover:text-warm-600 p-1 cursor-pointer"
+                    tabIndex={-1}
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   </button>
                 </div>
               </div>
@@ -390,17 +369,17 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-soft flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 px-4 mt-1 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-50"
               >
                 {loading ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Đang khởi tạo tài khoản...</span>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Đang tạo tài khoản...</span>
                   </>
                 ) : (
                   <>
-                    <Sparkles className="w-4 h-4" />
-                    <span>Hoàn Tất Đăng Ký</span>
+                    <span>Đăng Ký Miễn Phí</span>
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </>
                 )}
               </button>
@@ -409,20 +388,19 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
 
           {/* TAB 3: KHÔI PHỤC MẬT KHẨU */}
           {activeTab === 'FORGOT' && (
-            <form onSubmit={handleForgotPassword} className="space-y-4">
+            <form onSubmit={handleForgotPassword} noValidate className="space-y-3.5">
               <div>
-                <label className="block text-xs font-black text-warm-800 mb-1">
-                  Nhập Email Đã Đăng Ký
+                <label className="block text-xs font-semibold text-warm-700 mb-1">
+                  Email Tài Khoản
                 </label>
                 <div className="relative">
-                  <Mail className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400" />
+                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400 pointer-events-none" />
                   <input
                     type="email"
-                    required
                     placeholder="nguyenvana@gmail.com"
                     value={email}
-                    onChange={e => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-3.5 py-2.5 bg-warm-50/80 border border-warm-200 rounded-2xl text-xs font-bold text-warm-900 focus:outline-none focus:border-brand-500 focus:bg-white focus:ring-2 focus:ring-brand-500/20 transition-all"
+                    onChange={e => { setEmail(e.target.value); if (errorMessage) setErrorMessage(''); }}
+                    className="w-full pl-9 pr-3 py-2 bg-warm-50/60 border border-warm-200 rounded-xl text-xs font-medium text-warm-900 placeholder:text-warm-400 focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 transition-all"
                   />
                 </div>
               </div>
@@ -430,26 +408,26 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 px-4 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-soft flex items-center justify-center gap-2 transition-all cursor-pointer disabled:opacity-50"
+                className="w-full py-2.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-50"
               >
                 {loading ? (
                   <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
                     <span>Đang gửi liên kết...</span>
                   </>
                 ) : (
                   <>
-                    <Mail className="w-4 h-4" />
-                    <span>Gửi Liên Kết Đặt Lại Mật Khẩu</span>
+                    <Mail className="w-3.5 h-3.5" />
+                    <span>Gửi Liên Kết Khôi Phục</span>
                   </>
                 )}
               </button>
 
-              <div className="text-center pt-2">
+              <div className="text-center pt-1">
                 <button
                   type="button"
                   onClick={() => { setActiveTab('LOGIN'); setErrorMessage(''); }}
-                  className="text-xs font-bold text-brand-600 hover:text-brand-800 hover:underline cursor-pointer"
+                  className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
                 >
                   ← Quay lại Đăng Nhập
                 </button>
@@ -457,23 +435,24 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
             </form>
           )}
 
-          {/* Phân cách HOẶC */}
+          {/* Dòng phân cách & Tùy chọn Google tinh tế (chỉ hiện khi chưa ở FORGOT) */}
           {activeTab !== 'FORGOT' && (
-            <>
-              <div className="relative flex py-1 items-center">
-                <div className="flex-grow border-t border-warm-200"></div>
-                <span className="flex-shrink mx-3 text-[11px] font-bold text-warm-400 uppercase">Hoặc</span>
-                <div className="flex-grow border-t border-warm-200"></div>
+            <div className="pt-2">
+              <div className="relative flex items-center justify-center py-2">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-warm-200" />
+                </div>
+                <span className="relative bg-white px-2 text-[11px] text-warm-400 font-medium">hoặc</span>
               </div>
 
-              {/* Nút Đăng nhập 1 chạm Google */}
+              {/* Nút Đăng nhập Google tối giản, tinh tế */}
               <button
                 type="button"
                 onClick={() => {
                   onClose();
                   loginWithGoogle();
                 }}
-                className="w-full py-2.5 px-4 rounded-2xl border-2 border-warm-200 hover:border-brand-500 hover:bg-brand-50/60 text-xs font-black text-warm-800 flex items-center justify-center gap-2.5 transition-all shadow-2xs cursor-pointer group"
+                className="w-full py-2 px-3 rounded-xl border border-warm-200 hover:border-warm-300 hover:bg-warm-50 text-xs font-medium text-warm-700 flex items-center justify-center gap-2 transition-all cursor-pointer"
               >
                 <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -481,12 +460,42 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
                   <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                   <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
                 </svg>
-                <span>Đăng nhập 1 chạm với Google</span>
+                <span>Tiếp tục với Google</span>
               </button>
-            </>
+            </div>
           )}
         </div>
+
+        {/* Footer chuyển đổi Đăng nhập / Đăng ký dạng văn bản nhẹ nhàng thay vì Tab nặng nề */}
+        {activeTab !== 'FORGOT' && (
+          <div className="py-3 px-6 bg-warm-50/50 border-t border-warm-100 text-center text-xs text-warm-500">
+            {activeTab === 'LOGIN' ? (
+              <span>
+                Chưa có tài khoản?{' '}
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('REGISTER'); setErrorMessage(''); }}
+                  className="font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
+                >
+                  Đăng ký miễn phí
+                </button>
+              </span>
+            ) : (
+              <span>
+                Đã có tài khoản?{' '}
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('LOGIN'); setErrorMessage(''); }}
+                  className="font-bold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
+                >
+                  Đăng nhập ngay
+                </button>
+              </span>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
 }
+
