@@ -3,14 +3,13 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
-import { VIETNAM_PROVINCES } from '@/lib/provinces';
+import { VIETNAM_PROVINCES, getDistrictsByProvince, CATEGORY_FALLBACK_IMAGES } from '@/lib/provinces';
 import { getActiveUser, loginWithGoogle } from '@/lib/auth';
 import { 
   Sparkles, Heart, Search, MapPin, Filter, Leaf, 
   Clock, Repeat, AlertCircle, ShieldCheck, CheckCircle2,
   Laptop, Bike, Scissors, BookOpen, Wrench, Navigation,
-  ArrowRight, Share2, Copy, Check, MessageSquare, ArrowUp,
-  Lock, AlertTriangle
+  ArrowUp, Lock, MessageSquare, Send, X, ExternalLink
 } from 'lucide-react';
 
 interface WishItem {
@@ -26,6 +25,7 @@ interface WishItem {
   urgency_level?: string;
   status?: string;
   province_code?: string;
+  ward_code?: string;
 }
 
 const CATEGORIES = [
@@ -42,33 +42,36 @@ const CURATED_WISHES: WishItem[] = [
     id: 'a1111111-1111-1111-1111-111111111111',
     title: 'Máy tính xách tay phục vụ học tập CNTT',
     category: 'laptop',
-    imageUrl: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80',
+    imageUrl: CATEGORY_FALLBACK_IMAGES['laptop'],
     reason: 'Em vừa đỗ đại học nhưng gia đình làm nông ở vùng bão lũ không đủ kinh phí sắm máy thực hành lập trình Web.',
     honor_commitment: 'Em cam kết giữ gìn máy cẩn thận, học đạt loại giỏi và trao lại cho đàn em khóa sau khi ra trường.',
     urgency: 'urgent',
     province_code: '01',
+    ward_code: '01-05',
     status: 'verified',
   },
   {
     id: 'b2222222-2222-2222-2222-222222222222',
     title: 'Xe đạp đến trường cho học sinh nghèo hiếu học',
     category: 'bicycle',
-    imageUrl: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=600&q=80',
+    imageUrl: CATEGORY_FALLBACK_IMAGES['bicycle'],
     reason: 'Đoạn đường từ nhà tới trường cấp 3 dài 8km đường đồi núi hiểm trở, gia đình chưa có điều kiện mua xe cho em.',
     honor_commitment: 'Em cam kết đi học chuyên cần, bảo dưỡng xích líp tốt và nhượng lại cho học sinh khó khăn khác khi tốt nghiệp.',
     urgency: 'urgent',
     province_code: '02',
+    ward_code: '02-01',
     status: 'verified',
   },
   {
     id: 'c3333333-3333-3333-3333-333333333333',
     title: 'Máy may sinh kế cho mẹ đơn thân gia công tại nhà',
     category: 'sewing_machine',
-    imageUrl: 'https://images.unsplash.com/photo-1584992236310-6edddc08acff?auto=format&fit=crop&w=600&q=80',
+    imageUrl: CATEGORY_FALLBACK_IMAGES['sewing_machine'],
     reason: 'Cần máy may gia đình để nhận đồ may gia công kiếm thêm thu nhập trang trải tiền thuốc và nuôi hai con nhỏ ăn học.',
     honor_commitment: 'Tôi cam kết dùng máy đúng mục đích mưu sinh và sẵn sàng hướng dẫn nghề may miễn phí cho chị em khó khăn trong xóm.',
     urgency: 'normal',
     province_code: '48',
+    ward_code: '48-ST',
     status: 'verified',
   }
 ];
@@ -78,6 +81,15 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedProvince, setSelectedProvince] = useState('ALL');
+  const [selectedDistrict, setSelectedDistrict] = useState('ALL');
+  
+  // Modal Chi Tiết & Trao Đổi
+  const [detailWish, setDetailWish] = useState<WishItem | null>(null);
+  const [chatWish, setChatWish] = useState<WishItem | null>(null);
+  const [chatMessages, setChatMessages] = useState<any[]>([]);
+  const [chatInput, setChatInput] = useState('');
+
+  // Modal Khớp Nối Trao Tặng
   const [selectedWish, setSelectedWish] = useState<WishItem | null>(null);
   const [claiming, setClaiming] = useState(false);
   const [claimSuccess, setClaimSuccess] = useState<string | null>(null);
@@ -100,11 +112,8 @@ export default function HomePage() {
       if (res && res.data && res.data.length > 0) {
         serverItems = res.data as WishItem[];
       }
-    } catch {
-      console.log('Nạp dữ liệu đệm sạch, nạp tức thì!');
-    }
+    } catch {}
 
-    // Đọc thêm bản ghi Optimistic từ LocalStorage
     let localItems: WishItem[] = [];
     if (typeof window !== 'undefined') {
       const stored = localStorage.getItem('SOVA_OPTIMISTIC_WISHES');
@@ -113,7 +122,6 @@ export default function HomePage() {
       }
     }
 
-    // Kết hợp và khử trùng lặp theo ID
     const mergedMap = new Map<string, WishItem>();
     localItems.forEach(item => mergedMap.set(item.id, item));
     serverItems.forEach(item => mergedMap.set(item.id, item));
@@ -151,16 +159,49 @@ export default function HomePage() {
     }
   };
 
+  const openChatModal = (item: WishItem) => {
+    const currentUser = getActiveUser();
+    if (!currentUser) {
+      setShowAuthGateModal(true);
+      return;
+    }
+    setChatWish(item);
+    setChatMessages([
+      { sender: 'Hệ thống SOVA', text: 'Kênh trao đổi PII được mã hóa. Hãy hỏi thăm người nhận về thông số vật phẩm (chiều cao, kích cỡ, cấu hình) trước khi quyết định trao quà.' },
+      { sender: 'Người Nhận', text: `Chào bạn! Cảm ơn bạn đã quan tâm đến ước nguyện "${item.title}". Mình sẵn sàng giải đáp mọi câu hỏi ạ!` }
+    ]);
+  };
+
+  const sendChatMessage = () => {
+    if (!chatInput.trim()) return;
+    setChatMessages(prev => [
+      ...prev,
+      { sender: 'Bạn (Angel)', text: chatInput.trim() }
+    ]);
+    setChatInput('');
+  };
+
+  // Thuật toán so khớp thông minh: Hỗ trợ cả mã code lẫn tên tiếng Việt
   const filteredWishes = wishes.filter(item => {
     const title = item.title || '';
     const desc = item.reason || item.reason_description || '';
     const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           desc.toLowerCase().includes(searchQuery.toLowerCase());
+    
     const cat = (item.category || '').toLowerCase();
     const matchesCat = selectedCategory === 'ALL' || cat === selectedCategory.toLowerCase();
-    const prov = item.province_code || '01';
-    const matchesProv = selectedProvince === 'ALL' || prov === selectedProvince;
-    return matchesSearch && matchesCat && matchesProv;
+    
+    // So khớp tỉnh thành: chấp nhận cả mã '48' và tên 'Đà Nẵng'
+    const prov = item.province_code || '48';
+    const matchesProv = selectedProvince === 'ALL' || 
+                        prov === selectedProvince || 
+                        (selectedProvince === '48' && (prov.includes('Đà Nẵng') || prov.includes('Da Nang') || prov === '48'));
+
+    // So khớp quận huyện
+    const ward = item.ward_code || '';
+    const matchesDistrict = selectedDistrict === 'ALL' || ward === selectedDistrict || ward.includes(selectedDistrict);
+
+    return matchesSearch && matchesCat && matchesProv && matchesDistrict;
   });
 
   return (
@@ -218,13 +259,13 @@ export default function HomePage() {
           <div className="lg:col-span-5 relative">
             <div className="relative mx-auto rounded-3xl overflow-hidden shadow-xl border-4 border-white">
               <img 
-                src="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?auto=format&fit=crop&w=800&q=80" 
-                alt="Sinh viên học tập cùng thiết bị công nghệ" 
+                src="https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80" 
+                alt="Xe đạp đến trường" 
                 className="w-full h-80 object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent flex items-end p-5">
                 <p className="text-white text-xs font-bold leading-relaxed">
-                  "Mỗi chiếc máy tính cũ trao đi là một tương lai thoát nghèo được thắp sáng."
+                  "Mỗi chiếc xe đạp trao đi là con đường đến trường của các em bớt gập ghềnh."
                 </p>
               </div>
             </div>
@@ -285,36 +326,60 @@ export default function HomePage() {
           </span>
         </div>
 
-        {/* Thanh tìm kiếm & Lọc Tỉnh */}
+        {/* Thanh tìm kiếm & Lọc Đa Cấp Tỉnh / Huyện */}
         <div className="sticky top-16 z-30 bg-white/95 backdrop-blur-md p-3.5 sm:p-4 rounded-3xl border-2 border-brand-500/30 shadow-float space-y-3">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+            
+            {/* Ô tìm kiếm */}
             <div className="relative flex-1">
               <Search className="w-5 h-5 text-brand-600 absolute left-3.5 top-1/2 -translate-y-1/2"/>
               <input 
                 type="text" 
-                placeholder="Tìm kiếm ước nguyện (laptop, xe đạp, máy may...)"
+                placeholder="Tìm kiếm ước nguyện (xe đạp, laptop, máy may...)"
                 value={searchQuery}
                 onChange={e => setSearchQuery(e.target.value)}
                 className="w-full pl-11 pr-4 py-3 rounded-2xl border-2 border-warm-200 bg-white text-sm font-semibold text-warm-900 focus:outline-none focus:border-brand-600"
               />
             </div>
 
-            <div className="relative min-w-[260px]">
-              <MapPin className="w-5 h-5 text-sun-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"/>
+            {/* Lọc Tỉnh/Thành */}
+            <div className="relative min-w-[200px]">
+              <MapPin className="w-4 h-4 text-sun-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"/>
               <select
                 value={selectedProvince}
-                onChange={e => setSelectedProvince(e.target.value)}
-                className="w-full pl-11 pr-10 py-3 rounded-2xl border-2 border-warm-200 bg-white text-sm font-black text-warm-900 focus:outline-none focus:border-brand-600"
+                onChange={e => {
+                  setSelectedProvince(e.target.value);
+                  setSelectedDistrict('ALL');
+                }}
+                className="w-full pl-10 pr-8 py-3 rounded-2xl border-2 border-warm-200 bg-white text-xs font-black text-warm-900 focus:outline-none focus:border-brand-600 cursor-pointer"
               >
-                <option value="ALL">📍 Toàn quốc (63 Tỉnh/Thành)</option>
+                <option value="ALL">📍 Toàn quốc</option>
                 {VIETNAM_PROVINCES.map(p => (
                   <option key={p.code} value={p.code}>{p.name}</option>
                 ))}
               </select>
-              <Filter className="w-4 h-4 text-warm-700 absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none"/>
             </div>
+
+            {/* Lọc Quận/Huyện (Xuất hiện khi chọn tỉnh cụ thể) */}
+            {selectedProvince !== 'ALL' && (
+              <div className="relative min-w-[180px]">
+                <Filter className="w-4 h-4 text-brand-600 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none"/>
+                <select
+                  value={selectedDistrict}
+                  onChange={e => setSelectedDistrict(e.target.value)}
+                  className="w-full pl-10 pr-8 py-3 rounded-2xl border-2 border-brand-300 bg-brand-50/40 text-xs font-black text-brand-900 focus:outline-none focus:border-brand-600 cursor-pointer"
+                >
+                  <option value="ALL">Tất cả Quận/Huyện</option>
+                  {getDistrictsByProvince(selectedProvince).map(d => (
+                    <option key={d.code} value={d.code}>{d.name}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+
           </div>
 
+          {/* Lọc Category Tabs */}
           <div className="flex items-center justify-between gap-2 overflow-x-auto pb-1 no-scrollbar border-t border-warm-200/60 pt-1">
             <div className="flex items-center gap-2">
               {CATEGORIES.map(cat => {
@@ -340,23 +405,29 @@ export default function HomePage() {
           </div>
         </div>
 
-        {/* Lưới điều ước */}
+        {/* LƯỚI ĐIỀU ƯỚC: CLICK VÀO CARD ĐỂ MỞ CHI TIẾT */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredWishes.map(item => {
             const isUrgent = item.urgency === 'urgent' || item.urgency_level === 'urgent';
             const isPending = item.status === 'pending';
             const reasonText = item.reason || item.reason_description || 'Hoàn cảnh khó khăn cần hỗ trợ thiết bị.';
             const pledgeText = item.honor_commitment || item.commitment_pledge || 'Cam kết bảo quản tốt và trao lại.';
-            const provName = VIETNAM_PROVINCES.find(p => p.code === item.province_code)?.name || 'Toàn quốc';
-            const fallbackImg = item.imageUrl || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80';
+            const provName = VIETNAM_PROVINCES.find(p => p.code === item.province_code)?.name || 'Đà Nẵng';
+            
+            // Lấy ảnh đúng danh mục
+            const resolvedImg = item.imageUrl || CATEGORY_FALLBACK_IMAGES[item.category] || CATEGORY_FALLBACK_IMAGES['bicycle'];
 
             return (
-              <div key={item.id} className="bg-white rounded-3xl border border-warm-200 overflow-hidden shadow-soft flex flex-col justify-between group">
+              <div 
+                key={item.id} 
+                className="bg-white rounded-3xl border border-warm-200 overflow-hidden shadow-soft flex flex-col justify-between group hover:border-brand-500 hover:shadow-xl transition-all cursor-pointer"
+                onClick={() => setDetailWish(item)}
+              >
                 <div className="relative h-44 overflow-hidden">
-                  <img src={fallbackImg} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
+                  <img src={resolvedImg} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"/>
                   <div className="absolute top-3 left-3 right-3 flex justify-between items-center">
-                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-white/95 text-brand-800 uppercase">
-                      {item.category}
+                    <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-white/95 text-brand-800 uppercase shadow-2xs">
+                      {item.category === 'bicycle' ? 'Xe Đạp' : item.category === 'laptop' ? 'Laptop' : item.category === 'sewing_machine' ? 'Máy May' : item.category}
                     </span>
                     <div className="flex gap-1.5">
                       {isPending && (
@@ -365,7 +436,7 @@ export default function HomePage() {
                         </span>
                       )}
                       {isUrgent && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black bg-red-600 text-white">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black bg-red-600 text-white shadow-2xs">
                           <AlertCircle className="w-3 h-3"/> Cấp Thiết
                         </span>
                       )}
@@ -374,7 +445,7 @@ export default function HomePage() {
                 </div>
 
                 <div className="p-5 space-y-3 flex-1 flex flex-col justify-between">
-                  <div className="space-y-2">
+                  <div className="space-y-1.5">
                     <h3 className="font-black text-warm-900 text-base leading-snug group-hover:text-brand-700">
                       {item.title}
                     </h3>
@@ -386,19 +457,29 @@ export default function HomePage() {
                     <p className="italic text-brand-950 text-[11px] line-clamp-2">"{pledgeText}"</p>
                   </div>
 
-                  <div className="pt-3 border-t border-warm-100 flex items-center justify-between gap-2">
+                  <div className="pt-3 border-t border-warm-100 flex items-center justify-between gap-2" onClick={e => e.stopPropagation()}>
                     <div className="flex items-center gap-1 text-[11px] font-bold text-warm-700 truncate">
                       <Navigation className="w-3.5 h-3.5 text-brand-600 shrink-0"/>
                       <span className="truncate">{provName}</span>
                     </div>
 
-                    <button
-                      onClick={() => handleOpenClaimModal(item)}
-                      className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 shrink-0"
-                    >
-                      <Heart className="w-3.5 h-3.5 fill-current"/>
-                      <span>Trao Tặng</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => openChatModal(item)}
+                        className="p-2 rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-800 text-xs font-bold transition-all"
+                        title="Nhắn tin trao đổi trước"
+                      >
+                        <MessageSquare className="w-4 h-4 text-brand-700"/>
+                      </button>
+
+                      <button
+                        onClick={() => handleOpenClaimModal(item)}
+                        className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-bold shadow-xs flex items-center gap-1.5 shrink-0"
+                      >
+                        <Heart className="w-3.5 h-3.5 fill-current"/>
+                        <span>Trao Tặng</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -407,7 +488,140 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* MODAL YÊU CẦU ĐĂNG NHẬP XÁC THỰC NGƯỜI TRAO (AUTH GATE) */}
+      {/* 3. MODAL XEM CHI TIẾT ƯỚC NGUYỆN (CLICK TO VIEW FULL) */}
+      {detailWish && (
+        <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-warm-200 max-w-2xl w-full p-6 sm:p-8 shadow-2xl space-y-6 max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start">
+              <div className="space-y-1">
+                <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-brand-50 text-brand-700 border border-brand-200 uppercase">
+                  {detailWish.category === 'bicycle' ? 'Xe Đạp Đến Trường' : detailWish.category === 'laptop' ? 'Máy Tính Học Tập' : detailWish.category}
+                </span>
+                <h2 className="text-2xl font-black text-warm-900 mt-1">{detailWish.title}</h2>
+                <p className="text-xs text-warm-700 flex items-center gap-1">
+                  <MapPin className="w-3.5 h-3.5 text-brand-600"/>
+                  <span>Khu vực: <strong>{VIETNAM_PROVINCES.find(p => p.code === detailWish.province_code)?.name || 'Đà Nẵng'}</strong></span>
+                </p>
+              </div>
+              <button onClick={() => setDetailWish(null)} className="w-8 h-8 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center font-bold">✕</button>
+            </div>
+
+            {/* Ảnh To */}
+            <div className="h-64 rounded-2xl overflow-hidden border border-warm-200">
+              <img 
+                src={detailWish.imageUrl || CATEGORY_FALLBACK_IMAGES[detailWish.category] || CATEGORY_FALLBACK_IMAGES['bicycle']} 
+                alt={detailWish.title} 
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            {/* Hoàn cảnh chi tiết */}
+            <div className="p-4 bg-warm-50 rounded-2xl border border-warm-200 space-y-2">
+              <h4 className="text-xs font-black uppercase text-warm-900">Chia Sẻ Về Hoàn Cảnh & Mục Tiêu Tự Lập:</h4>
+              <p className="text-xs text-warm-800 leading-relaxed font-medium">
+                {detailWish.reason || detailWish.reason_description}
+              </p>
+            </div>
+
+            {/* Cam kết danh dự */}
+            <div className="p-4 bg-brand-50/60 rounded-2xl border border-brand-200 space-y-2">
+              <h4 className="text-xs font-black uppercase text-brand-900 flex items-center gap-1.5">
+                <Heart className="w-4 h-4 text-brand-600 fill-brand-600"/>
+                Lời Cam Kết Danh Dự 0-VND Của Người Nhận:
+              </h4>
+              <p className="text-xs text-brand-950 italic leading-relaxed">
+                "{detailWish.honor_commitment || detailWish.commitment_pledge}"
+              </p>
+            </div>
+
+            {/* 2 Nút hành động */}
+            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+              <button
+                onClick={() => {
+                  const item = detailWish;
+                  setDetailWish(null);
+                  openChatModal(item);
+                }}
+                className="flex-1 py-3 rounded-2xl bg-warm-100 hover:bg-warm-200 text-warm-900 font-bold text-xs flex items-center justify-center gap-2"
+              >
+                <MessageSquare className="w-4 h-4 text-brand-600"/>
+                <span>Nhắn Tin Tìm Hiểu Trước</span>
+              </button>
+
+              <button
+                onClick={() => {
+                  const item = detailWish;
+                  setDetailWish(null);
+                  handleOpenClaimModal(item);
+                }}
+                className="flex-1 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-float flex items-center justify-center gap-2"
+              >
+                <Heart className="w-4 h-4 fill-white"/>
+                <span>Chính Thức Trao Tặng (Angel)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 4. MODAL NHẮN TIN TRAO ĐỔI TRƯỚC (PRE-HANDSHAKE INQUIRY) */}
+      {chatWish && (
+        <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl border border-warm-200 max-w-lg w-full p-6 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-warm-100 pb-3">
+              <div>
+                <h3 className="font-black text-warm-900 text-sm flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-brand-600"/>
+                  <span>Trao Đổi Ẩn Danh Trước Khi Trao Quà</span>
+                </h3>
+                <p className="text-[11px] text-warm-700">Ước nguyện: {chatWish.title}</p>
+              </div>
+              <button onClick={() => setChatWish(null)} className="w-7 h-7 rounded-full bg-warm-100 text-warm-700 flex items-center justify-center font-bold">✕</button>
+            </div>
+
+            <div className="h-48 overflow-y-auto p-3 bg-warm-50 rounded-2xl border border-warm-200 space-y-2 text-xs">
+              {chatMessages.map((m, idx) => (
+                <div key={idx} className="space-y-0.5">
+                  <span className="text-[10px] font-bold text-warm-700">{m.sender}</span>
+                  <div className="p-2 bg-white rounded-xl border border-warm-200 text-warm-900">
+                    {m.text}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Nhập câu hỏi (chiều cao bé, size xe, cấu hình máy...)..."
+                value={chatInput}
+                onChange={e => setChatInput(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && sendChatMessage()}
+                className="flex-1 px-3.5 py-2.5 rounded-xl border border-warm-200 text-xs focus:ring-2 focus:ring-brand-500 focus:outline-none"
+              />
+              <button onClick={sendChatMessage} className="px-4 py-2 bg-brand-600 text-white font-bold text-xs rounded-xl flex items-center gap-1 shadow-xs">
+                <Send className="w-3.5 h-3.5"/> Gửi
+              </button>
+            </div>
+
+            <div className="pt-2 border-t border-warm-100 flex justify-between items-center">
+              <span className="text-[10px] text-warm-700">Thấy phù hợp với vật phẩm bạn đang có?</span>
+              <button
+                onClick={() => {
+                  const item = chatWish;
+                  setChatWish(null);
+                  handleOpenClaimModal(item);
+                }}
+                className="px-4 py-1.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-xs"
+              >
+                Tiến Hành Trao Tặng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. MODAL YÊU CẦU ĐĂNG NHẬP XÁC THỰC (AUTH GATE) */}
       {showAuthGateModal && (
         <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border-2 border-brand-500 max-w-md w-full p-6 sm:p-8 shadow-2xl text-center space-y-5">
@@ -417,17 +631,11 @@ export default function HomePage() {
             <div className="space-y-2">
               <h3 className="text-lg font-black text-warm-900">Yêu Cầu Xác Thực Người Trao (Angel)</h3>
               <p className="text-xs text-warm-700 leading-relaxed">
-                Để bảo vệ tính minh bạch của Hộ Chiếu Số và chống con buôn trục lợi, bạn cần đăng nhập tài khoản Google để hệ thống ghi nhận danh dự và điểm Karma cho bạn.
+                Để bảo vệ tính minh bạch và danh dự cho người nhận, vui lòng đăng nhập tài khoản Google để trao gửi quà tặng.
               </p>
             </div>
-
             <div className="flex gap-3 pt-2">
-              <button
-                onClick={() => setShowAuthGateModal(false)}
-                className="flex-1 py-2.5 rounded-xl border border-warm-200 text-xs font-bold text-warm-700 hover:bg-warm-100"
-              >
-                Hủy Bỏ
-              </button>
+              <button onClick={() => setShowAuthGateModal(false)} className="flex-1 py-2.5 rounded-xl border border-warm-200 text-xs font-bold text-warm-700">Hủy Bỏ</button>
               <button
                 onClick={() => {
                   setShowAuthGateModal(false);
@@ -442,7 +650,7 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* MODAL XÁC NHẬN KHỚP NỐI TRAO TẶNG */}
+      {/* 6. MODAL XÁC NHẬN KHỚP NỐI TRAO TẶNG */}
       {selectedWish && (
         <div className="fixed inset-0 z-50 bg-warm-900/40 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-warm-200 max-w-lg w-full p-6 sm:p-8 shadow-xl space-y-6">

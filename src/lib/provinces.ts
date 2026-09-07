@@ -9,7 +9,28 @@ export interface Province {
   districts: District[];
 }
 
+export const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
+  laptop: 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=800&q=80',
+  bicycle: 'https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=800&q=80',
+  sewing_machine: 'https://images.unsplash.com/photo-1584992236310-6edddc08acff?auto=format&fit=crop&w=800&q=80',
+  study_tools: 'https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?auto=format&fit=crop&w=800&q=80',
+  livelihood_tools: 'https://images.unsplash.com/photo-1581783342308-f792dbdd27c5?auto=format&fit=crop&w=800&q=80',
+};
+
 export const VIETNAM_PROVINCES: Province[] = [
+  {
+    code: '48',
+    name: 'Đà Nẵng',
+    districts: [
+      { code: '48-ST', name: 'Quận Sơn Trà' },
+      { code: '48-HC', name: 'Quận Hải Châu' },
+      { code: '48-TK', name: 'Quận Thanh Khê' },
+      { code: '48-NHS', name: 'Quận Ngũ Hành Sơn' },
+      { code: '48-LC', name: 'Quận Liên Chiểu' },
+      { code: '48-CL', name: 'Quận Cẩm Lệ' },
+      { code: '48-HV', name: 'Huyện Hòa Vang' }
+    ]
+  },
   {
     code: '01',
     name: 'Hà Nội',
@@ -48,19 +69,6 @@ export const VIETNAM_PROVINCES: Province[] = [
     ]
   },
   {
-    code: '48',
-    name: 'Đà Nẵng',
-    districts: [
-      { code: '48-01', name: 'Quận Hải Châu' },
-      { code: '48-02', name: 'Quận Thanh Khê' },
-      { code: '48-03', name: 'Quận Sơn Trà' },
-      { code: '48-04', name: 'Quận Ngũ Hành Sơn' },
-      { code: '48-05', name: 'Quận Liên Chiểu' },
-      { code: '48-06', name: 'Quận Cẩm Lệ' },
-      { code: '48-07', name: 'Huyện Hòa Vang' }
-    ]
-  },
-  {
     code: '02',
     name: 'Hà Giang',
     districts: [
@@ -68,10 +76,7 @@ export const VIETNAM_PROVINCES: Province[] = [
       { code: '02-02', name: 'Huyện Đồng Văn' },
       { code: '02-03', name: 'Huyện Mèo Vạc' },
       { code: '02-04', name: 'Huyện Yên Minh' },
-      { code: '02-05', name: 'Huyện Quản Bạ' },
-      { code: '02-06', name: 'Huyện Vị Xuyên' },
-      { code: '02-07', name: 'Huyện Bắc Mê' },
-      { code: '02-08', name: 'Huyện Hoàng Su Phì' }
+      { code: '02-05', name: 'Huyện Quản Bạ' }
     ]
   },
   {
@@ -81,8 +86,7 @@ export const VIETNAM_PROVINCES: Province[] = [
       { code: '31-01', name: 'Quận Hồng Bàng' },
       { code: '31-02', name: 'Quận Ngô Quyền' },
       { code: '31-03', name: 'Quận Lê Chân' },
-      { code: '31-04', name: 'Quận Hải An' },
-      { code: '31-05', name: 'Huyện Thủy Nguyên' }
+      { code: '31-04', name: 'Huyện Thủy Nguyên' }
     ]
   },
   {
@@ -91,44 +95,7 @@ export const VIETNAM_PROVINCES: Province[] = [
     districts: [
       { code: '92-01', name: 'Quận Ninh Kiều' },
       { code: '92-02', name: 'Quận Bình Thủy' },
-      { code: '92-03', name: 'Quận Cái Răng' },
-      { code: '92-04', name: 'Quận Ô Môn' }
-    ]
-  },
-  {
-    code: '46',
-    name: 'Thừa Thiên Huế',
-    districts: [
-      { code: '46-01', name: 'TP. Huế' },
-      { code: '46-02', name: 'Thị xã Hương Thủy' },
-      { code: '46-03', name: 'Huyện Phú Vang' }
-    ]
-  },
-  {
-    code: '74',
-    name: 'Bình Dương',
-    districts: [
-      { code: '74-01', name: 'TP. Thủ Dầu Một' },
-      { code: '74-02', name: 'TP. Thuận An' },
-      { code: '74-03', name: 'TP. Dĩ An' }
-    ]
-  },
-  {
-    code: '75',
-    name: 'Đồng Nai',
-    districts: [
-      { code: '75-01', name: 'TP. Biên Hòa' },
-      { code: '75-02', name: 'TP. Long Khánh' },
-      { code: '75-03', name: 'Huyện Long Thành' }
-    ]
-  },
-  {
-    code: '68',
-    name: 'Lâm Đồng',
-    districts: [
-      { code: '68-01', name: 'TP. Đà Lạt' },
-      { code: '68-02', name: 'TP. Bảo Lộc' },
-      { code: '68-03', name: 'Huyện Đức Trọng' }
+      { code: '92-03', name: 'Quận Cái Răng' }
     ]
   },
   {
@@ -136,12 +103,12 @@ export const VIETNAM_PROVINCES: Province[] = [
     name: 'Tỉnh/Thành phố khác',
     districts: [
       { code: '99-01', name: 'Khu vực Trung tâm' },
-      { code: '99-02', name: 'Khu vực Ngoại vi / Huyện lân cận' }
+      { code: '99-02', name: 'Khu vực Ngoại vi / Huyện' }
     ]
   }
 ];
 
 export function getDistrictsByProvince(provinceCode: string): District[] {
   const p = VIETNAM_PROVINCES.find(prov => prov.code === provinceCode);
-  return p ? p.districts : [{ code: '00', name: 'Toàn bộ địa bàn' }];
+  return p ? p.districts : [{ code: 'ALL', name: 'Toàn bộ Quận/Huyện' }];
 }
