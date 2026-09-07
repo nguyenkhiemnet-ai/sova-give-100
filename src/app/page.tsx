@@ -8,7 +8,7 @@ import {
   normalizeCategoryLabel, inferCategory 
 } from '@/lib/provinces';
 import { getActiveUser, loginWithGoogle, UserProfile } from '@/lib/auth';
-import { getHeroCMS, HeroCMSData } from '@/lib/cms';
+import { getFullSiteCMS, FullSiteCMS, DEFAULT_FULL_CMS } from '@/lib/cms';
 import { 
   Sparkles, Heart, Search, MapPin, Filter, Leaf, 
   Clock, Repeat, AlertCircle, ShieldCheck, CheckCircle2,
@@ -50,8 +50,10 @@ export default function HomePage() {
   const [selectedProvince, setSelectedProvince] = useState('ALL');
   const [selectedDistrict, setSelectedDistrict] = useState('ALL');
 
-  // Đọc nội dung động từ CMS
-  const [heroCMS, setHeroCMS] = useState<HeroCMSData>(getHeroCMS());
+  // Đọc nội dung động toàn trang từ CMS
+  const [siteCMS, setSiteCMS] = useState<FullSiteCMS>(DEFAULT_FULL_CMS);
+  const heroCMS = siteCMS.hero;
+  const footerCMS = siteCMS.footer;
 
   // Modal Chi Tiết & Trao Đổi
   const [detailWish, setDetailWish] = useState<WishItem | null>(null);
@@ -71,17 +73,33 @@ export default function HomePage() {
 
   useEffect(() => {
     setCurrentUser(getActiveUser());
-    setHeroCMS(getHeroCMS());
+    const initialCMS = getFullSiteCMS();
+    setSiteCMS(initialCMS);
     fetchCombinedWishes();
 
     const handleScroll = () => setShowBackToTop(window.scrollY > 400);
-    const handleCMSUpdate = () => setHeroCMS(getHeroCMS());
+    const handleCMSUpdate = () => {
+      const latest = getFullSiteCMS();
+      setSiteCMS(latest);
+    };
 
     window.addEventListener('scroll', handleScroll);
+    window.addEventListener('storage', handleCMSUpdate);
     window.addEventListener('sova_cms_updated', handleCMSUpdate);
+
+    let channel: BroadcastChannel | null = null;
+    try {
+      channel = new BroadcastChannel('sova_cms_channel');
+      channel.onmessage = (e) => {
+        if (e.data && e.data.data) setSiteCMS(e.data.data);
+      };
+    } catch {}
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
+      window.removeEventListener('storage', handleCMSUpdate);
       window.removeEventListener('sova_cms_updated', handleCMSUpdate);
+      if (channel) channel.close();
     };
   }, []);
 
@@ -300,7 +318,7 @@ export default function HomePage() {
 
               <Link 
                 href="/create-wish/"
-                className="px-6 py-3.5 rounded-2xl bg-white hover:bg-brand-50 border-2 border-brand-600 text-brand-700 font-black text-sm shadow-soft hover:scale-[1.02] transition-all flex items-center justify-center gap-2"
+                className="px-6 py-3.5 rounded-2xl bg-white hover:bg-brand-50 border-2 border-brand-600 text-brand-700 font-black text-sm shadow-soft hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <Sparkles className="w-4 h-4"/>
                 <span>Tôi Cần Dụng Cụ Để Tự Lập</span>
@@ -542,18 +560,18 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 3. CHÂN TRANG: CHIA SẺ MẠNG XÃ HỘI */}
+      {/* 3. CHÂN TRANG: CHIA SẺ MẠNG XÃ HỘI (CMS ĐỒNG BỘ) */}
       <footer className="bg-gradient-to-br from-brand-50/80 via-white to-warm-50 rounded-3xl border-2 border-brand-200 p-8 sm:p-10 shadow-soft text-center space-y-6">
         <div className="max-w-xl mx-auto space-y-2">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-100 text-brand-800 text-xs font-black uppercase">
             <Share2 className="w-3.5 h-3.5 text-brand-600"/>
-            <span>Lan Tỏa Tinh Thần 0-VND Đến Cộng Đồng</span>
+            <span>{footerCMS.badge}</span>
           </div>
           <h3 className="text-xl sm:text-2xl font-black text-warm-900">
-            Một Lần Chia Sẻ • Một Tương Lai Được Thắp Sáng
+            {footerCMS.headline}
           </h3>
           <p className="text-xs text-warm-700 leading-relaxed font-medium">
-            Hãy gửi đường link SOVA GIVE 100 tới bạn bè hoặc các hội đồng hương để những chiếc xe đạp, máy tính cũ tìm đúng người cần nhất.
+            {footerCMS.description}
           </p>
         </div>
 
@@ -604,8 +622,8 @@ export default function HomePage() {
         </div>
 
         <div className="pt-4 border-t border-warm-200/60 flex flex-col sm:flex-row items-center justify-between text-[11px] text-warm-600 gap-2">
-          <span>© 2026 SOVA GIVE 100 • Hệ Thống Tuần Hoàn Sinh Kế Phi Thương Mại</span>
-          <span>Bảo mật danh dự công dân theo Nghị định 13/2023/NĐ-CP</span>
+          <span>{footerCMS.copyright}</span>
+          <span>{footerCMS.legalNote}</span>
         </div>
       </footer>
 

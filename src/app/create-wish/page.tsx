@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { VIETNAM_PROVINCES, getDistrictsByProvince, CATEGORY_FALLBACK_IMAGES } from '@/lib/provinces';
+import { getFullSiteCMS, DEFAULT_FULL_CMS } from '@/lib/cms';
 import { 
   ArrowLeft, Sparkles, Laptop, Bike, Scissors, BookOpen, 
   Wrench, Camera, ShieldCheck, CheckCircle2, Heart, MapPin, 
@@ -40,6 +41,11 @@ export default function CreateWishPage() {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [createdPassport, setCreatedPassport] = useState<string | null>(null);
+  const [subpageNotice, setSubpageNotice] = useState(DEFAULT_FULL_CMS.subpages.createWishNotice);
+
+  useEffect(() => {
+    setSubpageNotice(getFullSiteCMS().subpages.createWishNotice);
+  }, []);
 
   // Tự động nhận diện danh mục theo từ khóa
   const handleTitleChange = (val: string) => {
@@ -164,7 +170,7 @@ export default function CreateWishPage() {
           <ArrowLeft className="w-4 h-4"/>
           <span>Quay lại Cây Nguyện Ước</span>
         </Link>
-        <span className="text-[11px] font-bold text-warm-700">Nghị định 13/2023/NĐ-CP • Dignity-First</span>
+        <span className="text-[11px] font-bold text-warm-700 hidden sm:inline">{subpageNotice}</span>
       </div>
 
       <div className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-10 shadow-soft space-y-8">

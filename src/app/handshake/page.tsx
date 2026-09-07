@@ -10,6 +10,7 @@ import {
   RotateCcw, Compass, UserCheck
 } from 'lucide-react';
 import { SAFE_PUBLIC_MEETING_HUBS } from '@/lib/privacyShield';
+import { getFullSiteCMS, DEFAULT_FULL_CMS } from '@/lib/cms';
 
 function HandshakeContent() {
   const searchParams = useSearchParams();
@@ -24,6 +25,11 @@ function HandshakeContent() {
   const [completed, setCompleted] = useState(false);
   const [passportCode, setPassportCode] = useState(paramPassport || 'SOVA-PASS-8842-VN');
   const [wishDetails, setWishDetails] = useState<{ title: string; category?: string; imageUrl?: string } | null>(null);
+  const [handshakeRules, setHandshakeRules] = useState(DEFAULT_FULL_CMS.subpages.handshakeRules);
+
+  useEffect(() => {
+    setHandshakeRules(getFullSiteCMS().subpages.handshakeRules);
+  }, []);
 
   useEffect(() => {
     if (paramPassport) setPassportCode(paramPassport);
@@ -125,7 +131,7 @@ function HandshakeContent() {
           Bắt Tay QR Văn Minh Tại Điểm Hẹn Miễn Phí
         </h1>
         <p className="text-xs sm:text-sm text-warm-700 max-w-3xl leading-relaxed">
-          Gặp nhau tại các Safe Hubs (Thư viện trường, Nhà văn hóa sinh viên) không tốn tiền nước, kích hoạt 72 giờ dùng thử và hỗ trợ kỹ thuật miễn phí từ Biệt Đội Bác Sĩ IT.
+          {handshakeRules}
         </p>
 
         {/* Chuyển vai */}

@@ -1,18 +1,21 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { 
   VIETNAM_PROVINCES, getDistrictsByProvince, getDistrictNameSafe, 
   CATEGORY_FALLBACK_IMAGES, normalizeCategoryLabel, inferCategory 
 } from '@/lib/provinces';
-import { getHeroCMS, saveHeroCMS, HeroCMSData, compressImageToWebP } from '@/lib/cms';
 import { 
-  ArrowLeft, ShieldCheck, CheckCircle2, AlertTriangle, XCircle, 
-  Trash2, Check, RefreshCw, Search, MapPin, Filter, Sparkles, 
-  Camera, Edit3, KeyRound, Lock, Save, ShieldAlert, Image as ImageIcon,
-  Clock, Award
+  getFullSiteCMS, saveFullSiteCMS, FullSiteCMS, DEFAULT_FULL_CMS, 
+  compressImageToWebP 
+} from '@/lib/cms';
+import { 
+  ShieldCheck, CheckCircle2, AlertTriangle, XCircle, 
+  Trash2, RefreshCw, Search, MapPin, Sparkles, 
+  Camera, Edit3, KeyRound, Lock, Save, ShieldAlert, 
+  Clock, Award, Layout, FileText, Share2
 } from 'lucide-react';
 
 interface WishItem {
@@ -32,39 +35,37 @@ interface WishItem {
 }
 
 export default function DedicatedAdminPortal() {
-  // Trạng thái khóa bảo vệ bằng Master PIN
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [pinInput, setPinInput] = useState('');
   const [pinError, setPinError] = useState(false);
 
-  // Tab điều hướng chính trong Admin
-  const [adminTab, setAdminTab] = useState<'CMS' | 'WISHES'>('CMS');
+  // 4 Tabs Quản Trị
+  const [adminTab, setAdminTab] = useState<'HERO' | 'FOOTER' | 'SUBPAGES' | 'WISHES'>('HERO');
 
-  // Modal Đổi Mật Mã Master PIN
+  // Đổi Master PIN
   const [showChangePinModal, setShowChangePinModal] = useState(false);
   const [newPin, setNewPin] = useState('');
   const [confirmPin, setConfirmPin] = useState('');
   const [changePinError, setChangePinError] = useState('');
 
-  // Modal Nhập Mật Mã Xác Nhận Khi Lưu (Action Password Guard)
+  // Modal Xác Nhận Mật Mã Khi Lưu
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
   const [showConfirmActionModal, setShowConfirmActionModal] = useState(false);
   const [actionPinInput, setActionPinInput] = useState('');
   const [actionPinError, setActionPinError] = useState(false);
 
-  // Phân hệ 1: CMS Banner & Nội Dung Web
-  const [heroCMS, setHeroCMS] = useState<HeroCMSData>(getHeroCMS());
-  const [cmsForm, setCmsForm] = useState<HeroCMSData>(getHeroCMS());
+  // Dữ liệu Full Site CMS
+  const [fullCMS, setFullCMS] = useState<FullSiteCMS>(DEFAULT_FULL_CMS);
   const [compressStats, setCompressStats] = useState<{ orig: string; comp: string } | null>(null);
   const [isCompressing, setIsCompressing] = useState(false);
 
-  // Phân hệ 2: Quản Trị Điều Ước
+  // Danh sách điều ước
   const [wishes, setWishes] = useState<WishItem[]>([]);
   const [wishFilter, setWishFilter] = useState<'ALL' | 'PENDING' | 'VERIFIED'>('ALL');
   const [wishSearch, setWishSearch] = useState('');
   const [loadingWishes, setLoadingWishes] = useState(false);
 
-  // Modal Sửa Điều Ước trong Admin
+  // Modal Sửa điều ước
   const [editingWish, setEditingWish] = useState<WishItem | null>(null);
   const [editWishTitle, setEditWishTitle] = useState('');
   const [editWishCat, setEditWishCat] = useState('bicycle');
@@ -75,12 +76,12 @@ export default function DedicatedAdminPortal() {
   const [editWishDist, setEditWishDist] = useState('48-ST');
 
   useEffect(() => {
-    // Kiểm tra phiên đăng nhập Master PIN
     if (typeof window !== 'undefined') {
       const unlocked = sessionStorage.getItem('SOVA_ADMIN_PORTAL_UNLOCKED') === 'true';
       setIsUnlocked(unlocked);
       if (unlocked) {
-        loadCMSAndWishes();
+        setFullCMS(getFullSiteCMS());
+        loadWishes();
       }
     }
   }, []);
@@ -99,7 +100,8 @@ export default function DedicatedAdminPortal() {
       setIsUnlocked(true);
       setPinError(false);
       setPinInput('');
-      loadCMSAndWishes();
+      setFullCMS(getFullSiteCMS());
+      loadWishes();
     } else {
       setPinError(true);
     }
@@ -110,11 +112,8 @@ export default function DedicatedAdminPortal() {
     setIsUnlocked(false);
   };
 
-  const loadCMSAndWishes = async () => {
-    setHeroCMS(getHeroCMS());
-    setCmsForm(getHeroCMS());
+  const loadWishes = async () => {
     setLoadingWishes(true);
-
     let serverItems: WishItem[] = [];
     try {
       const { data } = await supabase.from('wishes').select('*').order('created_at', { ascending: false });
@@ -177,7 +176,6 @@ export default function DedicatedAdminPortal() {
     setLoadingWishes(false);
   };
 
-  // Yêu cầu nhập mật mã xác nhận trước khi thực thi hành động lưu/xóa
   const requestActionWithPin = (action: () => void) => {
     setPendingAction(() => action);
     setActionPinInput('');
@@ -196,11 +194,10 @@ export default function DedicatedAdminPortal() {
     }
   };
 
-  // 1. Thực thi lưu CMS Banner
-  const executeSaveCMS = () => {
-    saveHeroCMS(cmsForm);
-    setHeroCMS(cmsForm);
-    alert('🎉 Đã cập nhật giao diện toàn hệ thống thành công! Nội dung mới đã được phân phối.');
+  // Lưu toàn bộ CMS
+  const executeSaveFullCMS = () => {
+    saveFullSiteCMS(fullCMS);
+    alert('🎉 Đã lưu và cập nhật trực tiếp toàn bộ trang web! Ảnh và nội dung đã đồng bộ 100%.');
   };
 
   const handleBannerUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -210,7 +207,10 @@ export default function DedicatedAdminPortal() {
     setIsCompressing(true);
     try {
       const { dataUrl, originalSize, compressedSize } = await compressImageToWebP(file);
-      setCmsForm(prev => ({ ...prev, bannerImage: dataUrl }));
+      setFullCMS(prev => ({
+        ...prev,
+        hero: { ...prev.hero, bannerImage: dataUrl }
+      }));
       setCompressStats({ orig: originalSize, comp: compressedSize });
     } catch (err: any) {
       alert('Lỗi nén ảnh: ' + err.message);
@@ -219,24 +219,22 @@ export default function DedicatedAdminPortal() {
     }
   };
 
-  // 2. Thực thi đổi Master PIN
   const handleSaveNewPin = () => {
     if (!newPin || newPin.length < 4) {
       setChangePinError('Mật mã phải có ít nhất 4 ký tự!');
       return;
     }
     if (newPin !== confirmPin) {
-      setChangePinError('Mật mã xác nhận không trùng khớp!');
+      setChangePinError('Mật mã xác nhận không khớp!');
       return;
     }
     localStorage.setItem('SOVA_CUSTOM_MASTER_PIN', newPin.trim());
     setShowChangePinModal(false);
     setNewPin('');
     setConfirmPin('');
-    alert('🎉 Đã đổi Master PIN quản trị thành công!');
+    alert('🎉 Đã đổi Master PIN thành công!');
   };
 
-  // 3. Thực thi Xóa điều ước
   const executeDeleteWish = async (wishId: string) => {
     try {
       if (!wishId.startsWith('opt-')) {
@@ -255,13 +253,12 @@ export default function DedicatedAdminPortal() {
       localStorage.removeItem(`SOVA_WISH_IMG_${wishId}`);
 
       setWishes(prev => prev.filter(w => w.id !== wishId));
-      alert('Đã xóa vĩnh viễn điều ước khỏi toàn bộ hệ thống.');
+      alert('Đã xóa vĩnh viễn điều ước.');
     } catch {
       setWishes(prev => prev.filter(w => w.id !== wishId));
     }
   };
 
-  // 4. Thực thi Sửa điều ước
   const executeSaveEditWish = async () => {
     if (!editingWish) return;
 
@@ -280,7 +277,6 @@ export default function DedicatedAdminPortal() {
       if (!editingWish.id.startsWith('opt-')) {
         await supabase.from('wishes').update(updatedData).eq('id', editingWish.id);
       }
-
       localStorage.setItem(`SOVA_WISH_IMG_${editingWish.id}`, chosenImg);
 
       let updatedDict: Record<string, any> = {};
@@ -290,24 +286,12 @@ export default function DedicatedAdminPortal() {
 
       setWishes(prev => prev.map(w => w.id === editingWish.id ? { ...w, ...updatedData } : w));
       setEditingWish(null);
-      alert('Đã cập nhật thông tin điều ước thành công!');
+      alert('Đã cập nhật điều ước thành công!');
     } catch {
       setEditingWish(null);
     }
   };
 
-  const handleEditWishImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const { dataUrl } = await compressImageToWebP(file);
-      setEditWishImg(dataUrl);
-    } catch (err: any) {
-      alert('Lỗi nén ảnh: ' + err.message);
-    }
-  };
-
-  // MÀN HÌNH KHÓA: NẾU CHƯA MỞ KHÓA MASTER PIN
   if (!isUnlocked) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center p-4">
@@ -322,7 +306,7 @@ export default function DedicatedAdminPortal() {
             </span>
             <h1 className="text-2xl font-black text-warm-900">Bàn Quản Trị SOVA GIVE 100</h1>
             <p className="text-xs text-warm-700 leading-relaxed">
-              Trang web này dành riêng cho Quản trị viên tối cao để chỉnh sửa toàn bộ nội dung, banner và kiểm duyệt tin đăng. Vui lòng nhập Master PIN để tiếp tục.
+              Nhập Master PIN để chỉnh sửa Hero Banner, Chân trang, Trang con và duyệt điều ước.
             </p>
           </div>
 
@@ -341,36 +325,26 @@ export default function DedicatedAdminPortal() {
               }`}
               autoFocus
             />
-
-            {pinError && (
-              <p className="text-xs font-bold text-red-600">
-                Mã PIN không chính xác! Mặc định là: 21081984
-              </p>
-            )}
-
+            {pinError && <p className="text-xs font-bold text-red-600">Mã PIN không đúng! (Mặc định: 21081984)</p>}
             <button
               onClick={handleUnlockPortal}
-              className="w-full py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-float transition-all cursor-pointer"
+              className="w-full py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-float cursor-pointer"
             >
               Mở Khóa Quản Trị Tối Cao
             </button>
           </div>
-
-          <div className="pt-2">
-            <Link href="/" className="text-xs font-bold text-warm-600 hover:text-brand-700">
-              ← Quay lại Trang Chủ Người Dùng
-            </Link>
-          </div>
+          <Link href="/" className="text-xs font-bold text-warm-600 hover:text-brand-700 block">
+            ← Quay lại Trang Chủ Người Dùng
+          </Link>
         </div>
       </div>
     );
   }
 
-  // MÀN HÌNH QUẢN TRỊ KHI ĐÃ XÁC THỰC THÀNH CÔNG
   return (
     <div className="space-y-8 max-w-6xl mx-auto pb-12">
       
-      {/* Top Header Bar */}
+      {/* Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-5 rounded-3xl border border-warm-200 shadow-soft">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-2xl bg-brand-600 text-white flex items-center justify-center font-black">
@@ -383,12 +357,11 @@ export default function DedicatedAdminPortal() {
                 Master Active
               </span>
             </h1>
-            <p className="text-xs text-warm-700">Quản trị toàn bộ nội dung tĩnh, banner và danh sách điều ước toàn quốc.</p>
+            <p className="text-xs text-warm-700">Quản lý toàn bộ Banner, Chân trang, Trang con và Điều ước.</p>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
-          {/* Nút Đổi PIN Trực Tiếp Trên Web */}
           <button
             onClick={() => {
               setChangePinError('');
@@ -396,7 +369,7 @@ export default function DedicatedAdminPortal() {
               setConfirmPin('');
               setShowChangePinModal(true);
             }}
-            className="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-black flex items-center gap-1.5 transition-all cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-200 text-xs font-black flex items-center gap-1.5 cursor-pointer"
           >
             <KeyRound className="w-3.5 h-3.5 text-amber-700"/>
             <span>Đổi Master PIN</span>
@@ -404,7 +377,7 @@ export default function DedicatedAdminPortal() {
 
           <button
             onClick={handleLockPortal}
-            className="px-3.5 py-2 rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-800 text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer"
+            className="px-3.5 py-2 rounded-xl bg-warm-100 hover:bg-warm-200 text-warm-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer"
           >
             <Lock className="w-3.5 h-3.5 text-warm-700"/>
             <span>Khóa & Thoát</span>
@@ -412,50 +385,70 @@ export default function DedicatedAdminPortal() {
 
           <Link
             href="/"
-            className="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-xs flex items-center gap-1.5 transition-all"
+            className="px-3.5 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-xs flex items-center gap-1.5 cursor-pointer"
           >
             <span>Xem Trang Chủ</span>
           </Link>
         </div>
       </div>
 
-      {/* 2 Tabs Phân Hệ */}
-      <div className="flex bg-warm-100 p-1.5 rounded-2xl border border-warm-200 gap-1">
+      {/* CỤM 4 TABS CMS QUẢN LÝ TOÀN BỘ WEBSITE */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 bg-warm-100 p-1.5 rounded-2xl border border-warm-200">
         <button
-          onClick={() => setAdminTab('CMS')}
-          className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
-            adminTab === 'CMS' ? 'bg-white text-brand-700 shadow-xs' : 'text-warm-700 hover:text-warm-900'
+          onClick={() => setAdminTab('HERO')}
+          className={`py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            adminTab === 'HERO' ? 'bg-white text-brand-700 shadow-xs' : 'text-warm-700 hover:text-warm-900'
           }`}
         >
-          <Edit3 className="w-4 h-4"/>
-          <span>1. Quản Trị Giao Diện & Hero Banner (Visual CMS)</span>
+          <Layout className="w-4 h-4"/>
+          <span>1. Hero Banner & Chỉ Số</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab('FOOTER')}
+          className={`py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            adminTab === 'FOOTER' ? 'bg-white text-brand-700 shadow-xs' : 'text-warm-700 hover:text-warm-900'
+          }`}
+        >
+          <Share2 className="w-4 h-4"/>
+          <span>2. Chân Trang & MXH</span>
+        </button>
+
+        <button
+          onClick={() => setAdminTab('SUBPAGES')}
+          className={`py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+            adminTab === 'SUBPAGES' ? 'bg-white text-brand-700 shadow-xs' : 'text-warm-700 hover:text-warm-900'
+          }`}
+        >
+          <FileText className="w-4 h-4"/>
+          <span>3. Trang Con & Quy Tắc</span>
         </button>
 
         <button
           onClick={() => setAdminTab('WISHES')}
-          className={`flex-1 py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
+          className={`py-2.5 rounded-xl text-xs font-black transition-all flex items-center justify-center gap-2 cursor-pointer ${
             adminTab === 'WISHES' ? 'bg-white text-brand-700 shadow-xs' : 'text-warm-700 hover:text-warm-900'
           }`}
         >
           <Sparkles className="w-4 h-4"/>
-          <span>2. Quản Trị & Kiểm Duyệt Điều Ước ({wishes.length})</span>
+          <span>4. Điều Ước ({wishes.length})</span>
         </button>
       </div>
 
-      {/* PHÂN HỆ 1: QUẢN TRỊ NỘI DUNG TĨNH & BANNER (CMS) */}
-      {adminTab === 'CMS' && (
+      {/* TAB 1: HERO BANNER CMS */}
+      {adminTab === 'HERO' && (
         <div className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-8 shadow-soft space-y-6">
           <div className="flex justify-between items-center border-b border-warm-100 pb-4">
             <div>
-              <h2 className="text-base font-black text-warm-900">Chỉnh Sửa Toàn Diện Khung Hero Banner & Chỉ Số</h2>
-              <p className="text-xs text-warm-700">Mọi thay đổi khi lưu sẽ được phản chiếu ngay lập tức ra ngoài Trang Chủ.</p>
+              <h2 className="text-base font-black text-warm-900">Quản Trị Hero Banner & 3 Chỉ Số Chính</h2>
+              <p className="text-xs text-warm-700">Tải ảnh xe đạp, máy tính mới lên đây sẽ cập nhật thẳng ra Trang Chủ.</p>
             </div>
             <button
-              onClick={() => requestActionWithPin(executeSaveCMS)}
+              onClick={() => requestActionWithPin(executeSaveFullCMS)}
               className="px-6 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-float flex items-center gap-1.5 cursor-pointer"
             >
               <Save className="w-4 h-4"/>
-              <span>Lưu Thay Đổi CMS (Cần Mật Mã)</span>
+              <span>Lưu Toàn Trang (Cần Mật Mã)</span>
             </button>
           </div>
 
@@ -465,9 +458,9 @@ export default function DedicatedAdminPortal() {
                 <label className="text-xs font-bold text-warm-800">Huy hiệu nhỏ (Badge):</label>
                 <input
                   type="text"
-                  value={cmsForm.badge}
-                  onChange={e => setCmsForm({ ...cmsForm, badge: e.target.value })}
-                  className="w-full p-3 rounded-2xl border-2 border-warm-200 text-xs font-bold text-warm-900 focus:border-brand-600 focus:outline-none"
+                  value={fullCMS.hero.badge}
+                  onChange={e => setFullCMS({ ...fullCMS, hero: { ...fullCMS.hero, badge: e.target.value } })}
+                  className="w-full p-3 rounded-2xl border-2 border-warm-200 text-xs font-bold text-warm-900"
                 />
               </div>
 
@@ -476,19 +469,18 @@ export default function DedicatedAdminPortal() {
                   <label className="text-xs font-bold text-warm-800">Dòng tiêu đề chính:</label>
                   <input
                     type="text"
-                    value={cmsForm.titlePrimary}
-                    onChange={e => setCmsForm({ ...cmsForm, titlePrimary: e.target.value })}
-                    className="w-full p-3 rounded-2xl border-2 border-warm-200 text-xs font-bold text-warm-900 focus:border-brand-600 focus:outline-none"
+                    value={fullCMS.hero.titlePrimary}
+                    onChange={e => setFullCMS({ ...fullCMS, hero: { ...fullCMS.hero, titlePrimary: e.target.value } })}
+                    className="w-full p-3 rounded-2xl border-2 border-warm-200 text-xs font-bold text-warm-900"
                   />
                 </div>
-
                 <div className="space-y-1">
                   <label className="text-xs font-bold text-warm-800">Dòng tiêu đề nổi bật (Xanh):</label>
                   <input
                     type="text"
-                    value={cmsForm.titleHighlight}
-                    onChange={e => setCmsForm({ ...cmsForm, titleHighlight: e.target.value })}
-                    className="w-full p-3 rounded-2xl border-2 border-brand-300 text-xs font-bold text-brand-900 focus:border-brand-600 focus:outline-none"
+                    value={fullCMS.hero.titleHighlight}
+                    onChange={e => setFullCMS({ ...fullCMS, hero: { ...fullCMS.hero, titleHighlight: e.target.value } })}
+                    className="w-full p-3 rounded-2xl border-2 border-brand-300 text-xs font-bold text-brand-900"
                   />
                 </div>
               </div>
@@ -497,29 +489,28 @@ export default function DedicatedAdminPortal() {
                 <label className="text-xs font-bold text-warm-800">Đoạn văn mô tả sứ mệnh:</label>
                 <textarea
                   rows={4}
-                  value={cmsForm.description}
-                  onChange={e => setCmsForm({ ...cmsForm, description: e.target.value })}
-                  className="w-full p-3 rounded-2xl border-2 border-warm-200 text-xs font-medium text-warm-900 focus:border-brand-600 focus:outline-none"
+                  value={fullCMS.hero.description}
+                  onChange={e => setFullCMS({ ...fullCMS, hero: { ...fullCMS.hero, description: e.target.value } })}
+                  className="w-full p-3 rounded-2xl border-2 border-warm-200 text-xs font-medium text-warm-900"
                 />
               </div>
 
-              {/* 3 Chỉ số */}
               <div className="grid grid-cols-3 gap-3 pt-2">
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-warm-800">Vốn Karma:</label>
                   <input
                     type="text"
-                    value={cmsForm.statKarma}
-                    onChange={e => setCmsForm({ ...cmsForm, statKarma: e.target.value })}
-                    className="w-full p-2.5 rounded-xl border border-warm-200 text-xs font-black text-warm-900"
+                    value={fullCMS.hero.statKarma}
+                    onChange={e => setFullCMS({ ...fullCMS, hero: { ...fullCMS.hero, statKarma: e.target.value } })}
+                    className="w-full p-2.5 rounded-xl border border-warm-200 text-xs font-black"
                   />
                 </div>
                 <div className="space-y-1">
                   <label className="text-[11px] font-bold text-warm-800">CO2 Đã Giảm:</label>
                   <input
                     type="text"
-                    value={cmsForm.statCO2}
-                    onChange={e => setCmsForm({ ...cmsForm, statCO2: e.target.value })}
+                    value={fullCMS.hero.statCO2}
+                    onChange={e => setFullCMS({ ...fullCMS, hero: { ...fullCMS.hero, statCO2: e.target.value } })}
                     className="w-full p-2.5 rounded-xl border border-warm-200 text-xs font-black text-sun-700"
                   />
                 </div>
@@ -527,20 +518,20 @@ export default function DedicatedAdminPortal() {
                   <label className="text-[11px] font-bold text-warm-800">Tuần Hoàn:</label>
                   <input
                     type="text"
-                    value={cmsForm.statRecycle}
-                    onChange={e => setCmsForm({ ...cmsForm, statRecycle: e.target.value })}
+                    value={fullCMS.hero.statRecycle}
+                    onChange={e => setFullCMS({ ...fullCMS, hero: { ...fullCMS.hero, statRecycle: e.target.value } })}
                     className="w-full p-2.5 rounded-xl border border-warm-200 text-xs font-black text-blue-700"
                   />
                 </div>
               </div>
             </div>
 
-            {/* Khung Quản Trị Ảnh Banner: Nén Canvas & Chống Vỡ Khung */}
+            {/* Khung Ảnh Banner Hero */}
             <div className="lg:col-span-5 space-y-4 p-5 bg-warm-50 rounded-3xl border border-warm-200">
               <div className="flex items-center justify-between">
                 <label className="text-xs font-black text-warm-900 flex items-center gap-1.5">
                   <Camera className="w-4 h-4 text-brand-600"/>
-                  <span>Hình Ảnh Banner Chính:</span>
+                  <span>Hình Ảnh Banner:</span>
                 </label>
                 <label className="px-3.5 py-1.5 bg-brand-600 hover:bg-brand-700 text-white rounded-xl text-xs font-black cursor-pointer shadow-xs">
                   <span>{isCompressing ? 'Đang Nén...' : 'Tải Ảnh Mới Từ Máy'}</span>
@@ -549,25 +540,24 @@ export default function DedicatedAdminPortal() {
               </div>
 
               <div className="aspect-[16/11] rounded-2xl overflow-hidden border-2 border-brand-500 shadow-md bg-warm-900">
-                <img src={cmsForm.bannerImage} alt="Preview Banner" className="w-full h-full object-cover object-center"/>
+                <img src={fullCMS.hero.bannerImage} alt="Banner Preview" className="w-full h-full object-cover object-center"/>
               </div>
 
               <div className="text-xs space-y-1">
-                {compressStats ? (
+                {compressStats && (
                   <p className="text-brand-800 font-bold">
-                    ✅ Đã tối ưu từ <span className="line-through text-warm-700">{compressStats.orig}</span> về <strong className="text-brand-700">{compressStats.comp}</strong> (Chuẩn tốc độ 10/10).
+                    ✅ Đã tối ưu từ {compressStats.orig} về {compressStats.comp} (Chuẩn tốc độ 10/10).
                   </p>
-                ) : (
-                  <p className="text-warm-700">Thuật toán Canvas tự động nén nhẹ dưới 90KB và khóa cứng tỷ lệ vàng 16:11 chống méo hình.</p>
                 )}
+                <p className="text-warm-700">Khóa tỷ lệ vàng 16:11 chống méo ảnh và chống phá vỡ giao diện.</p>
               </div>
 
               <div className="space-y-1 pt-1">
                 <label className="text-[11px] font-bold text-warm-800">Lời trích dẫn dưới banner:</label>
                 <input
                   type="text"
-                  value={cmsForm.imageQuote}
-                  onChange={e => setCmsForm({ ...cmsForm, imageQuote: e.target.value })}
+                  value={fullCMS.hero.imageQuote}
+                  onChange={e => setFullCMS({ ...fullCMS, hero: { ...fullCMS.hero, imageQuote: e.target.value } })}
                   className="w-full p-2.5 rounded-xl border border-warm-200 text-xs font-semibold text-warm-900"
                 />
               </div>
@@ -576,7 +566,125 @@ export default function DedicatedAdminPortal() {
         </div>
       )}
 
-      {/* PHÂN HỆ 2: QUẢN TRỊ ĐIỀU ƯỚC (SỬA, ĐỔI ẢNH, XÓA, DUYỆT) */}
+      {/* TAB 2: FOOTER CMS */}
+      {adminTab === 'FOOTER' && (
+        <div className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-8 shadow-soft space-y-6">
+          <div className="flex justify-between items-center border-b border-warm-100 pb-4">
+            <div>
+              <h2 className="text-base font-black text-warm-900">Quản Trị Chân Trang & Khối Chia Sẻ MXH</h2>
+              <p className="text-xs text-warm-700">Chỉnh sửa toàn bộ thông điệp kêu gọi lan tỏa, bản quyền và điều khoản pháp lý.</p>
+            </div>
+            <button
+              onClick={() => requestActionWithPin(executeSaveFullCMS)}
+              className="px-6 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-float flex items-center gap-1.5 cursor-pointer"
+            >
+              <Save className="w-4 h-4"/>
+              <span>Lưu Chân Trang (Cần Mật Mã)</span>
+            </button>
+          </div>
+
+          <div className="space-y-4 max-w-3xl">
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-warm-800">Huy hiệu Chân Trang (Badge):</label>
+              <input
+                type="text"
+                value={fullCMS.footer.badge}
+                onChange={e => setFullCMS({ ...fullCMS, footer: { ...fullCMS.footer, badge: e.target.value } })}
+                className="w-full p-3 rounded-2xl border-2 border-warm-200 text-xs font-bold text-warm-900"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-warm-800">Tiêu đề lớn kêu gọi:</label>
+              <input
+                type="text"
+                value={fullCMS.footer.headline}
+                onChange={e => setFullCMS({ ...fullCMS, footer: { ...fullCMS.footer, headline: e.target.value } })}
+                className="w-full p-3 rounded-2xl border-2 border-warm-200 text-xs font-bold text-warm-900"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-bold text-warm-800">Đoạn văn hướng dẫn chia sẻ:</label>
+              <textarea
+                rows={3}
+                value={fullCMS.footer.description}
+                onChange={e => setFullCMS({ ...fullCMS, footer: { ...fullCMS.footer, description: e.target.value } })}
+                className="w-full p-3 rounded-2xl border-2 border-warm-200 text-xs font-medium text-warm-900"
+              />
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-warm-800">Dòng bản quyền (Copyright):</label>
+                <input
+                  type="text"
+                  value={fullCMS.footer.copyright}
+                  onChange={e => setFullCMS({ ...fullCMS, footer: { ...fullCMS.footer, copyright: e.target.value } })}
+                  className="w-full p-2.5 rounded-xl border border-warm-200 text-xs font-semibold"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-warm-800">Ghi chú Nghị định / Pháp lý:</label>
+                <input
+                  type="text"
+                  value={fullCMS.footer.legalNote}
+                  onChange={e => setFullCMS({ ...fullCMS, footer: { ...fullCMS.footer, legalNote: e.target.value } })}
+                  className="w-full p-2.5 rounded-xl border border-warm-200 text-xs font-semibold"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: SUBPAGES CMS */}
+      {adminTab === 'SUBPAGES' && (
+        <div className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-8 shadow-soft space-y-6">
+          <div className="flex justify-between items-center border-b border-warm-100 pb-4">
+            <div>
+              <h2 className="text-base font-black text-warm-900">Quản Trị Nội Dung Các Trang Con</h2>
+              <p className="text-xs text-warm-700">Tùy chỉnh thông báo và quy định tại trang Gửi Điều Ước và Trạm Bắt Tay.</p>
+            </div>
+            <button
+              onClick={() => requestActionWithPin(executeSaveFullCMS)}
+              className="px-6 py-2.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-float flex items-center gap-1.5 cursor-pointer"
+            >
+              <Save className="w-4 h-4"/>
+              <span>Lưu Trang Con (Cần Mật Mã)</span>
+            </button>
+          </div>
+
+          <div className="space-y-5 max-w-3xl">
+            <div className="p-4 bg-warm-50 rounded-2xl border border-warm-200 space-y-2">
+              <label className="text-xs font-black text-warm-900 block">
+                1. Thông báo quy chuẩn trên Trang Gửi Điều Ước (/create-wish):
+              </label>
+              <textarea
+                rows={2}
+                value={fullCMS.subpages.createWishNotice}
+                onChange={e => setFullCMS({ ...fullCMS, subpages: { ...fullCMS.subpages, createWishNotice: e.target.value } })}
+                className="w-full p-2.5 rounded-xl border border-warm-300 text-xs font-medium"
+              />
+            </div>
+
+            <div className="p-4 bg-warm-50 rounded-2xl border border-warm-200 space-y-2">
+              <label className="text-xs font-black text-warm-900 block">
+                2. Quy tắc an toàn Safe Hub trên Trang Trạm Bắt Tay (/handshake):
+              </label>
+              <textarea
+                rows={2}
+                value={fullCMS.subpages.handshakeRules}
+                onChange={e => setFullCMS({ ...fullCMS, subpages: { ...fullCMS.subpages, handshakeRules: e.target.value } })}
+                className="w-full p-2.5 rounded-xl border border-warm-300 text-xs font-medium"
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 4: WISHES MODERATION */}
       {adminTab === 'WISHES' && (
         <div className="space-y-4">
           <div className="bg-white p-4 sm:p-5 rounded-3xl border border-warm-200 shadow-soft flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
@@ -605,9 +713,9 @@ export default function DedicatedAdminPortal() {
                 Chờ duyệt
               </button>
               <button
-                onClick={loadCMSAndWishes}
+                onClick={loadWishes}
                 className="p-2 rounded-xl border border-warm-200 text-warm-700 hover:bg-warm-50 cursor-pointer"
-                title="Làm mới danh sách"
+                title="Làm mới"
               >
                 <RefreshCw className="w-4 h-4"/>
               </button>
@@ -616,7 +724,7 @@ export default function DedicatedAdminPortal() {
 
           {loadingWishes ? (
             <div className="p-12 text-center text-xs font-bold text-warm-700 bg-white rounded-3xl border border-warm-200">
-              Đang tải danh sách điều ước từ hệ thống...
+              Đang tải danh sách điều ước...
             </div>
           ) : (
             <div className="space-y-4">
@@ -661,7 +769,6 @@ export default function DedicatedAdminPortal() {
                         </div>
                       </div>
 
-                      {/* Nút Hành Động Quản Trị */}
                       <div className="flex md:flex-col gap-2 w-full md:w-auto shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-warm-100">
                         <button
                           onClick={() => {
@@ -696,7 +803,7 @@ export default function DedicatedAdminPortal() {
         </div>
       )}
 
-      {/* MODAL SỬA ĐIỀU ƯỚC TRONG ADMIN */}
+      {/* MODAL SỬA ĐIỀU ƯỚC */}
       {editingWish && (
         <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-warm-200 max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
@@ -727,7 +834,7 @@ export default function DedicatedAdminPortal() {
                     setEditWishCat(e.target.value);
                     setEditWishImg(CATEGORY_FALLBACK_IMAGES[e.target.value]);
                   }}
-                  className="w-full p-2.5 rounded-xl border-2 border-warm-200 text-xs font-bold text-warm-900"
+                  className="w-full p-2.5 rounded-xl border-2 border-warm-200 text-xs font-bold text-warm-900 cursor-pointer"
                 >
                   <option value="bicycle">🚲 Xe đạp đến trường</option>
                   <option value="laptop">💻 Máy tính học tập</option>
@@ -742,7 +849,13 @@ export default function DedicatedAdminPortal() {
                   <label className="text-xs font-bold text-warm-900">Thay đổi ảnh thực tế:</label>
                   <label className="px-3 py-1 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-xs font-bold cursor-pointer">
                     <span>Tải ảnh mới</span>
-                    <input type="file" accept="image/*" onChange={handleEditWishImageUpload} className="hidden"/>
+                    <input type="file" accept="image/*" onChange={async (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const { dataUrl } = await compressImageToWebP(file);
+                        setEditWishImg(dataUrl);
+                      }
+                    }} className="hidden"/>
                   </label>
                 </div>
                 <img src={editWishImg} alt="Preview" className="w-24 h-20 rounded-xl object-cover border border-warm-300"/>
@@ -782,7 +895,7 @@ export default function DedicatedAdminPortal() {
         </div>
       )}
 
-      {/* MODAL NHẬP MẬT MÃ XÁC NHẬN KHI LƯU HOẶC XÓA (ACTION PIN GUARD) */}
+      {/* MODAL MẬT MÃ XÁC NHẬN KHI LƯU */}
       {showConfirmActionModal && (
         <div className="fixed inset-0 z-50 bg-warm-900/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in">
           <div className="bg-white rounded-3xl border-2 border-brand-500 max-w-sm w-full p-6 shadow-2xl space-y-4 text-center">
@@ -792,7 +905,7 @@ export default function DedicatedAdminPortal() {
 
             <div className="space-y-1">
               <h3 className="text-base font-black text-warm-900">Xác Nhận Quyền Quản Trị</h3>
-              <p className="text-xs text-warm-700">Nhập Master PIN để xác nhận thực hiện thao tác lưu/xóa này.</p>
+              <p className="text-xs text-warm-700">Nhập Master PIN để xác nhận thực hiện lưu/xóa này.</p>
             </div>
 
             <div className="space-y-2">
@@ -842,7 +955,7 @@ export default function DedicatedAdminPortal() {
 
             <div className="space-y-1">
               <h3 className="text-base font-black text-warm-900">Thiết Lập Master PIN Mới</h3>
-              <p className="text-xs text-warm-700">Mật mã mới sẽ có hiệu lực ngay lập tức cho toàn bộ các lần xác nhận.</p>
+              <p className="text-xs text-warm-700">Mật mã mới sẽ có hiệu lực ngay cho toàn bộ các lần xác nhận sau.</p>
             </div>
 
             <div className="space-y-3 text-left">
