@@ -41,17 +41,21 @@ export function setActiveUser(user: UserProfile | null): void {
   window.dispatchEvent(new Event('sova_auth_change'));
 }
 
-// Gọi cổng Google OAuth thật 100%
 export async function loginWithGoogle(): Promise<void> {
+  const redirectTarget = typeof window !== 'undefined' && window.location.origin.includes('pages.dev')
+    ? 'https://sova-give-100-app.pages.dev'
+    : (typeof window !== 'undefined' ? window.location.origin : 'https://sova-give-100-app.pages.dev');
+
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin
+      redirectTo: redirectTarget
     }
   });
+
   if (error) {
-    console.error("Lỗi khởi tạo phiên Google OAuth:", error.message);
-    alert("Đang chuyển hướng tới cổng đăng nhập Google: " + error.message);
+    console.error("Lỗi Google OAuth:", error.message);
+    alert("Không thể khởi tạo đăng nhập: " + error.message);
   }
 }
 
