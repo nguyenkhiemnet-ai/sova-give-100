@@ -34,12 +34,12 @@ interface WishItem {
 }
 
 const CATEGORIES = [
-  { id: 'ALL', label: 'Tất cả ước nguyện', icon: Sparkles },
-  { id: 'bicycle', label: 'Xe đạp đến trường', icon: Bike },
-  { id: 'laptop', label: 'Máy tính học tập', icon: Laptop },
-  { id: 'sewing_machine', label: 'Máy may sinh kế', icon: Scissors },
-  { id: 'study_tools', label: 'Dụng cụ tri thức', icon: BookOpen },
-  { id: 'livelihood_tools', label: 'Công cụ mưu sinh', icon: Wrench },
+  { id: 'ALL', label: 'Tất cả ước nguyện', shortLabel: 'Tất cả', icon: Sparkles },
+  { id: 'bicycle', label: 'Xe đạp đến trường', shortLabel: 'Xe đạp', icon: Bike },
+  { id: 'laptop', label: 'Máy tính học tập', shortLabel: 'Máy tính', icon: Laptop },
+  { id: 'sewing_machine', label: 'Máy may sinh kế', shortLabel: 'Máy may', icon: Scissors },
+  { id: 'study_tools', label: 'Dụng cụ tri thức', shortLabel: 'Tri thức', icon: BookOpen },
+  { id: 'livelihood_tools', label: 'Công cụ mưu sinh', shortLabel: 'Mưu sinh', icon: Wrench },
 ];
 
 export default function HomePage() {
@@ -409,30 +409,46 @@ export default function HomePage() {
           </span>
         </div>
 
-        {/* Thanh Chọn Danh Mục Tinh Gọn (Tìm kiếm đã đưa lên Header) */}
-        <div className="sticky top-[106px] md:top-20 z-30 bg-white/95 backdrop-blur-md p-2.5 sm:p-3 rounded-2xl border border-warm-200 shadow-soft">
-          <div className="flex items-center justify-between gap-2 overflow-x-auto no-scrollbar">
-            <div className="flex items-center gap-2">
+        {/* Thanh Chọn Danh Mục Tinh Gọn (Tự nhiên, không đè lấp thẻ) */}
+        <div className="sticky top-[106px] md:top-20 z-30 bg-white/95 backdrop-blur-md py-2 px-2 sm:px-3 rounded-2xl border border-warm-200/90 shadow-soft">
+          <div className="relative flex items-center justify-between gap-2">
+            <div className="flex items-center gap-1.5 sm:gap-2 overflow-x-auto no-scrollbar scroll-smooth pr-6 sm:pr-0 flex-1">
               {CATEGORIES.map(cat => {
                 const Icon = cat.icon;
                 const active = selectedCategory === cat.id;
+                const count = cat.id === 'ALL' 
+                  ? wishes.length 
+                  : wishes.filter(w => inferCategory(w.title, w.category) === cat.id).length;
+
                 return (
                   <button
                     key={cat.id}
                     onClick={() => setSelectedCategory(cat.id)}
-                    className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
-                      active ? 'bg-brand-600 text-white shadow-xs' : 'bg-warm-100 hover:bg-warm-200 text-warm-700'
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                      active 
+                        ? 'bg-brand-600 text-white shadow-soft scale-[1.02]' 
+                        : 'bg-warm-100/80 hover:bg-warm-200/90 text-warm-700 hover:text-warm-900 border border-warm-200/50'
                     }`}
                   >
-                    <Icon className="w-3.5 h-3.5"/>
-                    <span>{cat.label}</span>
+                    <Icon className="w-3.5 h-3.5 shrink-0"/>
+                    <span className="hidden sm:inline">{cat.label}</span>
+                    <span className="sm:hidden">{cat.shortLabel}</span>
+                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
+                      active ? 'bg-white/20 text-white' : 'bg-warm-200/90 text-warm-700'
+                    }`}>
+                      {count}
+                    </span>
                   </button>
                 );
               })}
             </div>
 
-            <div className="text-[11px] font-bold text-warm-700 whitespace-nowrap px-3 py-1.5 rounded-xl bg-warm-50 border border-warm-200 shrink-0">
-              Tìm thấy: <strong className="text-brand-700 font-black">{filteredWishes.length}</strong> hoàn cảnh
+            {/* Gradient fade indicator ở mép phải trên mobile để báo hiệu vuốt ngang */}
+            <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-white via-white/80 to-transparent sm:hidden" />
+
+            {/* Đếm tổng số hoàn cảnh tìm thấy trên desktop */}
+            <div className="hidden lg:inline-flex text-[11px] font-bold text-warm-700 whitespace-nowrap px-3 py-1.5 rounded-xl bg-warm-50 border border-warm-200 shrink-0">
+              Tổng số: <strong className="text-brand-700 font-black ml-1">{filteredWishes.length}</strong>
             </div>
           </div>
         </div>

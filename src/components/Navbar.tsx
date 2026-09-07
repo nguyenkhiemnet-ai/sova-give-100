@@ -297,35 +297,30 @@ export default function Navbar() {
       {/* ==================== 2. BẢN MOBILE (< 768px): 2 TẦNG CHUYÊN NGHIỆP NHƯ SHOPEE/TIKI ==================== */}
       <div className="md:hidden">
         {/* TẦNG 1: THƯƠNG HIỆU & CỤM TÁC VỤ */}
-        <div className="flex items-center justify-between px-3.5 h-13 border-b border-warm-100">
+        <div className="flex items-center justify-between px-3.5 h-13 border-b border-warm-100/90">
           {/* Logo & Tên Brand */}
-          <Link href="/" className="flex items-center gap-2 shrink-0">
+          <Link href="/" className="flex items-center gap-2.5 shrink-0">
             <div className="w-8 h-8 rounded-xl bg-brand-600 text-white flex items-center justify-center shadow-soft">
               <HeartHandshake className="w-4 h-4"/>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="font-black text-warm-900 text-sm tracking-tight">SOVA GIVE 100</span>
-              <span className="px-1.5 py-0.2 rounded-md bg-brand-50 text-brand-700 text-[9px] font-black border border-brand-200">0-VND</span>
+              <span className="px-1.5 py-0.5 rounded-md bg-brand-50 text-brand-700 text-[10px] font-black border border-brand-200 leading-none">0-VND</span>
             </div>
           </Link>
 
-          {/* Cụm Tác Vụ Phải: Gửi Ước + Đăng Nhập */}
+          {/* Cụm Tác Vụ Phải: Đăng Nhập / Profile Tinh Tế */}
           <div className="flex items-center gap-2">
-            <Link
-              href="/create-wish/"
-              className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-brand-600 text-white text-xs font-black shadow-xs active:scale-95 transition-all"
-            >
-              <Sparkles className="w-3.5 h-3.5"/>
-              <span>Gửi Ước</span>
-            </Link>
-
             {currentUser ? (
               <div className="relative" ref={mobileDropdownRef}>
                 <button
                   onClick={() => setShowUserMenu(!showUserMenu)}
-                  className="w-8 h-8 rounded-xl bg-brand-600 text-white text-xs font-black flex items-center justify-center shadow-2xs border border-brand-700"
+                  className="flex items-center gap-1.5 p-1 pr-2.5 rounded-xl border border-warm-200 bg-white hover:bg-warm-50 shadow-2xs"
                 >
-                  {currentUser.avatar || 'K'}
+                  <div className="w-7 h-7 rounded-lg bg-brand-600 text-white text-xs font-black flex items-center justify-center shadow-2xs">
+                    {currentUser.avatar || 'K'}
+                  </div>
+                  <span className="text-[11px] font-black text-warm-900 truncate max-w-[80px]">{currentUser.name.split(' ').pop()}</span>
                 </button>
 
                 {showUserMenu && (
@@ -370,7 +365,7 @@ export default function Navbar() {
             ) : (
               <button
                 onClick={loginWithGoogle}
-                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl border border-warm-200 bg-white active:bg-warm-50 text-xs font-black text-warm-900 shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-warm-200 bg-white active:bg-warm-50 text-xs font-black text-warm-900 shadow-2xs"
                 title="Đăng nhập Google"
               >
                 <svg className="w-3.5 h-3.5" viewBox="0 0 24 24">
