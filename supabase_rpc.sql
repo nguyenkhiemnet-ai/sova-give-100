@@ -1,4 +1,8 @@
--- 1. Tạo hàm RPC execute_handshake_claim xử lý khóa giao dịch ACID
+-- 1. Đảm bảo bảng wishes có đầy đủ các trường trạng thái vòng đời
+ALTER TABLE public.wishes ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'OPEN';
+ALTER TABLE public.wishes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+
+-- 2. Tạo hàm RPC execute_handshake_claim xử lý khóa giao dịch ACID
 CREATE OR REPLACE FUNCTION public.execute_handshake_claim(p_wish_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -10,8 +14,8 @@ DECLARE
     v_current_status TEXT;
 BEGIN
     -- Kiểm tra trạng thái hiện tại của điều ước
-    SELECT status INTO v_current_status
-    FROM public.wishlist_items
+    SELECT COALESCE(status, 'OPEN') INTO v_current_status
+    FROM public.wishes
     WHERE id = p_wish_id
     FOR UPDATE;
 
@@ -33,7 +37,7 @@ BEGIN
     v_passport_code := 'SOVA-PASS-' || floor(1000 + random() * 9000)::text || '-VN';
 
     -- Cập nhật trạng thái sang claimed
-    UPDATE public.wishlist_items
+    UPDATE public.wishes
     SET 
         status = 'claimed',
         updated_at = NOW()
@@ -47,5 +51,5 @@ BEGIN
 END;
 $$;
 
--- 2. Phân quyền thực thi cho cả khách vãng lai (anon) và người đã đăng nhập (authenticated)
+-- 3. Phân quyền thực thi cho client
 GRANT EXECUTE ON FUNCTION public.execute_handshake_claim(UUID) TO anon, authenticated, service_role;

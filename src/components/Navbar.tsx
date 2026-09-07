@@ -6,18 +6,36 @@ import {
   HeartHandshake, Sparkles, User, LogOut, ShieldCheck, 
   ChevronDown, Award, Lock, ExternalLink
 } from 'lucide-react';
-import { getActiveUser, setActiveUser, ADMIN_USER, SAMPLE_CITIZEN, UserProfile } from '@/lib/auth';
+import { getActiveUser, setActiveUser, loginWithGoogle, logoutUser, UserProfile } from '@/lib/auth';
+import { supabase } from '@/lib/supabaseClient';
 
 export default function Navbar() {
   const [user, setUser] = useState<UserProfile | null>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
-  const [loginModalOpen, setLoginModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setUser(getActiveUser());
-    const handleAuth = () => setUser(getActiveUser());
-    window.addEventListener('sova_auth_change', handleAuth);
+    // 1. Kiểm tra session từ Supabase Auth thật
+    supabase.auth.getUser().then(({ data: { user: sbUser } }) => {
+      if (sbUser) {
+        const profile: UserProfile = {
+          id: sbUser.id,
+          name: sbUser.user_metadata?.full_name || sbUser.email?.split('@')[0] || 'Công Dân Tử Tế',
+          email: sbUser.email || '',
+          avatar: (sbUser.user_metadata?.full_name || 'U').charAt(0).toUpperCase(),
+          role: sbUser.email?.includes('nguyenkhiem') ? 'SUPER_ADMIN' : 'CITIZEN',
+          karma: 100,
+          co2Saved: 85.5
+        };
+        setActiveUser(profile);
+        setUser(profile);
+      } else {
+        setUser(getActiveUser());
+      }
+    });
+
+    const handleAuthChange = () => setUser(getActiveUser());
+    window.addEventListener('sova_auth_change', handleAuthChange);
 
     const handleClickOutside = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -27,7 +45,7 @@ export default function Navbar() {
     document.addEventListener('mousedown', handleClickOutside);
 
     return () => {
-      window.removeEventListener('sova_auth_change', handleAuth);
+      window.removeEventListener('sova_auth_change', handleAuthChange);
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
@@ -63,9 +81,12 @@ export default function Navbar() {
           <Link href="/handshake/" className="px-3.5 py-2 rounded-xl hover:bg-warm-100 hover:text-brand-700 transition-all">
             Bắt Tay QR
           </Link>
+          <Link href="/verify/" className="px-3.5 py-2 rounded-xl hover:bg-warm-100 hover:text-brand-700 transition-all text-sun-800">
+            Tra Cứu Serial
+          </Link>
         </nav>
 
-        {/* Cụm Tài Khoản */}
+        {/* Cụm Đăng Nhập / Profile */}
         <div className="flex items-center gap-2.5">
           <Link 
             href="/create-wish/"
@@ -77,8 +98,8 @@ export default function Navbar() {
 
           {!user ? (
             <button
-              onClick={() => setLoginModalOpen(true)}
-              className="px-4 py-2 rounded-xl border-2 border-warm-200 bg-white hover:bg-brand-50 hover:border-brand-500 text-xs font-black text-warm-900 shadow-2xs transition-all flex items-center gap-2 cursor-pointer"
+              onClick={() => loginWithGoogle()}
+              className="px-4 py-2 rounded-xl border-2 border-warm-200 bg-white hover:bg-brand-50 hover:border-brand-500 text-xs font-black text-warm-900 shadow-2xs transition-all flex items-center gap-2"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -86,13 +107,13 @@ export default function Navbar() {
                 <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
                 <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
               </svg>
-              <span>Đăng Nhập</span>
+              <span>Đăng Nhập Google</span>
             </button>
           ) : (
             <div className="relative" ref={dropdownRef}>
               <button
                 onClick={() => setDropdownOpen(!dropdownOpen)}
-                className="flex items-center gap-2 p-1.5 pr-3 rounded-2xl border border-warm-200 bg-white hover:bg-brand-50 transition-all shadow-2xs cursor-pointer"
+                className="flex items-center gap-2 p-1.5 pr-3 rounded-2xl border border-warm-200 bg-white hover:bg-brand-50 transition-all shadow-2xs"
               >
                 <div className="w-8 h-8 rounded-xl bg-brand-600 text-white font-black text-sm flex items-center justify-center">
                   {user.avatar}
@@ -107,10 +128,10 @@ export default function Navbar() {
               </button>
 
               {dropdownOpen && (
-                <div className="absolute right-0 mt-2 w-64 bg-white rounded-3xl border border-warm-200 shadow-xl p-2.5 space-y-1 text-xs font-bold text-warm-700 animate-in fade-in zoom-in-95 z-50">
+                <div className="absolute right-0 mt-2 w-64 bg-white rounded-3xl border border-warm-200 shadow-xl p-2.5 space-y-1 text-xs font-bold text-warm-700 animate-in fade-in zoom-in-95">
                   <div className="p-3 bg-brand-50/60 rounded-2xl border border-brand-100 mb-1.5">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-brand-700 block">
-                      {user.role === 'SUPER_ADMIN' ? 'Trọng Tài Tối Cao' : 'Công Dân Xác Minh'}
+                      {user.role === 'SUPER_ADMIN' ? 'Trọng Tài Tối Cao' : 'Người Dùng Đã Xác Minh'}
                     </span>
                     <p className="text-sm font-black text-warm-900">{user.name}</p>
                     <span className="text-[11px] font-bold text-sun-600">{user.karma} ⭐ Vốn Xã Hội</span>
@@ -122,7 +143,7 @@ export default function Navbar() {
                     className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl hover:bg-warm-100 hover:text-brand-700 transition-colors"
                   >
                     <User className="w-4 h-4 text-brand-600"/>
-                    <span>Hồ Sơ Cá Nhân & Chứng Chỉ</span>
+                    <span>Hồ Sơ Của Tôi & Chứng Chỉ</span>
                   </Link>
 
                   {user.role === 'SUPER_ADMIN' && (
@@ -140,13 +161,13 @@ export default function Navbar() {
 
                   <button
                     onClick={() => {
-                      setActiveUser(null);
+                      logoutUser();
                       setDropdownOpen(false);
                     }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 transition-colors text-left cursor-pointer"
+                    className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-red-600 hover:bg-red-50 transition-colors text-left"
                   >
                     <LogOut className="w-4 h-4"/>
-                    <span>Đăng Xuất (Về Khách Vãng Lai)</span>
+                    <span>Đăng Xuất Khỏi Thiết Bị</span>
                   </button>
                 </div>
               )}
@@ -155,63 +176,6 @@ export default function Navbar() {
 
         </div>
       </div>
-
-      {/* Modal Chọn Tài Khoản Đăng Nhập 1 Chạm */}
-      {loginModalOpen && (
-        <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl border border-warm-200 max-w-sm w-full p-6 shadow-2xl space-y-4">
-            <div className="text-center space-y-1">
-              <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 mx-auto flex items-center justify-center border border-brand-200">
-                <Lock className="w-6 h-6"/>
-              </div>
-              <h3 className="text-lg font-black text-warm-900">Đăng Nhập 1 Chạm</h3>
-              <p className="text-xs text-warm-700">Chọn định danh để trải nghiệm đa vai trò</p>
-            </div>
-
-            <div className="space-y-2 pt-2">
-              <button
-                onClick={() => {
-                  setActiveUser(ADMIN_USER);
-                  setLoginModalOpen(false);
-                }}
-                className="w-full p-3 rounded-2xl border-2 border-sun-300 hover:border-sun-500 bg-sun-50/50 flex items-center gap-3 transition-all text-left cursor-pointer"
-              >
-                <div className="w-9 h-9 rounded-xl bg-sun-500 text-white font-black flex items-center justify-center shrink-0">
-                  K
-                </div>
-                <div>
-                  <span className="text-xs font-black text-warm-900 block">Nguyễn Khiêm (Trọng Tài Tối Cao)</span>
-                  <span className="text-[10px] text-sun-700 font-bold">Toàn quyền duyệt, xóa & quản trị 100%</span>
-                </div>
-              </button>
-
-              <button
-                onClick={() => {
-                  setActiveUser(SAMPLE_CITIZEN);
-                  setLoginModalOpen(false);
-                }}
-                className="w-full p-3 rounded-2xl border border-warm-200 hover:border-brand-500 bg-white flex items-center gap-3 transition-all text-left cursor-pointer"
-              >
-                <div className="w-9 h-9 rounded-xl bg-brand-600 text-white font-black flex items-center justify-center shrink-0">
-                  A
-                </div>
-                <div>
-                  <span className="text-xs font-black text-warm-900 block">Nguyễn Văn An (Người Nhận)</span>
-                  <span className="text-[10px] text-warm-700 font-medium">Quyền tự sửa & rút ước nguyện</span>
-                </div>
-              </button>
-            </div>
-
-            <button
-              onClick={() => setLoginModalOpen(false)}
-              className="w-full py-2.5 rounded-xl border border-warm-200 text-xs font-bold text-warm-700 hover:bg-warm-100 transition-all cursor-pointer"
-            >
-              Hủy Bỏ
-            </button>
-          </div>
-        </div>
-      )}
-
     </header>
   );
 }
