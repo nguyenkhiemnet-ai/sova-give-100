@@ -135,7 +135,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
     setLoading(false);
 
     if (res.success) {
-      setSuccessMessage(res.message || 'Đăng ký thành công! Chào mừng bạn gia nhập SOVAHUB.');
+      setSuccessMessage(res.message || 'Tạo tài khoản thành công! Chào mừng bạn gia nhập SOVAHUB.');
       setTimeout(() => {
         onClose();
       }, 900);
@@ -384,7 +384,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
                   </>
                 ) : (
                   <>
-                    <span>Đăng Ký Miễn Phí</span>
+                    <span>Tạo tài khoản</span>
                     <ArrowRight className="w-3.5 h-3.5" />
                   </>
                 )}
@@ -484,7 +484,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
                   className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-emerald-700 hover:bg-emerald-800 text-white font-black text-xs shadow-xs hover:shadow-soft transition-all hover:scale-105 active:scale-95 cursor-pointer ring-2 ring-emerald-600/20"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-emerald-200" />
-                  <span>Đăng ký miễn phí</span>
+                  <span>Tạo tài khoản</span>
                 </button>
               </div>
             ) : (

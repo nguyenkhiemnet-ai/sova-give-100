@@ -209,7 +209,7 @@ export default function CreateWishPage() {
               onClick={() => openAuthModal('REGISTER')}
               className="px-4 py-2 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-black text-xs shadow-xs hover:scale-105 transition-all shrink-0 cursor-pointer"
             >
-              Đăng Ký Miễn Phí Ngay
+              Tạo tài khoản ngay
             </button>
           </div>
         )}
