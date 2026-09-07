@@ -42,9 +42,9 @@ export function setActiveUser(user: UserProfile | null): void {
 }
 
 export async function loginWithGoogle(): Promise<void> {
-  const redirectTarget = typeof window !== 'undefined' && window.location.origin.includes('pages.dev')
-    ? 'https://sova-give-100-app.pages.dev'
-    : (typeof window !== 'undefined' ? window.location.origin : 'https://sova-give-100-app.pages.dev');
+  const redirectTarget = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    ? window.location.origin
+    : 'https://sovahub.org';
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',

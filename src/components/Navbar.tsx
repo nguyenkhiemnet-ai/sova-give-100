@@ -22,7 +22,30 @@ export default function Navbar() {
   const mobileDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Kiểm tra session từ Supabase Auth
+    // 1. Đồng bộ session tức thì khi Supabase nhận OAuth Token từ URL
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session?.user) {
+        const sbUser = session.user;
+        const profile: UserProfile = {
+          id: sbUser.id,
+          name: sbUser.user_metadata?.full_name || sbUser.email?.split('@')[0] || 'Công Dân Tử Tế',
+          email: sbUser.email || '',
+          avatar: (sbUser.user_metadata?.full_name || 'U').charAt(0).toUpperCase(),
+          role: sbUser.email?.includes('nguyenkhiem') ? 'SUPER_ADMIN' : 'CITIZEN',
+          karma: 100,
+          co2Saved: 85.5
+        };
+        setActiveUser(profile);
+        setCurrentUser(profile);
+
+        // Dọn dẹp URL hash #access_token để thanh địa chỉ luôn sang trọng, sạch sẽ
+        if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+          window.history.replaceState(null, '', window.location.pathname + window.location.search);
+        }
+      }
+    });
+
+    // 2. Kiểm tra session hiện hành từ Supabase Auth
     supabase.auth.getUser().then(({ data: { user: sbUser } }) => {
       if (sbUser) {
         const profile: UserProfile = {
@@ -55,6 +78,7 @@ export default function Navbar() {
     document.addEventListener('mousedown', handleClickOutside);
 
     return () => {
+      subscription.unsubscribe();
       window.removeEventListener('sova_auth_change', handleAuthChange);
       document.removeEventListener('mousedown', handleClickOutside);
     };
