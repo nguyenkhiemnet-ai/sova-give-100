@@ -75,7 +75,6 @@ const CURATED_WISHES: WishItem[] = [
 
 export default function HomePage() {
   const [wishes, setWishes] = useState<WishItem[]>(CURATED_WISHES);
-  const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedProvince, setSelectedProvince] = useState('ALL');
@@ -86,28 +85,46 @@ export default function HomePage() {
   const [showBackToTop, setShowBackToTop] = useState(false);
 
   useEffect(() => {
-    fetchLiveWishes();
+    fetchCombinedWishes();
     const handleScroll = () => setShowBackToTop(window.scrollY > 400);
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
   }, []);
 
-  async function fetchLiveWishes() {
+  async function fetchCombinedWishes() {
+    let serverItems: WishItem[] = [];
     try {
-      // Timeout 2 giây chống treo tải trang
       const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 2000));
-      const fetchPromise = supabase.from('wishlist_items').select('*').order('created_at', { ascending: false });
+      const fetchPromise = supabase.from('wishes').select('*').order('created_at', { ascending: false });
       const res: any = await Promise.race([fetchPromise, timeoutPromise]);
       if (res && res.data && res.data.length > 0) {
-        setWishes(res.data as WishItem[]);
+        serverItems = res.data as WishItem[];
       }
-    } catch (e) {
-      console.log('Nạp dữ liệu đệm sạch, trang sẵn sàng tức thì!');
+    } catch {
+      console.log('Nạp dữ liệu đệm sạch, nạp tức thì!');
     }
+
+    // Đọc thêm bản ghi Optimistic từ LocalStorage
+    let localItems: WishItem[] = [];
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('SOVA_OPTIMISTIC_WISHES');
+      if (stored) {
+        try { localItems = JSON.parse(stored); } catch {}
+      }
+    }
+
+    // Kết hợp và khử trùng lặp theo ID
+    const mergedMap = new Map<string, WishItem>();
+    localItems.forEach(item => mergedMap.set(item.id, item));
+    serverItems.forEach(item => mergedMap.set(item.id, item));
+    CURATED_WISHES.forEach(item => {
+      if (!mergedMap.has(item.id)) mergedMap.set(item.id, item);
+    });
+
+    setWishes(Array.from(mergedMap.values()));
   }
 
   const handleOpenClaimModal = (item: WishItem) => {
-    // CHỐT CHẶN BẢO MẬT: Phải đăng nhập mới được trao quà!
     const currentUser = getActiveUser();
     if (!currentUser) {
       setShowAuthGateModal(true);
@@ -167,7 +184,7 @@ export default function HomePage() {
               Kinh Tế Tuần Hoàn 0-VND • Trao Cơ Hội, Giữ Danh Dự
             </div>
 
-            <h1 className="text-3xl sm:5xl font-black text-warm-900 tracking-tight leading-[1.15]">
+            <h1 className="text-3xl sm:text-5xl font-black text-warm-900 tracking-tight leading-[1.15]">
               Đừng để đồ tốt ngủ quên trong góc tối.<br/>
               <span className="text-brand-700 bg-gradient-to-r from-brand-700 to-brand-500 bg-clip-text text-transparent">
                 Hãy biến chúng thành tương lai của ai đó.
@@ -251,7 +268,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* 2. CÂY NGUYỆN ƯỚC VỚI THANH TÌM KIẾM STICKY */}
+      {/* 2. CÂY NGUYỆN ƯỚC */}
       <section id="wishlist-section" className="space-y-6 pt-2">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -264,11 +281,11 @@ export default function HomePage() {
             </h2>
           </div>
           <span className="text-xs text-warm-700 bg-white px-3 py-1.5 rounded-xl border border-warm-200 shadow-2xs">
-            100% Hồ sơ đã qua kiểm duyệt Đại sứ địa phương
+            100% Hồ sơ bảo vệ danh dự theo Nghị định 13/2023/NĐ-CP
           </span>
         </div>
 
-        {/* Thanh tìm kiếm */}
+        {/* Thanh tìm kiếm & Lọc Tỉnh */}
         <div className="sticky top-16 z-30 bg-white/95 backdrop-blur-md p-3.5 sm:p-4 rounded-3xl border-2 border-brand-500/30 shadow-float space-y-3">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <div className="relative flex-1">
@@ -289,6 +306,7 @@ export default function HomePage() {
                 onChange={e => setSelectedProvince(e.target.value)}
                 className="w-full pl-11 pr-10 py-3 rounded-2xl border-2 border-warm-200 bg-white text-sm font-black text-warm-900 focus:outline-none focus:border-brand-600"
               >
+                <option value="ALL">📍 Toàn quốc (63 Tỉnh/Thành)</option>
                 {VIETNAM_PROVINCES.map(p => (
                   <option key={p.code} value={p.code}>{p.name}</option>
                 ))}
@@ -325,10 +343,11 @@ export default function HomePage() {
         {/* Lưới điều ước */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {filteredWishes.map(item => {
-            const isUrgent = item.urgency === 'urgent';
+            const isUrgent = item.urgency === 'urgent' || item.urgency_level === 'urgent';
+            const isPending = item.status === 'pending';
             const reasonText = item.reason || item.reason_description || 'Hoàn cảnh khó khăn cần hỗ trợ thiết bị.';
             const pledgeText = item.honor_commitment || item.commitment_pledge || 'Cam kết bảo quản tốt và trao lại.';
-            const provName = VIETNAM_PROVINCES.find(p => p.code === item.province_code)?.name || 'Hà Nội';
+            const provName = VIETNAM_PROVINCES.find(p => p.code === item.province_code)?.name || 'Toàn quốc';
             const fallbackImg = item.imageUrl || 'https://images.unsplash.com/photo-1517694712202-14dd9538aa97?auto=format&fit=crop&w=600&q=80';
 
             return (
@@ -339,11 +358,18 @@ export default function HomePage() {
                     <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-white/95 text-brand-800 uppercase">
                       {item.category}
                     </span>
-                    {isUrgent && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black bg-red-600 text-white">
-                        <AlertCircle className="w-3 h-3"/> Cấp Thiết
-                      </span>
-                    )}
+                    <div className="flex gap-1.5">
+                      {isPending && (
+                        <span className="px-2.5 py-1 rounded-lg text-[10px] font-black bg-amber-500 text-white shadow-2xs">
+                          Chờ Duyệt
+                        </span>
+                      )}
+                      {isUrgent && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-black bg-red-600 text-white">
+                          <AlertCircle className="w-3 h-3"/> Cấp Thiết
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
 
