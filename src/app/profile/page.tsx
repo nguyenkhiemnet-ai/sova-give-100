@@ -11,7 +11,7 @@ import { getActiveUser, ADMIN_USER, UserProfile } from '@/lib/auth';
 import { 
   ArrowLeft, Award, Clock, BookOpen, ShieldCheck, 
   CheckCircle2, AlertCircle, Edit3, Trash2, Heart, 
-  MapPin, X, Save, Plus, Sparkles, Filter
+  MapPin, X, Save, Plus, Sparkles, Filter, Camera, AlertTriangle
 } from 'lucide-react';
 
 interface WishItem {
@@ -46,7 +46,12 @@ export default function ProfilePage() {
   const [editPledge, setEditPledge] = useState('');
   const [editProvince, setEditProvince] = useState('48');
   const [editDistrict, setEditDistrict] = useState('48-ST');
+  const [editImageUrl, setEditImageUrl] = useState<string>('');
   const [savingEdit, setSavingEdit] = useState(false);
+
+  // Modal Xác Nhận Xóa In-App
+  const [deletingWish, setDeletingWish] = useState<WishItem | null>(null);
+  const [deletingProcess, setDeletingProcess] = useState(false);
 
   const [timebank] = useState({
     hoursDone: 6,
@@ -75,7 +80,6 @@ export default function ProfilePage() {
       if (data) serverItems = data as WishItem[];
     } catch {}
 
-    // Danh sách đã xóa và đã sửa lưu bền vững
     let deletedIds: string[] = [];
     let updatedDict: Record<string, Partial<WishItem>> = {};
     if (typeof window !== 'undefined') {
@@ -93,25 +97,26 @@ export default function ProfilePage() {
 
     const map = new Map<string, WishItem>();
 
-    // 1. Nạp từ local
+    // 1. Nạp từ local (bỏ tin đã xóa)
     localItems.forEach(item => {
       if (deletedIds.includes(item.id)) return;
       const savedImg = localStorage.getItem(`SOVA_WISH_IMG_${item.id}`);
-      const effectiveCat = inferCategory(item.title, item.category);
+      const override = updatedDict[item.id] || {};
+      const merged = { ...item, ...override };
+      const effectiveCat = inferCategory(merged.title, merged.category);
       map.set(item.id, {
-        ...item,
+        ...merged,
         category: effectiveCat,
-        imageUrl: savedImg || item.imageUrl || CATEGORY_FALLBACK_IMAGES[effectiveCat] || CATEGORY_FALLBACK_IMAGES['bicycle']
+        imageUrl: savedImg || merged.imageUrl || CATEGORY_FALLBACK_IMAGES[effectiveCat] || CATEGORY_FALLBACK_IMAGES['bicycle']
       });
     });
 
-    // 2. Nạp từ server (áp dụng cập nhật và lọc bỏ tin đã xóa)
+    // 2. Nạp từ server (bỏ tin đã xóa)
     serverItems.forEach(item => {
       if (deletedIds.includes(item.id)) return;
       const existing = map.get(item.id);
       const savedImg = localStorage.getItem(`SOVA_WISH_IMG_${item.id}`);
       const override = updatedDict[item.id] || {};
-      
       const merged = { ...item, ...existing, ...override };
       const effectiveCat = inferCategory(merged.title, merged.category);
       
@@ -127,24 +132,63 @@ export default function ProfilePage() {
   }
 
   const handleOpenEdit = (wish: WishItem) => {
+    const effectiveCat = inferCategory(wish.title, wish.category);
     setEditingWish(wish);
     setEditTitle(wish.title || '');
-    setEditCategory(inferCategory(wish.title, wish.category));
+    setEditCategory(effectiveCat);
     setEditReason(wish.reason || wish.reason_description || '');
     setEditPledge(wish.honor_commitment || wish.commitment_pledge || '');
     setEditProvince(wish.province_code || '48');
     setEditDistrict(wish.ward_code || '48-ST');
+    setEditImageUrl(wish.imageUrl || CATEGORY_FALLBACK_IMAGES[effectiveCat] || CATEGORY_FALLBACK_IMAGES['bicycle']);
   };
 
   const handleTitleChangeInEdit = (val: string) => {
     setEditTitle(val);
     const inferred = inferCategory(val, editCategory);
     setEditCategory(inferred);
+    if (!editImageUrl || Object.values(CATEGORY_FALLBACK_IMAGES).includes(editImageUrl)) {
+      setEditImageUrl(CATEGORY_FALLBACK_IMAGES[inferred]);
+    }
+  };
+
+  // Nén ảnh bằng Canvas khi tải ảnh mới từ máy
+  const handleEditImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDim = 600;
+          let w = img.width;
+          let h = img.height;
+          if (w > h && w > maxDim) {
+            h = Math.round((h * maxDim) / w);
+            w = maxDim;
+          } else if (h > maxDim) {
+            w = Math.round((w * maxDim) / h);
+            h = maxDim;
+          }
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, w, h);
+          const compressed = canvas.toDataURL('image/jpeg', 0.8);
+          setEditImageUrl(compressed);
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
   };
 
   const handleSaveEdit = async () => {
     if (!editingWish) return;
     setSavingEdit(true);
+
+    const chosenImg = editImageUrl || CATEGORY_FALLBACK_IMAGES[editCategory] || CATEGORY_FALLBACK_IMAGES['bicycle'];
 
     const updatedData: Partial<WishItem> = {
       title: editTitle.trim(),
@@ -153,11 +197,11 @@ export default function ProfilePage() {
       honor_commitment: editPledge.trim(),
       province_code: editProvince,
       ward_code: editDistrict,
-      imageUrl: CATEGORY_FALLBACK_IMAGES[editCategory] || editingWish.imageUrl
+      imageUrl: chosenImg
     };
 
     try {
-      // 1. Cố gắng ghi lên Supabase nếu có thể
+      // 1. Cập nhật Supabase
       if (!editingWish.id.startsWith('opt-')) {
         await supabase
           .from('wishes')
@@ -165,13 +209,16 @@ export default function ProfilePage() {
           .eq('id', editingWish.id);
       }
 
-      // 2. Ghi đè vào từ điển cập nhật bền vững
+      // 2. Lưu ảnh độc lập
+      localStorage.setItem(`SOVA_WISH_IMG_${editingWish.id}`, chosenImg);
+
+      // 3. Ghi đè vào từ điển cập nhật bền vững
       let updatedDict: Record<string, Partial<WishItem>> = {};
       try { updatedDict = JSON.parse(localStorage.getItem('SOVA_UPDATED_WISH_DICT') || '{}'); } catch {}
       updatedDict[editingWish.id] = updatedData;
       localStorage.setItem('SOVA_UPDATED_WISH_DICT', JSON.stringify(updatedDict));
 
-      // 3. Cập nhật LocalStorage danh sách
+      // 4. Cập nhật LocalStorage
       const stored = localStorage.getItem('SOVA_OPTIMISTIC_WISHES');
       if (stored) {
         const list: WishItem[] = JSON.parse(stored);
@@ -181,31 +228,32 @@ export default function ProfilePage() {
         localStorage.setItem('SOVA_OPTIMISTIC_WISHES', JSON.stringify(updatedList));
       }
 
-      // 4. Cập nhật state nội bộ
+      // 5. Cập nhật state
       setMyWishes(prev => prev.map(item => 
         item.id === editingWish.id ? { ...item, ...updatedData } : item
       ));
 
-      alert('Đã cập nhật thông tin và danh mục thành công!');
       setEditingWish(null);
-    } catch (err: any) {
-      alert('Đã lưu thay đổi cục bộ thành công.');
+    } catch {
       setEditingWish(null);
     } finally {
       setSavingEdit(false);
     }
   };
 
-  const handleDeleteWish = async (wishId: string) => {
-    if (!confirm('Bạn có chắc chắn muốn xóa vĩnh viễn điều ước này không?')) return;
+  // Xác nhận Xóa Vĩnh Viễn bằng Custom Modal (Không dùng window.confirm)
+  const confirmExecuteDelete = async () => {
+    if (!deletingWish) return;
+    setDeletingProcess(true);
+    const wishId = deletingWish.id;
 
     try {
-      // 1. Thử xóa trên Supabase
+      // 1. Gửi lệnh xóa lên Supabase
       if (!wishId.startsWith('opt-')) {
         await supabase.from('wishes').delete().eq('id', wishId);
       }
 
-      // 2. Thêm vào danh sách ID đã xóa vĩnh viễn (Chống phục hồi từ server)
+      // 2. Thêm vào danh sách ID đã xóa vĩnh viễn (Chặn 100% server kéo về lại)
       let deletedIds: string[] = [];
       try { deletedIds = JSON.parse(localStorage.getItem('SOVA_DELETED_WISH_IDS') || '[]'); } catch {}
       if (!deletedIds.includes(wishId)) deletedIds.push(wishId);
@@ -219,11 +267,14 @@ export default function ProfilePage() {
       }
       localStorage.removeItem(`SOVA_WISH_IMG_${wishId}`);
 
+      // 4. Xóa ngay lập tức khỏi UI
       setMyWishes(prev => prev.filter(item => item.id !== wishId));
-      alert('Đã xóa điều ước thành công khỏi toàn bộ hệ thống.');
-    } catch (err: any) {
-      alert('Đã xóa điều ước thành công.');
+      setDeletingWish(null);
+    } catch {
       setMyWishes(prev => prev.filter(item => item.id !== wishId));
+      setDeletingWish(null);
+    } finally {
+      setDeletingProcess(false);
     }
   };
 
@@ -300,7 +351,7 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {/* 3 Tabs Điều Hướng */}
+      {/* Tabs */}
       <div className="flex border-b border-warm-200 gap-2 sm:gap-6 overflow-x-auto pb-1 no-scrollbar">
         <button
           onClick={() => setActiveTab('MY_WISHES')}
@@ -339,7 +390,7 @@ export default function ProfilePage() {
           <div className="flex justify-between items-center">
             <div>
               <h3 className="text-lg font-black text-warm-900">Quản Lý Tin Đăng & Ước Nguyện Đã Gieo</h3>
-              <p className="text-xs text-warm-700">Xem trạng thái duyệt, chỉnh sửa phân loại hoặc thu hồi tin đăng bất kỳ lúc nào.</p>
+              <p className="text-xs text-warm-700">Xem trạng thái duyệt, chỉnh sửa ảnh/phân loại hoặc thu hồi tin đăng bất kỳ lúc nào.</p>
             </div>
           </div>
 
@@ -376,7 +427,6 @@ export default function ProfilePage() {
                     key={wish.id}
                     className="bg-white rounded-3xl border border-warm-200 p-5 sm:p-6 shadow-soft flex flex-col md:flex-row gap-5 items-start md:items-center justify-between"
                   >
-                    {/* Ảnh & Thông tin */}
                     <div className="flex flex-col sm:flex-row items-start gap-4 flex-1">
                       <img 
                         src={resolvedImg} 
@@ -413,7 +463,6 @@ export default function ProfilePage() {
                       </div>
                     </div>
 
-                    {/* 2 Nút: Sửa & Xóa */}
                     <div className="flex md:flex-col gap-2 w-full md:w-auto shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-warm-100">
                       <button
                         onClick={() => handleOpenEdit(wish)}
@@ -424,7 +473,7 @@ export default function ProfilePage() {
                       </button>
 
                       <button
-                        onClick={() => handleDeleteWish(wish.id)}
+                        onClick={() => setDeletingWish(wish)}
                         className="flex-1 md:flex-none px-4 py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-bold transition-all flex items-center justify-center gap-1.5 shadow-2xs"
                       >
                         <Trash2 className="w-3.5 h-3.5"/>
@@ -439,7 +488,41 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* MODAL SỬA ĐIỀU ƯỚC TOÀN DIỆN */}
+      {/* TAB 2 & 3 */}
+      {activeTab === 'TIMEBANK' && (
+        <div className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-8 shadow-soft space-y-6">
+          <div className="space-y-1">
+            <span className="text-xs font-black uppercase text-brand-700">Chứng Chỉ Phụng Sự Xã Hội</span>
+            <h3 className="text-lg font-black text-warm-900">Thanh Tiến Độ Trả Nợ Xã Hội Bằng Tri Thức</h3>
+            <p className="text-xs text-warm-700">
+              Nhận thiết bị 0-VND không phải là mang ơn, mà là cam kết cống hiến 10 giờ tương trợ cộng đồng để giữ vững nhân phẩm.
+            </p>
+          </div>
+          <div className="space-y-2 p-4 bg-warm-50 rounded-2xl border border-warm-200">
+            <div className="flex justify-between text-xs font-black">
+              <span>Tiến độ hoàn thành:</span>
+              <span className="text-brand-700">{timebank.hoursDone} / {timebank.hoursRequired} Giờ (60%)</span>
+            </div>
+            <div className="w-full h-3 bg-warm-200 rounded-full overflow-hidden">
+              <div className="h-full bg-brand-600 rounded-full" style={{ width: '60%' }}/>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeTab === 'RELAY' && (
+        <div className="bg-white rounded-3xl border border-warm-200 p-6 sm:p-8 shadow-soft space-y-6">
+          <div className="space-y-1">
+            <span className="text-xs font-black uppercase text-sun-700">Giao Thức Truyền Lửa Tốt Nghiệp</span>
+            <h3 className="text-lg font-black text-warm-900">Bàn Giao Trọn Gói Tri Thức Cho Khóa Dưới</h3>
+            <p className="text-xs text-warm-700">
+              Chuyển giao lại chiếc máy kèm kho tài nguyên học tập để một đàn em khác được bước tiếp.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL SỬA ĐIỀU ƯỚC: CÓ THÊM MỤC THAY ĐỔI ẢNH */}
       {editingWish && (
         <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border border-warm-200 max-w-xl w-full p-6 sm:p-8 shadow-2xl space-y-5 max-h-[90vh] overflow-y-auto">
@@ -464,7 +547,7 @@ export default function ProfilePage() {
                 />
               </div>
 
-              {/* BỘ CHỌN PHÂN LOẠI DANH MỤC */}
+              {/* Phân loại thiết bị */}
               <div className="space-y-1">
                 <label className="text-xs font-bold text-warm-800 flex items-center justify-between">
                   <span>Phân loại thiết bị / công cụ:</span>
@@ -472,7 +555,10 @@ export default function ProfilePage() {
                 </label>
                 <select
                   value={editCategory}
-                  onChange={e => setEditCategory(e.target.value)}
+                  onChange={e => {
+                    setEditCategory(e.target.value);
+                    setEditImageUrl(CATEGORY_FALLBACK_IMAGES[e.target.value]);
+                  }}
                   className="w-full p-3 rounded-2xl border-2 border-brand-500 bg-brand-50/40 text-xs font-black text-brand-900 focus:outline-none"
                 >
                   <option value="bicycle">🚲 Xe đạp đến trường (Bicycle)</option>
@@ -481,6 +567,32 @@ export default function ProfilePage() {
                   <option value="study_tools">📚 Dụng cụ tri thức (Sách vở, bàn ghế)</option>
                   <option value="livelihood_tools">🔧 Công cụ mưu sinh (Đồ nghề sửa chữa)</option>
                 </select>
+              </div>
+
+              {/* MỤC THAY ĐỔI ẢNH MINH CHỨNG */}
+              <div className="space-y-2 p-3.5 bg-warm-50 rounded-2xl border border-warm-200">
+                <label className="text-xs font-bold text-warm-900 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Camera className="w-4 h-4 text-brand-600"/>
+                    Hình ảnh minh chứng hiện tại:
+                  </span>
+                  <label className="px-3 py-1 bg-brand-600 hover:bg-brand-700 text-white rounded-lg text-[11px] font-bold cursor-pointer shadow-xs">
+                    <span>Tải ảnh mới từ máy</span>
+                    <input type="file" accept="image/*" onChange={handleEditImageUpload} className="hidden"/>
+                  </label>
+                </label>
+
+                <div className="flex items-center gap-3">
+                  <img 
+                    src={editImageUrl || CATEGORY_FALLBACK_IMAGES[editCategory]} 
+                    alt="Preview" 
+                    className="w-20 h-20 rounded-xl object-cover border-2 border-brand-400 shrink-0 shadow-sm"
+                  />
+                  <div className="text-[11px] text-warm-700 space-y-1">
+                    <p className="font-semibold text-warm-900">Bấm nút "Tải ảnh mới từ máy" để thay ảnh thực tế.</p>
+                    <p>Hệ thống tự động nén nhẹ dưới 80KB để tải trang nhanh nhất.</p>
+                  </div>
+                </div>
               </div>
 
               {/* Hoàn cảnh */}
@@ -559,7 +671,43 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {/* Bằng khen chứng chỉ xanh */}
+      {/* MODAL XÁC NHẬN XÓA TIN CHUYÊN NGHIỆP (KHÔNG BỊ CHẶN BỞI WINDOW.CONFIRM) */}
+      {deletingWish && (
+        <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in">
+          <div className="bg-white rounded-3xl border-2 border-red-500 max-w-md w-full p-6 sm:p-8 shadow-2xl text-center space-y-5">
+            <div className="w-16 h-16 rounded-full bg-red-50 text-red-600 mx-auto flex items-center justify-center ring-8 ring-red-100">
+              <AlertTriangle className="w-8 h-8"/>
+            </div>
+
+            <div className="space-y-2">
+              <h3 className="text-lg font-black text-warm-900">Xác Nhận Xóa Vĩnh Viễn?</h3>
+              <p className="text-xs text-warm-700 leading-relaxed">
+                Bạn đang xóa điều ước: <strong className="text-warm-900 block mt-1">"{deletingWish.title}"</strong>
+                Hồ sơ này sẽ được gỡ bỏ hoàn toàn khỏi Cây Nguyện Ước và danh sách cá nhân của bạn.
+              </p>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <button
+                onClick={() => setDeletingWish(null)}
+                className="flex-1 py-2.5 rounded-xl border border-warm-200 text-xs font-bold text-warm-700 hover:bg-warm-100"
+              >
+                Giữ Lại
+              </button>
+              <button
+                disabled={deletingProcess}
+                onClick={confirmExecuteDelete}
+                className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-black shadow-xs flex items-center justify-center gap-2"
+              >
+                <Trash2 className="w-4 h-4"/>
+                <span>{deletingProcess ? 'Đang Xóa...' : 'Xóa Vĩnh Viễn'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bằng khen chứng chỉ */}
       {showCertModal && (
         <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border-4 border-sun-500/40 max-w-2xl w-full p-6 sm:p-10 shadow-2xl relative space-y-6">

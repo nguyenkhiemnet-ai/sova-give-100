@@ -20,7 +20,7 @@ export const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
   livelihood_tools: 'https://images.unsplash.com/photo-1581783342308-f792dbdd27c5?auto=format&fit=crop&w=800&q=80',
 };
 
-// Hàm suy luận tự động danh mục thông minh theo tiêu đề
+// Tự động nhận diện danh mục thông minh theo tiêu đề
 export function inferCategory(title: string, currentCategory?: string): string {
   const t = (title || '').toLowerCase();
   if (t.includes('xe đạp') || t.includes('xe dap') || t.includes('xe ') || t.includes('bike')) return 'bicycle';
@@ -126,7 +126,6 @@ export function getDistrictsByProvince(provinceCode: string): District[] {
   return p ? p.districts : [{ code: 'ALL', name: 'Toàn bộ Quận/Huyện' }];
 }
 
-// Khắc phục triệt để lỗi gán nhầm quận chéo tỉnh
 export function getDistrictNameSafe(provCode: string, wardCode?: string): string {
   if (!wardCode) return 'Khu vực Trung tâm';
   const inProv = getDistrictsByProvince(provCode).find(d => d.code === wardCode);
