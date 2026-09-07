@@ -34,7 +34,7 @@ export const DEFAULT_FULL_CMS: FullSiteCMS = {
     badge: "Kinh Tế Tuần Hoàn 0-VND • Trao Cơ Hội, Giữ Danh Dự",
     titlePrimary: "Đừng để đồ tốt ngủ quên trong góc tối.",
     titleHighlight: "Hãy biến chúng thành tương lai của ai đó.",
-    description: "Bao nhiêu chiếc laptop cũ, xe đạp, máy may vẫn còn chạy rất tốt nhưng đang nằm phủ bụi trong kho? Tại SOVA GIVE 100, vật phẩm của bạn tìm thấy cuộc đời thứ hai qua Hộ Chiếu Số và cái Bắt Tay Tử Tế 0 Đồng.",
+    description: "Bao nhiêu chiếc laptop cũ, xe đạp, máy may vẫn còn chạy rất tốt nhưng đang nằm phủ bụi trong kho? Tại SOVAHUB.org, vật phẩm của bạn tìm thấy cuộc đời thứ hai qua Hộ Chiếu Số và cái Bắt Tay Tử Tế 0 Đồng.",
     bannerImage: "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=1200&q=80",
     imageQuote: "Mỗi chiếc xe đạp trao đi là con đường đến trường của các em bớt gập ghềnh.",
     statKarma: "100,000+ ⭐",
@@ -44,8 +44,8 @@ export const DEFAULT_FULL_CMS: FullSiteCMS = {
   footer: {
     badge: "Lan Tỏa Tinh Thần 0-VND Đến Cộng Đồng",
     headline: "Một Lần Chia Sẻ • Một Tương Lai Được Thắp Sáng",
-    description: "Hãy gửi đường link SOVA GIVE 100 tới bạn bè hoặc các hội đồng hương để những chiếc xe đạp, máy tính cũ tìm đúng người cần nhất.",
-    copyright: "© 2026 SOVA GIVE 100 • Hệ Thống Tuần Hoàn Sinh Kế Phi Thương Mại",
+    description: "Hãy gửi đường link SOVAHUB.org tới bạn bè hoặc các hội đồng hương để những chiếc xe đạp, máy tính cũ tìm đúng người cần nhất.",
+    copyright: "© 2026 SOVAHUB.org • Hệ Thống Tuần Hoàn Sinh Kế Phi Thương Mại",
     legalNote: "Bảo mật danh dự công dân theo Nghị định 13/2023/NĐ-CP"
   },
   subpages: {

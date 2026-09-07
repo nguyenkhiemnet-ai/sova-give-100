@@ -127,7 +127,7 @@ export default function Navbar() {
           </div>
           <div>
             <div className="flex items-center gap-1.5">
-              <span className="font-black text-warm-900 text-base tracking-tight leading-none">SOVA GIVE 100</span>
+              <span className="font-black text-warm-900 text-base tracking-tight leading-none">SOVAHUB.org</span>
               <span className="px-1.5 py-0.5 rounded-md bg-brand-50 text-brand-700 text-[10px] font-black border border-brand-200 leading-none">0-VND</span>
             </div>
             <span className="text-[10px] text-warm-600 font-semibold block mt-0.5">Mạng Lưới Tuần Hoàn Sinh Kế</span>
@@ -310,7 +310,7 @@ export default function Navbar() {
               <HeartHandshake className="w-4 h-4"/>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="font-black text-warm-900 text-sm tracking-tight">SOVA GIVE 100</span>
+              <span className="font-black text-warm-900 text-sm tracking-tight">SOVAHUB.org</span>
               <span className="px-1.5 py-0.5 rounded-md bg-brand-50 text-brand-700 text-[10px] font-black border border-brand-200 leading-none">0-VND</span>
             </div>
           </Link>

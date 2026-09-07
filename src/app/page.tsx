@@ -263,8 +263,8 @@ export default function HomePage() {
     }, 1200);
   };
 
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://sova-give-100-app.pages.dev';
-  const shareTitle = "SOVA GIVE 100 • Nền Tảng Tuần Hoàn Sinh Kế & Tri Thức 0-VND";
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : 'https://sovahub.org';
+  const shareTitle = "SOVAHUB.org • Nền Tảng Tuần Hoàn Sinh Kế & Tri Thức 0-VND";
 
   const handleCopyShareLink = () => {
     navigator.clipboard.writeText(shareUrl);
