@@ -193,6 +193,26 @@ export default function DedicatedAdminPortal() {
   const [userSearch, setUserSearch] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState<'ALL' | 'SUPER_ADMIN' | 'USER'>('ALL');
   const [resetMessage, setResetMessage] = useState<{ [email: string]: string }>({});
+  const [resetCooldowns, setResetCooldowns] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const hasActive = Object.values(resetCooldowns).some(c => c > 0);
+    if (!hasActive) return;
+    const timer = setInterval(() => {
+      setResetCooldowns(prev => {
+        const updated = { ...prev };
+        let changed = false;
+        Object.keys(updated).forEach(k => {
+          if (updated[k] > 0) {
+            updated[k] -= 1;
+            changed = true;
+          }
+        });
+        return changed ? updated : prev;
+      });
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resetCooldowns]);
 
   const loadUsers = async () => {
     setLoadingUsers(true);
@@ -207,14 +227,16 @@ export default function DedicatedAdminPortal() {
   };
 
   const handleSendResetPassword = async (userEmail: string) => {
+    if ((resetCooldowns[userEmail] || 0) > 0) return;
     setResetMessage(prev => ({ ...prev, [userEmail]: 'Đang gửi...' }));
+    setResetCooldowns(prev => ({ ...prev, [userEmail]: 60 }));
     const res = await resetPassword(userEmail);
     if (res.success) {
-      setResetMessage(prev => ({ ...prev, [userEmail]: 'Đã gửi email khôi phục thành công!' }));
+      setResetMessage(prev => ({ ...prev, [userEmail]: 'Đã gửi email khôi phục thành công! (Kiểm tra cả Inbox & Spam)' }));
     } else {
       let errText = res.error || '';
-      if (errText.includes('security purposes') || errText.includes('rate limit')) {
-        errText = 'Vui lòng đợi vài giây trước khi bấm gửi lại (chống spam).';
+      if (errText.toLowerCase().includes('security purposes') || errText.toLowerCase().includes('rate limit') || errText.toLowerCase().includes('over_email_send_rate_limit')) {
+        errText = 'Hệ thống bảo vệ chống spam: Vui lòng đợi 60 giây trước khi yêu cầu gửi lại.';
       }
       setResetMessage(prev => ({ ...prev, [userEmail]: `Lỗi: ${errText}` }));
     }
@@ -1427,23 +1449,36 @@ export default function DedicatedAdminPortal() {
                         </td>
 
                         <td className="py-3 px-4 text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <button
-                              onClick={() => handleSendResetPassword(u.email)}
-                              className="px-3 py-1.5 rounded-xl bg-warm-100 hover:bg-brand-50 hover:text-brand-700 text-warm-800 text-[11px] font-bold border border-warm-200 transition-colors cursor-pointer flex items-center gap-1"
-                              title="Gửi email đặt lại mật khẩu cho khách hàng này"
-                            >
-                              <KeyRound className="w-3 h-3"/>
-                              <span>Gửi Link Reset</span>
-                            </button>
-                          </div>
-                          {resetMessage[u.email] && (
-                            <p className={`text-[10px] font-bold mt-1 ${
-                              resetMessage[u.email].includes('thành công') ? 'text-emerald-600' : 'text-warm-600'
-                            }`}>
-                              {resetMessage[u.email]}
-                            </p>
-                          )}
+                          {(() => {
+                            const cooldown = resetCooldowns[u.email] || 0;
+                            const isSending = resetMessage[u.email] === 'Đang gửi...';
+                            return (
+                              <>
+                                <div className="flex items-center justify-end gap-2">
+                                  <button
+                                    disabled={cooldown > 0 || isSending}
+                                    onClick={() => handleSendResetPassword(u.email)}
+                                    className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-all flex items-center gap-1.5 ${
+                                      cooldown > 0 || isSending
+                                        ? 'bg-warm-100 text-warm-400 border-warm-200 cursor-not-allowed opacity-75'
+                                        : 'bg-warm-100 hover:bg-brand-50 hover:text-brand-700 text-warm-800 border-warm-200 cursor-pointer'
+                                    }`}
+                                    title={cooldown > 0 ? `Đang chờ chống spam (${cooldown}s)` : "Gửi email đặt lại mật khẩu cho khách hàng này"}
+                                  >
+                                    <KeyRound className="w-3 h-3"/>
+                                    <span>{cooldown > 0 ? `Đã gửi (Chờ ${cooldown}s...)` : isSending ? 'Đang gửi...' : 'Gửi Link Reset'}</span>
+                                  </button>
+                                </div>
+                                {resetMessage[u.email] && (
+                                  <p className={`text-[10px] font-bold mt-1 ${
+                                    resetMessage[u.email].includes('thành công') ? 'text-emerald-600' : 'text-warm-600'
+                                  }`}>
+                                    {resetMessage[u.email]}
+                                  </p>
+                                )}
+                              </>
+                            );
+                          })()}
                         </td>
                       </tr>
                     );

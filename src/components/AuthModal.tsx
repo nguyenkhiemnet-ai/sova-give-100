@@ -35,8 +35,19 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [resetSuccess, setResetSuccess] = useState(false);
+  const [resetCooldown, setResetCooldown] = useState(0);
 
   const modalRef = useRef<HTMLDivElement>(null);
+
+  // Bộ đếm lùi thời gian Cooldown gửi email
+  useEffect(() => {
+    if (resetCooldown <= 0) return;
+    const timer = setInterval(() => {
+      setResetCooldown(prev => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [resetCooldown]);
 
   // Khôi phục email đã ghi nhớ
   useEffect(() => {
@@ -56,6 +67,9 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
       setSuccessMessage('');
       setPassword('');
       setConfirmPassword('');
+      if (defaultTab !== 'FORGOT') {
+        setResetSuccess(false);
+      }
     }
   }, [isOpen, defaultTab]);
 
@@ -178,14 +192,21 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
         onClose();
       }, 900);
     } else {
-      setErrorMessage(res.error || 'Không thể tạo tài khoản, vui lòng thử lại.');
+      let errText = res.error || '';
+      if (errText.includes('rate limit') || errText.includes('over_email_send_rate_limit')) {
+        errText = 'Hệ thống bảo vệ chống spam: Vui lòng đợi 60 giây trước khi thử lại.';
+      }
+      setErrorMessage(errText || 'Không thể tạo tài khoản, vui lòng thử lại.');
     }
   };
 
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleForgotPassword = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!email.trim()) {
       setErrorMessage('Vui lòng nhập địa chỉ email để khôi phục.');
+      return;
+    }
+    if (resetCooldown > 0) {
       return;
     }
 
@@ -197,9 +218,16 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
     setLoading(false);
 
     if (res.success) {
+      setResetSuccess(true);
+      setResetCooldown(60);
       setSuccessMessage(res.message || 'Đã gửi liên kết khôi phục mật khẩu vào email của bạn.');
     } else {
-      setErrorMessage(res.error || 'Không thể gửi email khôi phục.');
+      let errText = res.error || '';
+      if (errText.includes('rate limit') || errText.includes('security purposes') || errText.includes('over_email_send_rate_limit')) {
+        errText = 'Hệ thống bảo vệ chống spam: Vui lòng đợi 60 giây trước khi yêu cầu gửi lại.';
+        setResetCooldown(60);
+      }
+      setErrorMessage(errText || 'Không thể gửi email khôi phục.');
     }
   };
 
@@ -519,51 +547,118 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
 
           {/* TAB 3: KHÔI PHỤC MẬT KHẨU */}
           {activeTab === 'FORGOT' && (
-            <form onSubmit={handleForgotPassword} noValidate className="space-y-3.5">
-              <div>
-                <label className="block text-xs font-semibold text-warm-700 mb-1">
-                  Email Tài Khoản
-                </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400 pointer-events-none" />
-                  <input
-                    type="email"
-                    placeholder="nguyenvana@gmail.com"
-                    value={email}
-                    onChange={e => { setEmail(e.target.value); if (errorMessage) setErrorMessage(''); }}
-                    className="w-full pl-9 pr-3 py-2 bg-warm-50/60 border border-warm-200 rounded-xl text-xs font-medium text-warm-900 placeholder:text-warm-400 focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 transition-all"
-                  />
+            resetSuccess ? (
+              <div className="space-y-4 text-center py-2 animate-in fade-in zoom-in-95">
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-700 flex items-center justify-center shadow-soft">
+                  <Mail className="w-7 h-7 text-emerald-600" />
+                </div>
+
+                <div className="space-y-1.5">
+                  <h3 className="text-sm font-bold text-warm-900">
+                    Đã gửi liên kết khôi phục!
+                  </h3>
+                  <p className="text-xs text-warm-600 leading-relaxed">
+                    Hệ thống đã gửi hướng dẫn đặt lại mật khẩu đến email:
+                  </p>
+                  <div className="p-2 rounded-xl bg-warm-100/80 border border-warm-200 text-xs font-black text-emerald-800 break-all">
+                    {email}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-amber-50/80 rounded-xl border border-amber-200 text-[11px] text-amber-900 text-left space-y-1.5 leading-relaxed">
+                  <div className="flex items-start gap-1.5 font-bold">
+                    <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                    <span>Lưu ý quan trọng:</span>
+                  </div>
+                  <p className="pl-5">• Vui lòng kiểm tra <strong>Hộp thư đến</strong> và cả thư mục <strong>Spam / Thư rác</strong>.</p>
+                  <p className="pl-5">• Nếu email này <strong>chưa từng đăng ký tài khoản</strong> trên SOVA, bạn sẽ không nhận được thư. Hãy chọn Tạo tài khoản mới.</p>
+                </div>
+
+                <div className="space-y-2 pt-1">
+                  <button
+                    type="button"
+                    disabled={loading || resetCooldown > 0}
+                    onClick={() => handleForgotPassword()}
+                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:bg-warm-200 disabled:text-warm-500 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Đang gửi lại...</span>
+                      </>
+                    ) : resetCooldown > 0 ? (
+                      <span>Gửi lại sau ({resetCooldown}s)</span>
+                    ) : (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Gửi lại liên kết</span>
+                      </>
+                    )}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setActiveTab('LOGIN');
+                      setErrorMessage('');
+                      setSuccessMessage('');
+                      setResetSuccess(false);
+                    }}
+                    className="w-full py-1.5 text-xs font-semibold text-warm-700 hover:text-emerald-700 transition-colors cursor-pointer"
+                  >
+                    ← Quay lại Đăng Nhập
+                  </button>
                 </div>
               </div>
+            ) : (
+              <form onSubmit={handleForgotPassword} noValidate className="space-y-3.5">
+                <div>
+                  <label className="block text-xs font-semibold text-warm-700 mb-1">
+                    Email Tài Khoản
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400 pointer-events-none" />
+                    <input
+                      type="email"
+                      placeholder="nguyenvana@gmail.com"
+                      value={email}
+                      onChange={e => { setEmail(e.target.value); if (errorMessage) setErrorMessage(''); }}
+                      className="w-full pl-9 pr-3 py-2 bg-warm-50/60 border border-warm-200 rounded-xl text-xs font-medium text-warm-900 placeholder:text-warm-400 focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 transition-all"
+                    />
+                  </div>
+                </div>
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-2.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-50"
-              >
-                {loading ? (
-                  <>
-                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                    <span>Đang gửi liên kết...</span>
-                  </>
-                ) : (
-                  <>
-                    <Mail className="w-3.5 h-3.5" />
-                    <span>Gửi Liên Kết Khôi Phục</span>
-                  </>
-                )}
-              </button>
-
-              <div className="text-center pt-1">
                 <button
-                  type="button"
-                  onClick={() => { setActiveTab('LOGIN'); setErrorMessage(''); }}
-                  className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
+                  type="submit"
+                  disabled={loading || resetCooldown > 0}
+                  className="w-full py-2.5 px-4 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:bg-warm-200 disabled:text-warm-500 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] disabled:cursor-not-allowed"
                 >
-                  ← Quay lại Đăng Nhập
+                  {loading ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Đang gửi liên kết...</span>
+                    </>
+                  ) : resetCooldown > 0 ? (
+                    <span>Chờ ({resetCooldown}s)...</span>
+                  ) : (
+                    <>
+                      <Mail className="w-3.5 h-3.5" />
+                      <span>Gửi Liên Kết Khôi Phục</span>
+                    </>
+                  )}
                 </button>
-              </div>
-            </form>
+
+                <div className="text-center pt-1">
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('LOGIN'); setErrorMessage(''); }}
+                    className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
+                  >
+                    ← Quay lại Đăng Nhập
+                  </button>
+                </div>
+              </form>
+            )
           )}
 
           {/* Dòng phân cách & Tùy chọn Google tinh tế (chỉ hiện ở LOGIN hoặc REGISTER) */}
