@@ -8,6 +8,7 @@ export async function onRequest(context) {
 
   const response = await context.next();
   const newHeaders = new Headers(response.headers);
+  newHeaders.delete('alt-svc');
   newHeaders.set('alt-svc', 'clear');
 
   return new Response(response.body, {
