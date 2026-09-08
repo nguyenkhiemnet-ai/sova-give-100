@@ -36,6 +36,17 @@ export default function RootLayout({
 }) {
   return (
     <html lang="vi" className="scroll-smooth">
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined' && window.location.hostname.includes('pages.dev')) {
+                window.location.replace('https://sovahub.org' + window.location.pathname + window.location.search + (window.location.hash || ''));
+              }
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-screen flex flex-col bg-warm-50 text-warm-900 selection:bg-brand-100 selection:text-brand-900 pb-28 md:pb-0">
         
         {/* GLOBAL BROADCAST BANNER */}

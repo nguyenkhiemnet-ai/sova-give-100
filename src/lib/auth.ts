@@ -72,10 +72,17 @@ export function setActiveUser(user: UserProfile | null): void {
   window.dispatchEvent(new Event('sova_auth_change'));
 }
 
+export function getCanonicalSiteUrl(): string {
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return window.location.origin;
+    }
+  }
+  return process.env.NEXT_PUBLIC_SITE_URL || 'https://sovahub.org';
+}
+
 export async function loginWithGoogle(): Promise<void> {
-  const redirectTarget = typeof window !== 'undefined'
-    ? window.location.origin
-    : 'https://sovahub.org';
+  const redirectTarget = getCanonicalSiteUrl();
 
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
@@ -115,9 +122,7 @@ export async function loginWithEmail(email: string, password: string): Promise<{
 
 export async function signUpWithEmail(email: string, password: string, fullName: string): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
-    const redirectTarget = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
-      ? window.location.origin
-      : 'https://sovahub.org';
+    const redirectTarget = getCanonicalSiteUrl();
 
     const { data, error } = await supabase.auth.signUp({
       email: email.trim(),
@@ -191,9 +196,7 @@ export async function signUpWithEmail(email: string, password: string, fullName:
 
 export async function resetPassword(email: string): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
-    const redirectTarget = typeof window !== 'undefined'
-      ? window.location.origin
-      : 'https://sovahub.org';
+    const redirectTarget = getCanonicalSiteUrl();
 
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: `${redirectTarget}/`

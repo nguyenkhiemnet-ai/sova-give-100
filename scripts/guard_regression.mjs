@@ -107,6 +107,26 @@ async function runGate() {
     assert(false, `Lỗi kiểm tra tệp PWA / _headers: ${err.message}`);
   }
 
+  // 5. CHECK CANONICAL DOMAIN ENFORCEMENT
+  console.log('\n[GATE 5] KIỂM TRA KHÓA CHẶT TÊN MIỀN THƯƠNG HIỆU CANONICAL:');
+  try {
+    const redirectsPath = path.resolve(process.cwd(), 'public/_redirects');
+    const redirectsExists = fs.existsSync(redirectsPath);
+    assert(redirectsExists, 'Tệp public/_redirects tồn tại');
+    if (redirectsExists) {
+      const redirectsContent = fs.readFileSync(redirectsPath, 'utf-8');
+      assert(redirectsContent.includes('https://sovahub.org/:splat 301!'), 'Quy tắc 301! chuyển hướng tên miền pages.dev về sovahub.org chính xác');
+    }
+
+    const authContent = fs.readFileSync(path.resolve(process.cwd(), 'src/lib/auth.ts'), 'utf-8');
+    assert(authContent.includes('getCanonicalSiteUrl'), 'Hàm getCanonicalSiteUrl khóa cứng domain chuẩn trong auth.ts');
+
+    const layoutContent = fs.readFileSync(path.resolve(process.cwd(), 'src/app/layout.tsx'), 'utf-8');
+    assert(layoutContent.includes('window.location.replace(\'https://sovahub.org\''), 'Script chuyển hướng tức thì Client-side có mặt tại layout.tsx');
+  } catch (err) {
+    assert(false, `Lỗi kiểm tra cấu hình canonical domain: ${err.message}`);
+  }
+
   // TỔNG KẾT
   console.log('\n================================================================');
   console.log(`📊 TỔNG KẾT KIỂM TOÁN: ${passCount} PASSED • ${failCount} FAILED`);
