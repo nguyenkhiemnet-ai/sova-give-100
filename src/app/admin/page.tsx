@@ -988,8 +988,15 @@ export default function DedicatedAdminPortal() {
                 </label>
               </div>
 
-              <div className="aspect-[16/11] rounded-2xl overflow-hidden border-2 border-brand-500 shadow-md bg-warm-900">
-                <img src={fullCMS.hero.bannerImage} alt="Banner Preview" className="w-full h-full object-cover object-center"/>
+              <div className="aspect-[16/11] rounded-2xl overflow-hidden border-2 border-brand-500 shadow-md bg-warm-100">
+                <img 
+                  src={fullCMS.hero.bannerImage || '/hero-bicycle.webp'} 
+                  alt="Banner Preview" 
+                  className="w-full h-full object-cover object-center"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = '/hero-bicycle.webp';
+                  }}
+                />
               </div>
 
               <div className="text-xs space-y-1">

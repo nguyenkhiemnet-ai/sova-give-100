@@ -113,6 +113,15 @@ async function runGate() {
 
     const layoutContent = fs.readFileSync(path.resolve(process.cwd(), 'src/app/layout.tsx'), 'utf-8');
     assert(layoutContent.includes('rel="preconnect"'), 'RootLayout có gắn thẻ preconnect tăng tốc tải tài nguyên tĩnh');
+    assert(layoutContent.includes('rel="preload"') && layoutContent.includes('/hero-bicycle.webp'), 'RootLayout có gắn thẻ preload /hero-bicycle.webp');
+
+    const heroImgPath = path.resolve(process.cwd(), 'public/hero-bicycle.webp');
+    const heroExists = fs.existsSync(heroImgPath);
+    assert(heroExists, 'Tệp public/hero-bicycle.webp tồn tại nội bộ');
+    if (heroExists) {
+      const heroSize = fs.statSync(heroImgPath).size;
+      assert(heroSize < 60 * 1024, `Dung lượng ảnh Hero đạt chuẩn siêu nhẹ < 60KB: ${(heroSize / 1024).toFixed(1)} KB`);
+    }
   } catch (err) {
     assert(false, `Lỗi kiểm tra tệp PWA / _headers / Edge Cache: ${err.message}`);
   }

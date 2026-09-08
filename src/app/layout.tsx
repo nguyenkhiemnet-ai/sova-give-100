@@ -42,8 +42,7 @@ export default function RootLayout({
   return (
     <html lang="vi" className="scroll-smooth">
       <head>
-        <link rel="preconnect" href="https://images.unsplash.com" />
-        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        <link rel="preload" href="/hero-bicycle.webp" as="image" type="image/webp" />
         <link rel="preconnect" href="https://bltzkqrjzuplukamvdvb.supabase.co" crossOrigin="anonymous" />
         <link rel="dns-prefetch" href="https://bltzkqrjzuplukamvdvb.supabase.co" />
         <script

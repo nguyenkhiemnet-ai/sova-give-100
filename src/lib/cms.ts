@@ -55,7 +55,7 @@ export const DEFAULT_FULL_CMS: FullSiteCMS = {
     titlePrimary: "Đừng để đồ tốt ngủ quên trong góc tối.",
     titleHighlight: "Hãy biến chúng thành tương lai của ai đó.",
     description: "Bao nhiêu chiếc laptop cũ, xe đạp, máy may vẫn còn chạy rất tốt nhưng đang nằm phủ bụi trong kho? Tại SOVAHUB.org, vật phẩm của bạn tìm thấy cuộc đời thứ hai qua Hộ Chiếu Số và cái Bắt Tay Tử Tế 0 Đồng.",
-    bannerImage: "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=1200&q=80",
+    bannerImage: "/hero-bicycle.webp",
     imageQuote: "Mỗi chiếc xe đạp trao đi là con đường đến trường của các em bớt gập ghềnh.",
     statKarma: "100,000+ ⭐",
     statCO2: "1,450.5 kg",

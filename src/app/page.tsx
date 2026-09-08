@@ -485,15 +485,18 @@ export default function HomePage() {
           </div>
 
           <div className="lg:col-span-5 relative">
-            <div className="relative mx-auto rounded-3xl overflow-hidden shadow-xl border-4 border-white aspect-[16/11] bg-warm-900">
+            <div className="relative mx-auto rounded-3xl overflow-hidden shadow-xl border-4 border-white aspect-[16/11] bg-warm-100">
               <img 
-                src={heroCMS.bannerImage} 
-                alt="Banner minh họa" 
-                className="w-full h-full object-cover object-center"
+                src="/hero-bicycle.webp" 
+                alt="Mỗi chiếc xe đạp trao đi..." 
+                className="w-full h-full object-cover rounded-2xl shadow-xl"
+                onError={(e) => {
+                  (e.currentTarget as HTMLImageElement).src = '/hero-bicycle.webp';
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-5">
                 <p className="text-white text-xs font-bold leading-relaxed">
-                  "{heroCMS.imageQuote}"
+                  "{heroCMS.imageQuote || 'Mỗi chiếc xe đạp trao đi, một tương lai được thắp sáng'}"
                 </p>
               </div>
             </div>
