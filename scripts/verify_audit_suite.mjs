@@ -110,11 +110,11 @@ async function runAudit() {
 
   // TEST 4: Profile Page SSR / Loading
   total++;
-  console.log(`\n[TEST ${total}] Kiểm tra tải trang /profile...`);
+  console.log(`\n[TEST ${total}] Kiểm tra tải trang /profile/...`);
   try {
-    const res = await fetch('http://localhost:3000/profile');
+    const res = await fetch('http://localhost:3000/profile/');
     if (res.status === 200) {
-      console.log(`✅ TEST ${total} PASSED: Trang /profile phản hồi HTTP 200 OK.`);
+      console.log(`✅ TEST ${total} PASSED: Trang /profile/ phản hồi HTTP 200 OK.`);
       passed++;
     } else {
       console.error(`❌ TEST ${total} FAILED: HTTP ${res.status}`);

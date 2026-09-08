@@ -9,7 +9,7 @@ import {
 } from '@/lib/provinces';
 import { 
   getFullSiteCMS, saveFullSiteCMS, FullSiteCMS, DEFAULT_FULL_CMS, 
-  compressImageToWebP, DynamicCategoryItem 
+  compressImageToWebP, DynamicCategoryItem, saveCategoriesToCloud, fetchCategoriesFromCloud
 } from '@/lib/cms';
 import { 
   ShieldCheck, CheckCircle2, AlertTriangle, XCircle, 
@@ -58,15 +58,15 @@ export default function DedicatedAdminPortal() {
   const [newCatShort, setNewCatShort] = useState('');
   const [newCatDesc, setNewCatDesc] = useState('');
 
-  const handleAddCategory = () => {
+  const handleAddCategory = async () => {
     if (!newCatId.trim() || !newCatLabel.trim()) {
-      alert('Vui lòng điền mã ID và tên danh mục!');
+      showAdminToast('Vui lòng điền mã ID và tên danh mục!', 'warning');
       return;
     }
     const cleanId = newCatId.trim().toLowerCase().replace(/\s+/g, '_');
     const existing = fullCMS.categories || DEFAULT_FULL_CMS.categories;
     if (existing.some(c => c.id === cleanId)) {
-      alert('Mã danh mục này đã tồn tại!');
+      showAdminToast('Mã danh mục này đã tồn tại!', 'warning');
       return;
     }
     const newCategory: DynamicCategoryItem = {
@@ -82,17 +82,25 @@ export default function DedicatedAdminPortal() {
     setNewCatLabel('');
     setNewCatShort('');
     setNewCatDesc('');
-    alert('Đã thêm danh mục mới vào danh sách. Hãy bấm "Lưu Toàn Trang (Cần Mật Mã)" để áp dụng!');
+
+    // Tự động đồng bộ lên Supabase Cloud site_settings & API
+    await saveCategoriesToCloud(updatedCategories);
+    showAdminToast(`Đã thêm danh mục "${newCategory.label}" và tự động đồng bộ lên Cloud!`, 'success');
   };
 
-  const handleDeleteCategory = (catId: string) => {
+  const handleDeleteCategory = async (catId: string) => {
     const existing = fullCMS.categories || DEFAULT_FULL_CMS.categories;
     if (existing.length <= 1) {
-      alert('Hệ thống cần ít nhất 1 danh mục hoạt động!');
+      showAdminToast('Hệ thống cần ít nhất 1 danh mục hoạt động!', 'warning');
       return;
     }
+    const targetCat = existing.find(c => c.id === catId);
     const updatedCategories = existing.filter(c => c.id !== catId);
     setFullCMS(prev => ({ ...prev, categories: updatedCategories }));
+
+    // Tự động đồng bộ lên Supabase Cloud site_settings & API
+    await saveCategoriesToCloud(updatedCategories);
+    showAdminToast(`Đã xóa danh mục "${targetCat?.label || catId}" và đồng bộ lên Cloud!`, 'success');
   };
 
   // Quản lý Sổ cái Hộ chiếu & Bắt tay (Passports)
@@ -412,6 +420,11 @@ export default function DedicatedAdminPortal() {
         if (unlocked && isSuperAdminEmail(user?.email)) {
           setIsUnlocked(true);
           setFullCMS(getFullSiteCMS());
+          fetchCategoriesFromCloud().then(cloudCats => {
+            if (cloudCats && cloudCats.length > 0) {
+              setFullCMS(prev => ({ ...prev, categories: cloudCats }));
+            }
+          });
           loadWishes();
           loadUsers();
         } else {
@@ -440,6 +453,11 @@ export default function DedicatedAdminPortal() {
       setPinError(false);
       setPinInput('');
       setFullCMS(getFullSiteCMS());
+      fetchCategoriesFromCloud().then(cloudCats => {
+        if (cloudCats && cloudCats.length > 0) {
+          setFullCMS(prev => ({ ...prev, categories: cloudCats }));
+        }
+      });
       loadWishes();
       loadUsers();
     } else {

@@ -88,11 +88,146 @@ export const DEFAULT_FULL_CMS: FullSiteCMS = {
   ]
 };
 
+// ==============================================================================
+// BỘ ÁNH XẠ DANH MỤC THÔNG MINH (CATEGORY ALIAS MAPPER)
+// ==============================================================================
+export function normalizeCategorySlug(category?: string, title?: string): string {
+  // 1. Ưu tiên nhận diện từ khóa trực quan trong tiêu đề nếu có
+  if (title) {
+    const t = title.toLowerCase();
+    if (t.includes('xe đạp') || t.includes('xe dap') || t.includes('bicycle') || t.includes('bike')) return 'bicycle';
+    if (t.includes('máy may') || t.includes('may may') || t.includes('khâu') || t.includes('sewing')) return 'sewing_machine';
+    if (t.includes('máy tính') || t.includes('laptop') || t.includes('pc') || t.includes('máy vi tính') || t.includes('computer')) return 'laptop';
+    if (t.includes('sách') || t.includes('bút') || t.includes('vở') || t.includes('tri thức') || t.includes('học tập')) {
+      if (!t.includes('máy tính') && !t.includes('laptop')) return 'study_tools';
+    }
+    if (t.includes('mưu sinh') || t.includes('sinh kế') || t.includes('đồ nghề') || t.includes('công cụ')) {
+      if (t.includes('may')) return 'sewing_machine';
+      return 'livelihood_tools';
+    }
+  }
+
+  // 2. Chuẩn hóa theo mã slug / mã enum của database
+  const c = (category || '').trim().toLowerCase();
+  if (['commute', 'bicycle', 'xe_dap', 'xedap', 'bike'].includes(c)) return 'bicycle';
+  if (['study_device', 'laptop', 'may_tinh', 'maytinh', 'pc', 'computer'].includes(c)) return 'laptop';
+  if (['vocational_tool', 'sewing_machine', 'may_may', 'maymay', 'sewing'].includes(c)) return 'sewing_machine';
+  if (['study_tools', 'sach_vo', 'sachvo', 'books', 'tri_thuc'].includes(c)) return 'study_tools';
+  if (['livelihood_tools', 'cong_cu', 'congcu', 'muu_sinh'].includes(c)) return 'livelihood_tools';
+
+  return c || 'bicycle';
+}
+
 // Cờ kiểm soát fetch nền từ Supabase Cloud
 let isCloudFetching = false;
 
+/**
+ * Tải danh mục động trực tiếp từ Supabase Cloud (site_settings / api)
+ */
+export async function fetchCategoriesFromCloud(): Promise<DynamicCategoryItem[] | null> {
+  try {
+    // 1. Thử lấy qua Supabase site_settings (key: 'site_categories')
+    const { data: setCat, error: catErr } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'site_categories')
+      .maybeSingle();
+
+    if (!catErr && setCat && setCat.value && Array.isArray(setCat.value) && setCat.value.length > 0) {
+      const cats = setCat.value as DynamicCategoryItem[];
+      syncCategoriesLocally(cats);
+      return cats;
+    }
+
+    // 2. Thử lấy từ cms_full_config
+    const { data: fullData, error: fullErr } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'cms_full_config')
+      .maybeSingle();
+
+    if (!fullErr && fullData && fullData.value?.categories && Array.isArray(fullData.value.categories) && fullData.value.categories.length > 0) {
+      const cats = fullData.value.categories as DynamicCategoryItem[];
+      syncCategoriesLocally(cats);
+      return cats;
+    }
+
+    // 3. Gọi qua API Categories endpoint (hỗ trợ cả Cloudflare Pages & Local Dev)
+    const apiRes = await fetch('/api/categories', { cache: 'no-store' }).catch(() => null);
+    if (apiRes && apiRes.ok) {
+      const apiJson = await apiRes.json();
+      if (apiJson.categories && Array.isArray(apiJson.categories) && apiJson.categories.length > 0) {
+        syncCategoriesLocally(apiJson.categories);
+        return apiJson.categories;
+      }
+    }
+  } catch (e) {
+    console.warn('Lỗi đọc Cloud Categories:', e);
+  }
+  return null;
+}
+
+function syncCategoriesLocally(cats: DynamicCategoryItem[]) {
+  if (typeof window === 'undefined') return;
+  localStorage.setItem('SOVA_DYNAMIC_CATEGORIES', JSON.stringify(cats));
+  
+  // Cập nhật cả trong SOVA_FULL_SITE_CMS
+  try {
+    const existing = JSON.parse(localStorage.getItem('SOVA_FULL_SITE_CMS') || '{}');
+    existing.categories = cats;
+    localStorage.setItem('SOVA_FULL_SITE_CMS', JSON.stringify(existing));
+  } catch {}
+
+  window.dispatchEvent(new Event('sova_categories_updated'));
+  window.dispatchEvent(new Event('sova_cms_updated'));
+}
+
+/**
+ * Lưu danh mục mới lên Supabase Cloud & đồng bộ tức thì
+ */
+export async function saveCategoriesToCloud(categories: DynamicCategoryItem[]): Promise<boolean> {
+  syncCategoriesLocally(categories);
+
+  try {
+    // 1. Lưu vào site_settings (key: site_categories)
+    try {
+      await supabase.from('site_settings').upsert({
+        key: 'site_categories',
+        value: categories,
+        updated_at: new Date().toISOString()
+      });
+    } catch {}
+
+    // 2. Cập nhật vào cms_full_config
+    try {
+      const currentCMS = getFullSiteCMS();
+      currentCMS.categories = categories;
+      await supabase.from('site_settings').upsert({
+        key: 'cms_full_config',
+        value: currentCMS,
+        updated_at: new Date().toISOString()
+      });
+    } catch {}
+
+    // 3. Đồng bộ qua API Categories endpoint (đảm bảo lưu trên Edge/Workers)
+    try {
+      await fetch('/api/categories', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categories })
+      });
+    } catch {}
+
+    return true;
+  } catch (e) {
+    console.warn('Lỗi lưu Categories lên Cloud:', e);
+    return false;
+  }
+}
+
 export async function fetchFullSiteCMSFromCloud(): Promise<FullSiteCMS | null> {
   try {
+    // 1. Tải cms_full_config
     const { data, error } = await supabase
       .from('site_settings')
       .select('value')
@@ -108,6 +243,9 @@ export async function fetchFullSiteCMSFromCloud(): Promise<FullSiteCMS | null> {
       }
       return cloudCMS;
     }
+
+    // 2. Tải qua API Categories để lấy danh mục mới nhất
+    await fetchCategoriesFromCloud();
   } catch (e) {
     console.warn('Lỗi đọc Cloud CMS từ Supabase:', e);
   }
@@ -125,6 +263,16 @@ export function getFullSiteCMS(): FullSiteCMS {
 
   try {
     const stored = localStorage.getItem('SOVA_FULL_SITE_CMS');
+    const storedCats = localStorage.getItem('SOVA_DYNAMIC_CATEGORIES');
+    let resolvedCats = DEFAULT_FULL_CMS.categories;
+
+    if (storedCats) {
+      try {
+        const parsedCats = JSON.parse(storedCats);
+        if (Array.isArray(parsedCats) && parsedCats.length > 0) resolvedCats = parsedCats;
+      } catch {}
+    }
+
     if (stored) {
       const parsed = JSON.parse(stored);
       return {
@@ -134,9 +282,9 @@ export function getFullSiteCMS(): FullSiteCMS {
         footer: { ...DEFAULT_FULL_CMS.footer, ...(parsed.footer || {}) },
         subpages: { ...DEFAULT_FULL_CMS.subpages, ...(parsed.subpages || {}) },
         broadcast: { ...DEFAULT_FULL_CMS.broadcast, ...(parsed.broadcast || {}) },
-        categories: parsed.categories && Array.isArray(parsed.categories) && parsed.categories.length > 0 
+        categories: (parsed.categories && Array.isArray(parsed.categories) && parsed.categories.length > 0)
           ? parsed.categories 
-          : DEFAULT_FULL_CMS.categories
+          : resolvedCats
       };
     }
   } catch {}
@@ -149,6 +297,9 @@ export function saveFullSiteCMS(data: FullSiteCMS): void {
   // 1. Lưu LocalStorage & Phát sự kiện toàn máy
   localStorage.setItem('SOVA_FULL_SITE_CMS', JSON.stringify(data));
   localStorage.setItem('SOVA_LIVE_CMS_HERO', JSON.stringify(data.hero));
+  if (data.categories && Array.isArray(data.categories)) {
+    localStorage.setItem('SOVA_DYNAMIC_CATEGORIES', JSON.stringify(data.categories));
+  }
   
   try {
     const channel = new BroadcastChannel('sova_cms_channel');
@@ -156,21 +307,39 @@ export function saveFullSiteCMS(data: FullSiteCMS): void {
   } catch {}
   window.dispatchEvent(new Event('storage'));
   window.dispatchEvent(new Event('sova_cms_updated'));
+  window.dispatchEvent(new Event('sova_categories_updated'));
 
-  // 2. Đồng bộ phân tán lên Supabase Cloud site_settings
+  // 2. Đồng bộ phân tán lên Supabase Cloud site_settings & API
   (async () => {
     try {
-      const { error } = await supabase
-        .from('site_settings')
-        .upsert({
-          key: 'cms_full_config',
-          value: data,
-          updated_at: new Date().toISOString()
-        });
-      if (error) {
-        console.warn('Cảnh báo lưu CMS lên Supabase Cloud:', error.message);
-      } else {
-        console.log('✅ Đã đồng bộ Cloud CMS lên Supabase thành công!');
+      try {
+        await supabase
+          .from('site_settings')
+          .upsert({
+            key: 'cms_full_config',
+            value: data,
+            updated_at: new Date().toISOString()
+          });
+      } catch {}
+
+      if (data.categories) {
+        try {
+          await supabase
+            .from('site_settings')
+            .upsert({
+              key: 'site_categories',
+              value: data.categories,
+              updated_at: new Date().toISOString()
+            });
+        } catch {}
+
+        try {
+          await fetch('/api/categories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ categories: data.categories })
+          });
+        } catch {}
       }
     } catch (err) {
       console.warn('Lỗi mạng khi lưu Cloud CMS:', err);

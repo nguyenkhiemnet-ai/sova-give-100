@@ -20,25 +20,20 @@ export const CATEGORY_FALLBACK_IMAGES: Record<string, string> = {
   livelihood_tools: 'https://images.unsplash.com/photo-1581783342308-f792dbdd27c5?auto=format&fit=crop&w=800&q=80',
 };
 
-// Tự động nhận diện danh mục thông minh theo tiêu đề
+import { normalizeCategorySlug } from './cms';
+
+export { normalizeCategorySlug };
+
+// Tự động nhận diện danh mục thông minh theo tiêu đề và mã danh mục
 export function inferCategory(title: string, currentCategory?: string): string {
-  const t = (title || '').toLowerCase();
-  if (t.includes('xe đạp') || t.includes('xe dap') || t.includes('xe ') || t.includes('bike')) return 'bicycle';
-  if (t.includes('máy may') || t.includes('may may') || t.includes('khâu')) return 'sewing_machine';
-  if (t.includes('máy tính') || t.includes('laptop') || t.includes('pc') || t.includes('máy')) return 'laptop';
-  
-  const c = (currentCategory || '').toLowerCase();
-  if (c === 'commute') return 'bicycle';
-  if (c === 'study_device') return 'laptop';
-  if (c === 'vocational_tool') return 'sewing_machine';
-  return currentCategory || 'bicycle';
+  return normalizeCategorySlug(currentCategory, title);
 }
 
 export function normalizeCategoryLabel(cat: string): string {
-  const c = (cat || '').toLowerCase();
-  if (c === 'bicycle' || c === 'commute') return 'Xe Đạp';
-  if (c === 'laptop' || c === 'study_device') return 'Máy Tính';
-  if (c === 'sewing_machine' || c === 'vocational_tool') return 'Máy May';
+  const c = normalizeCategorySlug(cat);
+  if (c === 'bicycle') return 'Xe Đạp';
+  if (c === 'laptop') return 'Máy Tính';
+  if (c === 'sewing_machine') return 'Máy May';
   if (c === 'study_tools') return 'Tri Thức';
   if (c === 'livelihood_tools') return 'Mưu Sinh';
   return 'Dụng Cụ';

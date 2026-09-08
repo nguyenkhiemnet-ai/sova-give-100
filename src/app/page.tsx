@@ -9,7 +9,7 @@ import {
   normalizeCategoryLabel, inferCategory 
 } from '@/lib/provinces';
 import { getActiveUser, loginWithGoogle, UserProfile, openAuthModal } from '@/lib/auth';
-import { getFullSiteCMS, FullSiteCMS, DEFAULT_FULL_CMS } from '@/lib/cms';
+import { getFullSiteCMS, FullSiteCMS, DEFAULT_FULL_CMS, fetchCategoriesFromCloud, normalizeCategorySlug } from '@/lib/cms';
 import { 
   Sparkles, Heart, Search, MapPin, Filter, Leaf, 
   Clock, Repeat, AlertCircle, ShieldCheck, CheckCircle2,
@@ -57,17 +57,24 @@ export default function HomePage() {
   const heroCMS = siteCMS.hero;
   const footerCMS = siteCMS.footer;
 
+  const getCategoryIcon = (id: string) => {
+    switch (id) {
+      case 'laptop': return Laptop;
+      case 'bicycle': return Bike;
+      case 'sewing_machine': return Scissors;
+      case 'study_tools': return BookOpen;
+      case 'livelihood_tools': return Wrench;
+      default: return Sparkles;
+    }
+  };
+
   const dynamicCategories = [
     { id: 'ALL', label: 'Tất cả ước nguyện', shortLabel: 'Tất cả', icon: Sparkles },
     ...((siteCMS.categories && siteCMS.categories.length > 0) ? siteCMS.categories : DEFAULT_FULL_CMS.categories).map(cat => ({
       id: cat.id,
       label: cat.label,
       shortLabel: cat.shortLabel || cat.label,
-      icon: cat.id === 'laptop' ? Laptop :
-            cat.id === 'bicycle' ? Bike :
-            cat.id === 'sewing_machine' ? Scissors :
-            cat.id === 'study_tools' ? BookOpen :
-            cat.id === 'livelihood_tools' ? Wrench : Sparkles
+      icon: getCategoryIcon(cat.id)
     }))
   ];
 
@@ -93,6 +100,13 @@ export default function HomePage() {
     setSiteCMS(initialCMS);
     fetchCombinedWishes();
 
+    // Tự động tải danh mục mới nhất từ Supabase Cloud khi mở trang
+    fetchCategoriesFromCloud().then(cloudCats => {
+      if (cloudCats && cloudCats.length > 0) {
+        setSiteCMS(prev => ({ ...prev, categories: cloudCats }));
+      }
+    });
+
     const handleScroll = () => setShowBackToTop(window.scrollY > 400);
     const handleCMSUpdate = () => {
       const latest = getFullSiteCMS();
@@ -102,6 +116,7 @@ export default function HomePage() {
     window.addEventListener('scroll', handleScroll);
     window.addEventListener('storage', handleCMSUpdate);
     window.addEventListener('sova_cms_updated', handleCMSUpdate);
+    window.addEventListener('sova_categories_updated', handleCMSUpdate);
 
     // Lắng nghe tìm kiếm trực tiếp từ Navbar
     const handleGlobalSearch = (e: any) => {
@@ -137,6 +152,7 @@ export default function HomePage() {
       window.removeEventListener('scroll', handleScroll);
       window.removeEventListener('storage', handleCMSUpdate);
       window.removeEventListener('sova_cms_updated', handleCMSUpdate);
+      window.removeEventListener('sova_categories_updated', handleCMSUpdate);
       window.removeEventListener('sova_global_search_change', handleGlobalSearch);
       window.removeEventListener('keydown', handleKeyDown);
       if (channel) channel.close();
@@ -146,16 +162,18 @@ export default function HomePage() {
   async function fetchCombinedWishes() {
     let serverItems: WishItem[] = [];
     try {
-      // 1. Ưu tiên lấy qua Edge Cached Route (/api/wishes-feed/) để hấp thụ 99.9% lưu lượng vào Cloudflare
-      const edgeRes = await fetch('/api/wishes-feed/', { cache: 'default' });
+      // 1. Ưu tiên lấy qua Edge Cached Route (/api/wishes-feed) - KHÔNG dùng trailing slash để tránh 404 trên Cloudflare
+      const edgeRes = await fetch('/api/wishes-feed', { cache: 'default' });
       if (edgeRes.ok) {
         const json = await edgeRes.json();
         if (json.data && Array.isArray(json.data) && json.data.length > 0) {
           serverItems = json.data as WishItem[];
         }
       }
-    } catch {
-      // 2. Dự phòng an toàn: Gọi trực tiếp Supabase nếu Edge Route gặp sự cố
+    } catch {}
+
+    // 2. Dự phòng an toàn: Gọi trực tiếp Supabase nếu Edge Route chưa có dữ liệu
+    if (serverItems.length === 0) {
       try {
         const { data } = await supabase
           .from('wishes')
@@ -331,7 +349,7 @@ export default function HomePage() {
     const matchesSearch = title.toLowerCase().includes(searchQuery.toLowerCase()) || 
                           desc.toLowerCase().includes(searchQuery.toLowerCase());
     
-    const effectiveCat = inferCategory(item.title, item.category);
+    const effectiveCat = normalizeCategorySlug(item.category, item.title);
     const matchesCat = selectedCategory === 'ALL' || effectiveCat === selectedCategory;
     
     const prov = item.province_code || '48';
@@ -488,7 +506,7 @@ export default function HomePage() {
                 const active = selectedCategory === cat.id;
                 const count = cat.id === 'ALL' 
                   ? wishes.length 
-                  : wishes.filter(w => inferCategory(w.title, w.category) === cat.id).length;
+                  : wishes.filter(w => normalizeCategorySlug(w.category, w.title) === cat.id).length;
 
                 return (
                   <button
