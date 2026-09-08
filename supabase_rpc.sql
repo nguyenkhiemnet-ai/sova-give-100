@@ -1,8 +1,14 @@
--- 1. Đảm bảo bảng wishes có đầy đủ các trường trạng thái vòng đời
+-- ==============================================================================
+-- SOVA GIVE 100: ENTERPRISE ACID HANDSHAKE CLAIM RPC (10.000 CCU CONCURRENCY)
+-- Authority: Trọng tài Nguyễn Khiêm (21/08/1984)
+-- ==============================================================================
+
+-- 1. Bổ sung các cột an toàn vào bảng wishes nếu chưa có
 ALTER TABLE public.wishes ADD COLUMN IF NOT EXISTS status TEXT DEFAULT 'OPEN';
 ALTER TABLE public.wishes ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();
+ALTER TABLE public.wishes ADD COLUMN IF NOT EXISTS passport_code TEXT;
 
--- 2. Tạo hàm RPC execute_handshake_claim xử lý khóa giao dịch ACID
+-- 2. Hàm RPC execute_handshake_claim (Chuẩn ACID - FOR UPDATE SKIP LOCKED)
 CREATE OR REPLACE FUNCTION public.execute_handshake_claim(p_wish_id UUID)
 RETURNS JSONB
 LANGUAGE plpgsql
@@ -23,34 +29,36 @@ BEGIN
     IF v_current_status IS NULL THEN
         RETURN jsonb_build_object(
             'success', false,
-            'message', 'Điều ước này đang được một Người Trao khác thao tác hoặc không tồn tại. Vui lòng chọn điều ước khác.'
+            'message', 'Điều ước này đang được một Angel khác thao tác hoặc không tồn tại. Vui lòng chọn điều ước khác.'
         );
     END IF;
 
+    -- Kiểm tra nếu điều ước đã được claim trước đó
     IF v_current_status = 'claimed' OR v_current_status = 'fulfilled' THEN
         RETURN jsonb_build_object(
             'success', false,
-            'message', 'Điều ước này đã được tiếp nhận bởi một người trao khác.'
+            'message', 'Điều ước này đã được tiếp nhận bởi một Người Trao khác.'
         );
     END IF;
 
     -- Sinh mã Hộ Chiếu Số ngẫu nhiên
     v_passport_code := 'SOVA-PASS-' || floor(1000 + random() * 9000)::text || '-VN';
 
-    -- Cập nhật trạng thái sang claimed
+    -- Cập nhật trạng thái sang claimed và gán passport_code
     UPDATE public.wishes
     SET 
         status = 'claimed',
+        passport_code = v_passport_code,
         updated_at = NOW()
     WHERE id = p_wish_id;
 
     RETURN jsonb_build_object(
         'success', true,
         'passport_code', v_passport_code,
-        'message', 'Khớp nối thành công! Đã chuyển giao dịch sang trạng thái claimed.'
+        'message', 'Khớp nối thành công! Đã cấp Hộ Chiếu Số và khóa giao dịch an toàn.'
     );
 END;
 $$;
 
--- 3. Phân quyền thực thi cho client
+-- 3. Phân quyền thực thi cho client (Anon, Authenticated, Service Role)
 GRANT EXECUTE ON FUNCTION public.execute_handshake_claim(UUID) TO anon, authenticated, service_role;

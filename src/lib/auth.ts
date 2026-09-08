@@ -73,7 +73,7 @@ export function setActiveUser(user: UserProfile | null): void {
 }
 
 export async function loginWithGoogle(): Promise<void> {
-  const redirectTarget = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  const redirectTarget = typeof window !== 'undefined'
     ? window.location.origin
     : 'https://sovahub.org';
 

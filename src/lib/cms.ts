@@ -1,3 +1,5 @@
+import { supabase } from './supabaseClient';
+
 export interface HeroCMSData {
   badge: string;
   titlePrimary: string;
@@ -86,8 +88,41 @@ export const DEFAULT_FULL_CMS: FullSiteCMS = {
   ]
 };
 
+// Cờ kiểm soát fetch nền từ Supabase Cloud
+let isCloudFetching = false;
+
+export async function fetchFullSiteCMSFromCloud(): Promise<FullSiteCMS | null> {
+  try {
+    const { data, error } = await supabase
+      .from('site_settings')
+      .select('value')
+      .eq('key', 'cms_full_config')
+      .maybeSingle();
+
+    if (!error && data && data.value) {
+      const cloudCMS = data.value as FullSiteCMS;
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('SOVA_FULL_SITE_CMS', JSON.stringify(cloudCMS));
+        localStorage.setItem('SOVA_LIVE_CMS_HERO', JSON.stringify(cloudCMS.hero));
+        window.dispatchEvent(new Event('sova_cms_updated'));
+      }
+      return cloudCMS;
+    }
+  } catch (e) {
+    console.warn('Lỗi đọc Cloud CMS từ Supabase:', e);
+  }
+  return null;
+}
+
 export function getFullSiteCMS(): FullSiteCMS {
   if (typeof window === 'undefined') return DEFAULT_FULL_CMS;
+
+  // Kích hoạt fetch nền đồng bộ từ Supabase nếu chưa fetch
+  if (!isCloudFetching) {
+    isCloudFetching = true;
+    fetchFullSiteCMSFromCloud().catch(() => {});
+  }
+
   try {
     const stored = localStorage.getItem('SOVA_FULL_SITE_CMS');
     if (stored) {
@@ -110,16 +145,37 @@ export function getFullSiteCMS(): FullSiteCMS {
 
 export function saveFullSiteCMS(data: FullSiteCMS): void {
   if (typeof window === 'undefined') return;
+  
+  // 1. Lưu LocalStorage & Phát sự kiện toàn máy
   localStorage.setItem('SOVA_FULL_SITE_CMS', JSON.stringify(data));
   localStorage.setItem('SOVA_LIVE_CMS_HERO', JSON.stringify(data.hero));
   
-  // Phát tín hiệu đồng bộ đa Tab
   try {
     const channel = new BroadcastChannel('sova_cms_channel');
     channel.postMessage({ type: 'CMS_UPDATED', data });
   } catch {}
   window.dispatchEvent(new Event('storage'));
   window.dispatchEvent(new Event('sova_cms_updated'));
+
+  // 2. Đồng bộ phân tán lên Supabase Cloud site_settings
+  (async () => {
+    try {
+      const { error } = await supabase
+        .from('site_settings')
+        .upsert({
+          key: 'cms_full_config',
+          value: data,
+          updated_at: new Date().toISOString()
+        });
+      if (error) {
+        console.warn('Cảnh báo lưu CMS lên Supabase Cloud:', error.message);
+      } else {
+        console.log('✅ Đã đồng bộ Cloud CMS lên Supabase thành công!');
+      }
+    } catch (err) {
+      console.warn('Lỗi mạng khi lưu Cloud CMS:', err);
+    }
+  })();
 }
 
 // Giữ tương thích ngược với các trang cũ nếu còn gọi getHeroCMS / saveHeroCMS
