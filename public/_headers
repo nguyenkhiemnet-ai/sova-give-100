@@ -1,0 +1,15 @@
+/api/wishes-feed
+  Cache-Control: public, max-age=30, s-maxage=120, stale-while-revalidate=600
+  CDN-Cache-Control: max-age=120, stale-while-revalidate=600
+  Cloudflare-CDN-Cache-Control: max-age=120, stale-while-revalidate=600
+  Access-Control-Allow-Origin: *
+
+/api/categories
+  Cache-Control: public, max-age=60, s-maxage=300, stale-while-revalidate=86400
+  CDN-Cache-Control: max-age=300, stale-while-revalidate=86400
+  Cloudflare-CDN-Cache-Control: max-age=300, stale-while-revalidate=86400
+  Access-Control-Allow-Origin: *
+
+/manifest.json
+  Cache-Control: public, max-age=86400
+  Access-Control-Allow-Origin: *

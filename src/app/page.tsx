@@ -122,6 +122,21 @@ export default function HomePage() {
     setCurrentUser(getActiveUser());
     const initialCMS = getFullSiteCMS();
     setSiteCMS(initialCMS);
+
+    // GIAI ĐOẠN 3: 0ms SWR Initial Render - nạp ngay cache để hiển thị tức thì không giật khung hình
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = localStorage.getItem('SOVA_CACHED_FEED');
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            setWishes(parsed);
+            setLoadingWishes(false);
+          }
+        }
+      } catch {}
+    }
+
     fetchCombinedWishes();
 
     // Tự động tải danh mục mới nhất từ Supabase Cloud khi mở trang
@@ -184,7 +199,10 @@ export default function HomePage() {
   }, []);
 
   async function fetchCombinedWishes() {
-    setLoadingWishes(true);
+    setWishes(prev => {
+      if (prev.length === 0) setLoadingWishes(true);
+      return prev;
+    });
     let serverItems: WishItem[] = [];
     try {
       // 1. Ưu tiên lấy qua Edge Cached Route (/api/wishes-feed) - KHÔNG dùng trailing slash để tránh 404 trên Cloudflare
@@ -266,8 +284,15 @@ export default function HomePage() {
       });
     });
 
-    setWishes(Array.from(mergedMap.values()));
+    const finalItems = Array.from(mergedMap.values());
+    setWishes(finalItems);
     setLoadingWishes(false);
+
+    if (typeof window !== 'undefined' && finalItems.length > 0) {
+      try {
+        localStorage.setItem('SOVA_CACHED_FEED', JSON.stringify(finalItems));
+      } catch {}
+    }
   }
 
   const handleOpenClaimModal = (item: WishItem) => {
@@ -960,7 +985,7 @@ export default function HomePage() {
                   <Phone className="w-4 h-4" />
                 </div>
                 <div>
-                  <div className="text-[11px] font-bold text-warm-900">Hotline & Zalo Tiếp Nhận: <strong className="text-brand-800">0908.210.884</strong></div>
+                  <div className="text-[11px] font-bold text-warm-900">Hotline & Zalo Tiếp Nhận: <strong className="text-brand-800">0912.661.558</strong></div>
                   <div className="text-[10px] text-warm-600">Nguyễn Khiêm • Ban điều phối SOVA hỗ trợ kết nối 24/7</div>
                 </div>
               </div>
@@ -969,8 +994,8 @@ export default function HomePage() {
                   type="button"
                   id="btn-copy-hotline"
                   onClick={() => {
-                    navigator.clipboard.writeText('0908210884');
-                    setToastMessage('Đã sao chép Hotline 0908.210.884 vào bộ nhớ tạm!');
+                    navigator.clipboard.writeText('0912661558');
+                    setToastMessage('Đã sao chép Hotline 0912.661.558 vào bộ nhớ tạm!');
                     setTimeout(() => setToastMessage(null), 3000);
                   }}
                   className="flex-1 sm:flex-none px-2.5 py-1.5 rounded-lg bg-white hover:bg-warm-100 border border-warm-200 text-[11px] font-bold text-warm-800 transition-all cursor-pointer shadow-2xs"
@@ -979,7 +1004,7 @@ export default function HomePage() {
                 </button>
                 <a
                   id="btn-open-zalo"
-                  href="https://zalo.me/0908210884"
+                  href="https://zalo.me/0912661558"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex-1 sm:flex-none px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-2xs"

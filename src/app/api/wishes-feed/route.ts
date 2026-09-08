@@ -36,9 +36,9 @@ export async function GET() {
     return NextResponse.json({ success: true, data: cleanData }, {
       status: 200,
       headers: {
-        'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300, max-age=10',
-        'CDN-Cache-Control': 'max-age=30',
-        'Cloudflare-CDN-Cache-Control': 'max-age=30',
+        'Cache-Control': 'public, max-age=30, s-maxage=120, stale-while-revalidate=600',
+        'CDN-Cache-Control': 'max-age=120, stale-while-revalidate=600',
+        'Cloudflare-CDN-Cache-Control': 'max-age=120, stale-while-revalidate=600',
         'Content-Type': 'application/json'
       }
     });

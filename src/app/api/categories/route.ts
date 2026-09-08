@@ -23,7 +23,9 @@ export async function GET() {
     const supabaseAdmin = getAdminClient();
 
     const cacheHeaders = {
-      'Cache-Control': 'public, max-age=60, s-maxage=300'
+      'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400',
+      'CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400',
+      'Cloudflare-CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400'
     };
 
     // 1. Thử lấy từ bảng site_settings

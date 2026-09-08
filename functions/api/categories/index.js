@@ -37,7 +37,9 @@ export async function onRequestGet(context) {
             headers: {
               'Content-Type': 'application/json',
               'Access-Control-Allow-Origin': '*',
-              'Cache-Control': 'public, max-age=60, s-maxage=300'
+              'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400',
+              'CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400',
+              'Cloudflare-CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400'
             }
           });
         }
@@ -58,7 +60,9 @@ export async function onRequestGet(context) {
             headers: {
               'Content-Type': 'application/json',
               'Access-Control-Allow-Origin': '*',
-              'Cache-Control': 'public, max-age=60, s-maxage=300'
+              'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400',
+              'CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400',
+              'Cloudflare-CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400'
             }
           });
         }
@@ -70,7 +74,9 @@ export async function onRequestGet(context) {
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=60, s-maxage=300'
+        'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400',
+        'CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400',
+        'Cloudflare-CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400'
       }
     });
   } catch (err) {
@@ -79,7 +85,9 @@ export async function onRequestGet(context) {
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=60, s-maxage=300'
+        'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400',
+        'CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400',
+        'Cloudflare-CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400'
       }
     });
   }
