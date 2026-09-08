@@ -13,16 +13,17 @@ DECLARE
     v_passport_code TEXT;
     v_current_status TEXT;
 BEGIN
-    -- Kiểm tra trạng thái hiện tại của điều ước
+    -- Khóa hàng thông minh: Sử dụng FOR UPDATE SKIP LOCKED để triệt tiêu xếp hàng chờ & deadlock
     SELECT COALESCE(status, 'OPEN') INTO v_current_status
     FROM public.wishes
     WHERE id = p_wish_id
-    FOR UPDATE;
+    FOR UPDATE SKIP LOCKED;
 
+    -- Nếu v_current_status IS NULL, có thể điều ước không tồn tại hoặc ĐANG BỊ KHÓA bởi 1 Angel khác
     IF v_current_status IS NULL THEN
         RETURN jsonb_build_object(
             'success', false,
-            'message', 'Không tìm thấy hồ sơ điều ước yêu cầu.'
+            'message', 'Điều ước này đang được một Người Trao khác thao tác hoặc không tồn tại. Vui lòng chọn điều ước khác.'
         );
     END IF;
 

@@ -146,13 +146,27 @@ export default function HomePage() {
   async function fetchCombinedWishes() {
     let serverItems: WishItem[] = [];
     try {
-      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject(new Error('TIMEOUT')), 2000));
-      const fetchPromise = supabase.from('wishes').select('*').order('created_at', { ascending: false });
-      const res: any = await Promise.race([fetchPromise, timeoutPromise]);
-      if (res && res.data && res.data.length > 0) {
-        serverItems = res.data as WishItem[];
+      // 1. Ưu tiên lấy qua Edge Cached Route (/api/wishes-feed/) để hấp thụ 99.9% lưu lượng vào Cloudflare
+      const edgeRes = await fetch('/api/wishes-feed/', { cache: 'default' });
+      if (edgeRes.ok) {
+        const json = await edgeRes.json();
+        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+          serverItems = json.data as WishItem[];
+        }
       }
-    } catch {}
+    } catch {
+      // 2. Dự phòng an toàn: Gọi trực tiếp Supabase nếu Edge Route gặp sự cố
+      try {
+        const { data } = await supabase
+          .from('wishes')
+          .select('id, title, category, reason, honor_commitment, urgency, province_code, ward_code, status, created_at, authority')
+          .order('created_at', { ascending: false })
+          .limit(100);
+        if (data && data.length > 0) {
+          serverItems = data as WishItem[];
+        }
+      } catch {}
+    }
 
     let deletedIds: string[] = [];
     let updatedDict: Record<string, any> = {};
