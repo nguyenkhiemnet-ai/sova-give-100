@@ -41,6 +41,7 @@ export async function onRequestGet(context) {
     'Cache-Control': 'public, max-age=30, s-maxage=120, stale-while-revalidate=600',
     'CDN-Cache-Control': 'max-age=120, stale-while-revalidate=600',
     'Cloudflare-CDN-Cache-Control': 'max-age=120, stale-while-revalidate=600',
+    'Alt-Svc': 'clear',
     'cf-edge-cache': 'MISS'
   };
 
