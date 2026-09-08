@@ -212,7 +212,11 @@ export default function DedicatedAdminPortal() {
     if (res.success) {
       setResetMessage(prev => ({ ...prev, [userEmail]: 'Đã gửi email khôi phục thành công!' }));
     } else {
-      setResetMessage(prev => ({ ...prev, [userEmail]: `Lỗi: ${res.error}` }));
+      let errText = res.error || '';
+      if (errText.includes('security purposes') || errText.includes('rate limit')) {
+        errText = 'Vui lòng đợi vài giây trước khi bấm gửi lại (chống spam).';
+      }
+      setResetMessage(prev => ({ ...prev, [userEmail]: `Lỗi: ${errText}` }));
     }
   };
 

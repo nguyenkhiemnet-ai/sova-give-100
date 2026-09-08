@@ -238,7 +238,33 @@ export async function getAllProfiles(): Promise<any[]> {
       .select('*')
       .order('created_at', { ascending: false });
     if (error) throw error;
-    return data || [];
+    
+    // Tự động gộp các tài khoản trùng email (chỉ giữ 1 bản ghi duy nhất, mới nhất và tên đầy đủ nhất)
+    const emailMap = new Map<string, any>();
+    (data || []).forEach(profile => {
+      const email = (profile.email || '').trim().toLowerCase();
+      if (!email) return;
+
+      const existing = emailMap.get(email);
+      if (!existing) {
+        emailMap.set(email, profile);
+      } else {
+        const currentName = profile.full_name || '';
+        const existingName = existing.full_name || '';
+        // Ưu tiên bản ghi có tên đầy đủ hơn (VD: "Nguyễn Khiêm" thay vì "Nguy")
+        if (currentName.length >= existingName.length) {
+          emailMap.set(email, {
+            ...existing,
+            ...profile,
+            full_name: currentName || existingName,
+            karma: Math.max(existing.karma || 0, profile.karma || 0),
+            co2_saved: Math.max(existing.co2_saved || 0, profile.co2_saved || 0)
+          });
+        }
+      }
+    });
+
+    return Array.from(emailMap.values());
   } catch (e) {
     console.error("Lỗi truy vấn danh sách thành viên:", e);
     return [];
