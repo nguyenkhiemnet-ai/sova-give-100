@@ -196,7 +196,7 @@ export default function CreateWishPage() {
   };
 
   return (
-    <div className="space-y-8 max-w-3xl mx-auto">
+    <div className="space-y-8 max-w-3xl mx-auto pb-28 sm:pb-32">
       <div className="flex items-center justify-between">
         <Link 
           href="/" 
@@ -277,36 +277,36 @@ export default function CreateWishPage() {
                     onClick={() => {
                       setCategory(cat.id);
                       if (!title) setTitle(cat.label);
+                      setTimeout(() => {
+                        setStep(2);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }, 300);
                     }}
-                    className={`p-4 rounded-2xl border-2 text-left flex items-start gap-3.5 transition-all ${
+                    className={`p-4 rounded-2xl border-2 text-left flex items-start gap-3.5 transition-all cursor-pointer ${
                       active 
-                        ? 'border-brand-600 bg-brand-50/50 shadow-soft ring-2 ring-brand-500/20' 
-                        : 'border-warm-200 hover:border-warm-300 bg-white'
+                        ? 'border-brand-600 bg-brand-50/60 shadow-soft ring-2 ring-brand-500 scale-[1.01]' 
+                        : 'border-warm-200 hover:border-brand-300 hover:bg-warm-50/50 bg-white'
                     }`}
                   >
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                      active ? 'bg-brand-600 text-white' : 'bg-warm-100 text-warm-700'
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
+                      active ? 'bg-brand-600 text-white shadow-2xs' : 'bg-warm-100 text-warm-700'
                     }`}>
                       <Icon className="w-5 h-5"/>
                     </div>
-                    <div>
-                      <h4 className="font-black text-sm text-warm-900">{cat.label}</h4>
+                    <div className="flex-1">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-black text-sm text-warm-900">{cat.label}</h4>
+                        {active && (
+                          <span className="text-[10px] font-bold text-brand-700 bg-brand-100 px-2 py-0.5 rounded-full animate-pulse">
+                            Đã chọn
+                          </span>
+                        )}
+                      </div>
                       <p className="text-[11px] text-warm-700 mt-0.5">{cat.desc}</p>
                     </div>
                   </button>
                 );
               })}
-            </div>
-
-            <div className="pt-4 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setStep(2)}
-                className="px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-float flex items-center gap-2"
-              >
-                <span>Tiếp Tục Bước 2</span>
-                <Sparkles className="w-4 h-4"/>
-              </button>
             </div>
           </div>
         )}
@@ -386,23 +386,6 @@ export default function CreateWishPage() {
                   </div>
                 </div>
               )}
-            </div>
-
-            <div className="pt-4 flex justify-between">
-              <button
-                type="button"
-                onClick={() => setStep(1)}
-                className="px-5 py-2.5 rounded-xl border border-warm-200 text-xs font-bold text-warm-700"
-              >
-                Quay Lại
-              </button>
-              <button
-                type="button"
-                onClick={() => setStep(3)}
-                className="px-6 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-float flex items-center gap-2"
-              >
-                <span>Tiếp Tục Bước 3</span>
-              </button>
             </div>
           </div>
         )}
@@ -516,29 +499,77 @@ export default function CreateWishPage() {
                 </select>
               </div>
             </div>
+          </div>
+        )}
 
-            <div className="pt-4 flex justify-between items-center">
+      </div>
+
+      {/* FLOATING ACTION DOCK (6-STAR ERGONOMIC EXPERIENCE) */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-emerald-500/20 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+        <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
+          {/* Nút Quay Lại */}
+          {step > 1 ? (
+            <button
+              type="button"
+              onClick={() => {
+                setStep(step - 1);
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+              }}
+              className="px-4 sm:px-5 py-2.5 rounded-xl border border-warm-200 bg-white hover:bg-warm-50 text-xs font-bold text-warm-700 hover:text-brand-700 shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
+            >
+              <ArrowLeft className="w-4 h-4"/>
+              <span>Quay Lại</span>
+            </button>
+          ) : (
+            <div className="text-[11px] font-bold text-warm-600 hidden sm:flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
+              <span>Bước 1/3: Chọn nhóm dụng cụ</span>
+            </div>
+          )}
+
+          {/* Cụm Nút Hành Động Trọng Tâm */}
+          <div className="flex items-center gap-2 ml-auto">
+            {step === 1 && (
               <button
                 type="button"
-                onClick={() => setStep(2)}
-                className="px-5 py-2.5 rounded-xl border border-warm-200 text-xs font-bold text-warm-700"
+                onClick={() => {
+                  setStep(2);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white text-xs font-black shadow-float flex items-center gap-2 transition-all cursor-pointer"
               >
-                Quay Lại
+                <span>Tiếp Tục Bước 2: Hình Ảnh</span>
+                <Sparkles className="w-4 h-4"/>
               </button>
+            )}
 
+            {step === 2 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setStep(3);
+                  window.scrollTo({ top: 0, behavior: 'smooth' });
+                }}
+                className="px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white text-xs font-black shadow-float flex items-center gap-2 transition-all cursor-pointer"
+              >
+                <span>Tiếp Tục Bước 3: Cam Kết</span>
+                <Sparkles className="w-4 h-4"/>
+              </button>
+            )}
+
+            {step === 3 && (
               <button
                 type="button"
                 disabled={submitting}
                 onClick={handleSubmit}
-                className="px-8 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white text-xs font-black shadow-float disabled:opacity-50 flex items-center gap-2"
+                className="px-6 sm:px-8 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white text-xs font-black shadow-float disabled:opacity-50 flex items-center gap-2 transition-all cursor-pointer"
               >
                 <Sparkles className="w-4 h-4"/>
                 <span>{submitting ? 'Đang Gieo Mầm...' : 'Gieo Mầm Ước Nguyện 0-VND'}</span>
               </button>
-            </div>
+            )}
           </div>
-        )}
-
+        </div>
       </div>
 
       {/* MODAL THÀNH CÔNG */}
