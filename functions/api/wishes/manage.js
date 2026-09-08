@@ -34,12 +34,19 @@ export async function onRequestPost(context) {
     }
 
     if (action === 'delete') {
+      // Cơ chế bảo vệ bất biến: Không xóa cứng, chuyển thành soft-delete an toàn 100%
       const res = await fetch(`${envUrl}/rest/v1/wishes?id=eq.${wishId}`, {
-        method: 'DELETE',
+        method: 'PATCH',
         headers: {
           apikey: envKey,
-          Authorization: `Bearer ${envKey}`
-        }
+          Authorization: `Bearer ${envKey}`,
+          'Content-Type': 'application/json',
+          Prefer: 'return=minimal'
+        },
+        body: JSON.stringify({
+          status: 'archived',
+          updated_at: new Date().toISOString()
+        })
       });
 
       if (!res.ok) {
@@ -50,7 +57,7 @@ export async function onRequestPost(context) {
         });
       }
 
-      return new Response(JSON.stringify({ success: true, message: 'Đã xóa điều ước thành công' }), {
+      return new Response(JSON.stringify({ success: true, message: 'Đã lưu trữ điều ước thành công (Soft-Delete)' }), {
         status: 200,
         headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
       });

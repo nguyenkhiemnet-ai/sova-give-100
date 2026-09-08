@@ -221,6 +221,7 @@ export default function HomePage() {
         const { data } = await supabase
           .from('wishes')
           .select('id, title, category, reason, honor_commitment, urgency, province_code, ward_code, status, created_at, authority')
+          .neq('status', 'archived')
           .order('created_at', { ascending: false })
           .limit(100);
         if (data && data.length > 0) {
@@ -246,7 +247,8 @@ export default function HomePage() {
 
     const mergedMap = new Map<string, WishItem>();
 
-    const isTestOrDeleted = (id: string, title?: string) => {
+    const isTestOrDeleted = (id: string, title?: string, status?: string, is_deleted?: boolean) => {
+      if (is_deleted || status === 'archived') return true;
       if (deletedIds.includes(id)) return true;
       if (!title) return false;
       const lower = title.toLowerCase();
@@ -254,7 +256,7 @@ export default function HomePage() {
     };
 
     localItems.forEach(item => {
-      if (isTestOrDeleted(item.id, item.title)) return;
+      if (isTestOrDeleted(item.id, item.title, item.status, (item as any).is_deleted)) return;
       const override = updatedDict[item.id] || {};
       const merged = { ...item, ...override };
       const savedImg = typeof window !== 'undefined' ? localStorage.getItem(`SOVA_WISH_IMG_${item.id}`) : null;
@@ -267,7 +269,7 @@ export default function HomePage() {
     });
 
     serverItems.forEach(item => {
-      if (isTestOrDeleted(item.id, item.title)) return;
+      if (isTestOrDeleted(item.id, item.title, item.status, (item as any).is_deleted)) return;
       const existing = mergedMap.get(item.id);
       const override = updatedDict[item.id] || {};
       const merged = { ...item, ...existing, ...override };

@@ -1,0 +1,258 @@
+{
+  "vault_version": "1.0.0-enterprise-gold",
+  "timestamp": "2026-09-08T14:58:43.471Z",
+  "environment": "production",
+  "metadata": {
+    "total_wishes": 4,
+    "total_profiles": 4,
+    "total_settings": 0,
+    "total_auth_users": 4,
+    "duration_ms": 1306
+  },
+  "tables": {
+    "wishes": [
+      {
+        "id": "0c3a3fac-b289-43fe-9487-f8cefd8b66b8",
+        "title": "Xe đạp",
+        "amount": 100,
+        "authority": "Nguyễn Khiêm (21/08/1984)",
+        "status": "claimed",
+        "created_at": "2026-09-07T05:45:49.403895+00:00",
+        "category": "laptop",
+        "reason": "Xe đap VS rất cần",
+        "honor_commitment": "Tôi cam kết giữ gìn thiết bị cẩn thận và trao lại cho người khác khi không còn dùng đến. | Tôi cam kết dùng đúng mục đích học tập/sinh kế tự lập, không bán hay cầm cố. | Tôi cam kết chia sẻ kinh nghiệm và hỗ trợ cộng đồng sau khi vượt qua khó khăn. | Lời hứa từ trái tim: \"TÔI CAM KẾT\"",
+        "urgency": "urgent",
+        "province_code": "01",
+        "ward_code": "01-03",
+        "updated_at": "2026-09-07T06:19:35.155+00:00"
+      },
+      {
+        "id": "c3333333-3333-3333-3333-333333333333",
+        "title": "Máy may sinh kế cho mẹ đơn thân gia công tại nhà",
+        "amount": 100,
+        "authority": "Nguyễn Khiêm (21/08/1984)",
+        "status": "VERIFIED",
+        "created_at": "2026-09-05T15:39:18.055543+00:00",
+        "category": "VOCATIONAL_TOOL",
+        "reason": "Cần máy may để nhận đồ về gia công kiếm thêm thu nhập nuôi hai con nhỏ ăn học.",
+        "honor_commitment": "Cam kết sử dụng đúng mục đích sinh kế và truyền nghề may cho phụ nữ trong xóm.",
+        "urgency": "NORMAL",
+        "province_code": "Đà Nẵng (48)",
+        "ward_code": "00001",
+        "updated_at": "2026-09-07T04:16:14.789006+00:00"
+      },
+      {
+        "id": "a1111111-1111-1111-1111-111111111111",
+        "title": "Máy tính xách tay phục vụ học tập CNTT",
+        "amount": 100,
+        "authority": "Nguyễn Khiêm (21/08/1984)",
+        "status": "claimed",
+        "created_at": "2026-09-05T15:39:18.055543+00:00",
+        "category": "STUDY_DEVICE",
+        "reason": "Sinh viên năm nhất hoàn cảnh khó khăn, cần máy tính để thực hành lập trình Web.",
+        "honor_commitment": "Cam kết bảo quản tốt và trao lại cho đàn em khóa sau khi tốt nghiệp.",
+        "urgency": "HIGH",
+        "province_code": "Hà Nội (01)",
+        "ward_code": "00001",
+        "updated_at": "2026-09-07T04:59:36.930127+00:00"
+      },
+      {
+        "id": "b2222222-2222-2222-2222-222222222222",
+        "title": "Xe đạp đến trường cho học sinh nghèo hiếu học",
+        "amount": 100,
+        "authority": "Nguyễn Khiêm (21/08/1984)",
+        "status": "VERIFIED",
+        "created_at": "2026-09-05T15:39:18.055543+00:00",
+        "category": "COMMUTE",
+        "reason": "Đoạn đường từ nhà tới trường cấp 3 dài 8km, gia đình chưa có điều kiện mua xe.",
+        "honor_commitment": "Cam kết giữ gìn xe cẩn thận, nhượng lại cho học sinh khó khăn khác khi ra trường.",
+        "urgency": "CRITICAL",
+        "province_code": "Hà Giang (03)",
+        "ward_code": "00001",
+        "updated_at": "2026-09-08T12:55:20.245+00:00"
+      }
+    ],
+    "profiles": [
+      {
+        "id": "00000000-0000-0000-0000-000000000001",
+        "email": "nguyenkhiemnet@gmail.com",
+        "full_name": "Nguyễn Khiêm",
+        "role": "SUPER_ADMIN",
+        "karma": 200,
+        "co2_saved": 130.5,
+        "status": "ACTIVE",
+        "created_at": "2026-09-07T14:18:19.181153+00:00",
+        "last_sign_in_at": "2026-09-07T14:18:19.181153+00:00"
+      },
+      {
+        "id": "293a1548-9827-4702-a31f-e589d2373d3b",
+        "email": "nguyenkhiemnet@gmail.com",
+        "full_name": "Nguy",
+        "role": "SUPER_ADMIN",
+        "karma": 200,
+        "co2_saved": 130.5,
+        "status": "ACTIVE",
+        "created_at": "2026-09-07T15:06:44.148226+00:00",
+        "last_sign_in_at": "2026-09-07T15:06:43.546+00:00"
+      },
+      {
+        "id": "0a2b2141-367f-425e-8f48-0440ea34f9a0",
+        "email": "nguyenkhiemnet@gmail.com",
+        "full_name": "Nguyễn Khiêm",
+        "role": "SUPER_ADMIN",
+        "karma": 200,
+        "co2_saved": 130.5,
+        "status": "ACTIVE",
+        "created_at": "2026-09-07T15:22:08.592624+00:00",
+        "last_sign_in_at": "2026-09-07T15:22:07.939+00:00"
+      },
+      {
+        "id": "0696129d-30b8-430f-b4d8-9ee9e8098797",
+        "email": "sale70.net@gmail.com",
+        "full_name": "PHẠM THỊ NGA",
+        "role": "CITIZEN",
+        "karma": 100,
+        "co2_saved": 0,
+        "status": "ACTIVE",
+        "created_at": "2026-09-07T15:59:56.655415+00:00",
+        "last_sign_in_at": "2026-09-07T15:59:55.788+00:00"
+      }
+    ],
+    "site_settings": [],
+    "auth_users": [
+      {
+        "id": "852cd4a7-ecd7-43b9-8e98-09558e0b2da6",
+        "email": "sale70.net@gmail.com",
+        "created_at": "2026-09-07T12:40:22.794029Z",
+        "last_sign_in_at": "2026-09-08T13:23:09.196783Z",
+        "app_metadata": {
+          "provider": "google",
+          "providers": [
+            "google"
+          ]
+        },
+        "user_metadata": {
+          "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocL7SSyfFmXi0iIu9l51fyaDYuRLbBWTvKguOVwOFkBXZAiVFlw=s96-c",
+          "email": "sale70.net@gmail.com",
+          "email_verified": true,
+          "full_name": "Khiem Nguyen",
+          "iss": "https://accounts.google.com",
+          "name": "Khiem Nguyen",
+          "phone_verified": false,
+          "picture": "https://lh3.googleusercontent.com/a/ACg8ocL7SSyfFmXi0iIu9l51fyaDYuRLbBWTvKguOVwOFkBXZAiVFlw=s96-c",
+          "provider_id": "107748072942628153056",
+          "sub": "107748072942628153056"
+        }
+      },
+      {
+        "id": "704fe181-cfeb-4a5f-86a1-8aa2dba067ca",
+        "email": "greeup.com@gmail.com",
+        "created_at": "2026-09-07T12:02:05.503937Z",
+        "last_sign_in_at": "2026-09-07T12:16:17.925225Z",
+        "app_metadata": {
+          "provider": "google",
+          "providers": [
+            "google"
+          ]
+        },
+        "user_metadata": {
+          "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocKTSFvkc710pwhNtnS4wOdxXrQ0SNNaGeW5d-J3Gc8qgFzhc3c=s96-c",
+          "email": "greeup.com@gmail.com",
+          "email_verified": true,
+          "full_name": "Gree Up",
+          "iss": "https://accounts.google.com",
+          "name": "Gree Up",
+          "phone_verified": false,
+          "picture": "https://lh3.googleusercontent.com/a/ACg8ocKTSFvkc710pwhNtnS4wOdxXrQ0SNNaGeW5d-J3Gc8qgFzhc3c=s96-c",
+          "provider_id": "111593806457532793424",
+          "sub": "111593806457532793424"
+        }
+      },
+      {
+        "id": "b09e1c2d-479a-446d-8e20-79e4fd9cbcf3",
+        "email": "004002@gmail.com",
+        "created_at": "2026-09-07T06:07:53.52095Z",
+        "last_sign_in_at": "2026-09-07T12:05:20.622842Z",
+        "app_metadata": {
+          "provider": "google",
+          "providers": [
+            "google"
+          ]
+        },
+        "user_metadata": {
+          "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocKIHQlLs9GmxNLzZXBnNb7oT0__YUO1q80BAnxoFKx_4EBet6yk=s96-c",
+          "email": "004002@gmail.com",
+          "email_verified": true,
+          "full_name": "Nguyễn Khiêm",
+          "iss": "https://accounts.google.com",
+          "name": "Nguyễn Khiêm",
+          "phone_verified": false,
+          "picture": "https://lh3.googleusercontent.com/a/ACg8ocKIHQlLs9GmxNLzZXBnNb7oT0__YUO1q80BAnxoFKx_4EBet6yk=s96-c",
+          "provider_id": "117991077892326791150",
+          "sub": "117991077892326791150"
+        }
+      },
+      {
+        "id": "e2071b5f-9929-4d9c-b377-1ee79e2f9846",
+        "email": "nguyenkhiemnet@gmail.com",
+        "created_at": "2026-09-07T04:53:05.283349Z",
+        "last_sign_in_at": "2026-09-08T13:40:58.777581Z",
+        "app_metadata": {
+          "provider": "google",
+          "providers": [
+            "google"
+          ]
+        },
+        "user_metadata": {
+          "avatar_url": "https://lh3.googleusercontent.com/a/ACg8ocJq_IZLBAv-NsXbDhFh3eP6QzZlx3_xZGCKIOFy2Mm-aQgB3iOp=s96-c",
+          "email": "nguyenkhiemnet@gmail.com",
+          "email_verified": true,
+          "full_name": "NGUYEN KHIEM NET",
+          "iss": "https://accounts.google.com",
+          "name": "NGUYEN KHIEM NET",
+          "phone_verified": false,
+          "picture": "https://lh3.googleusercontent.com/a/ACg8ocJq_IZLBAv-NsXbDhFh3eP6QzZlx3_xZGCKIOFy2Mm-aQgB3iOp=s96-c",
+          "provider_id": "112954035244935306817",
+          "site_categories": [
+            {
+              "desc": "Phương tiện đi lại cho học sinh nghèo",
+              "iconName": "Bike",
+              "id": "bicycle",
+              "label": "Xe đạp đến trường",
+              "shortLabel": "Xe đạp"
+            },
+            {
+              "desc": "Laptop, PC cho học sinh - sinh viên",
+              "iconName": "Laptop",
+              "id": "laptop",
+              "label": "Máy tính học tập",
+              "shortLabel": "Máy tính"
+            },
+            {
+              "desc": "Dụng cụ may vá cho mẹ đơn thân",
+              "iconName": "Scissors",
+              "id": "sewing_machine",
+              "label": "Máy may sinh kế",
+              "shortLabel": "Máy may"
+            },
+            {
+              "desc": "Sách vở, bàn học, máy tính cầm tay",
+              "iconName": "BookOpen",
+              "id": "study_tools",
+              "label": "Dụng cụ tri thức",
+              "shortLabel": "Sách & Dụng cụ"
+            },
+            {
+              "desc": "Đồ nghề sửa xe, làm mộc, làm nông",
+              "iconName": "Wrench",
+              "id": "livelihood_tools",
+              "label": "Công cụ mưu sinh",
+              "shortLabel": "Nghề mưu sinh"
+            }
+          ],
+          "sub": "112954035244935306817"
+        }
+      }
+    ]
+  }
+}

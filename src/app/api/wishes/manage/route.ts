@@ -29,17 +29,21 @@ export async function POST(request: Request) {
     const supabaseAdmin = getAdminClient();
 
     if (action === 'delete') {
+      // Cơ chế bảo vệ bất biến: Không xóa cứng, chuyển thành soft-delete an toàn 100%
       const { error } = await supabaseAdmin
         .from('wishes')
-        .delete()
+        .update({
+          status: 'archived',
+          updated_at: new Date().toISOString()
+        })
         .eq('id', wishId);
 
       if (error) {
-        console.error('Lỗi xóa wish qua admin API:', error);
+        console.error('Lỗi soft-delete wish qua admin API:', error);
         return NextResponse.json({ success: false, error: error.message }, { status: 500 });
       }
 
-      return NextResponse.json({ success: true, message: 'Đã xóa điều ước thành công' });
+      return NextResponse.json({ success: true, message: 'Đã lưu trữ điều ước thành công (Soft-Delete)' });
     }
 
     if (action === 'update') {

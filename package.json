@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "backup": "node --env-file=.env.local scripts/backup_vault.mjs",
+    "guard": "node --env-file=.env.local scripts/guard_regression.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.48.1",

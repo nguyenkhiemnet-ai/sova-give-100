@@ -24,7 +24,7 @@ export async function onRequestGet(context) {
   };
 
   try {
-    const sbRes = await fetch(`${envUrl}/rest/v1/wishes?select=id,title,category,reason,honor_commitment,urgency,province_code,ward_code,status,created_at,authority&order=created_at.desc&limit=100`, {
+    const sbRes = await fetch(`${envUrl}/rest/v1/wishes?select=id,title,category,reason,honor_commitment,urgency,province_code,ward_code,status,created_at,authority&status=neq.archived&order=created_at.desc&limit=100`, {
       headers: {
         apikey: envKey,
         Authorization: `Bearer ${envKey}`
@@ -49,7 +49,7 @@ export async function onRequestGet(context) {
              w.id === 'db4739ed-9ef1-4766-ba78-721a0648d679';
     };
 
-    const cleanData = Array.isArray(items) ? items.filter(item => !isTestWish(item)) : [];
+    const cleanData = Array.isArray(items) ? items.filter(item => !isTestWish(item) && item.status !== 'archived' && !item.is_deleted) : [];
 
     return new Response(JSON.stringify({ success: true, data: cleanData }), {
       status: 200,

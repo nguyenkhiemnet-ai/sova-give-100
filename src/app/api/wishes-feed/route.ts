@@ -9,6 +9,7 @@ export async function GET() {
     const { data, error } = await supabase
       .from('wishes')
       .select('id, title, category, reason, honor_commitment, urgency, province_code, ward_code, status, created_at, authority')
+      .neq('status', 'archived')
       .order('created_at', { ascending: false })
       .limit(100);
 
@@ -28,7 +29,7 @@ export async function GET() {
       return title.includes('thử nghiệm') || title.includes('test wish') || title.includes('kiểm thử') || title.includes('kiểm tra gửi') || w.id === '0160532f-7480-4e73-8c95-e3df6839a897' || w.id === 'db4739ed-9ef1-4766-ba78-721a0648d679';
     };
 
-    const cleanData = (data || []).filter(item => !isTestWish(item));
+    const cleanData = (data || []).filter(item => !isTestWish(item) && item.status !== 'archived');
 
     // 2. Trả về payload kèm Edge CDN Caching Headers
     // s-maxage=30: Cloudflare Edge lưu cache 30s
