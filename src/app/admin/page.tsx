@@ -16,7 +16,8 @@ import {
   Trash2, RefreshCw, Search, MapPin, Sparkles, 
   Camera, Edit3, KeyRound, Lock, Save, ShieldAlert, 
   Clock, Award, Layout, FileText, Share2, LogIn, ArrowLeft,
-  Users, Mail, Tag, Database, Compass, Bell, Download, FileSpreadsheet, Plus, Check
+  Users, Mail, Tag, Database, Compass, Bell, Download, FileSpreadsheet, Plus, Check,
+  Copy, ExternalLink, X
 } from 'lucide-react';
 import { 
   getActiveUser, isSuperAdminEmail, buildUserProfile, 
@@ -223,6 +224,120 @@ export default function DedicatedAdminPortal() {
       console.error("Lỗi tải thành viên:", e);
     } finally {
       setLoadingUsers(false);
+    }
+  };
+
+  // Hệ thống thông báo Toast Ban Quản Trị
+  const [adminToast, setAdminToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+
+  const showAdminToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setAdminToast({ message, type });
+    setTimeout(() => {
+      setAdminToast(null);
+    }, 5000);
+  };
+
+  // Trạng thái sinh Link Khôi Phục Trực Tiếp (Bypass SMTP)
+  const [generatingLinks, setGeneratingLinks] = useState<{ [email: string]: boolean }>({});
+  const [copiedLinks, setCopiedLinks] = useState<{ [email: string]: string }>({});
+
+  // Modal đặt trực tiếp mật khẩu mới cho thành viên
+  const [directPasswordModal, setDirectPasswordModal] = useState<{
+    isOpen: boolean;
+    user: any;
+    password: string;
+    loading: boolean;
+    error: string;
+    success: string;
+  }>({
+    isOpen: false,
+    user: null,
+    password: '',
+    loading: false,
+    error: '',
+    success: ''
+  });
+
+  const handleGetDirectResetLink = async (userEmail: string) => {
+    if (!userEmail) return;
+    setGeneratingLinks(prev => ({ ...prev, [userEmail]: true }));
+    try {
+      const res = await fetch('/api/admin/auth-ops/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'generate-recovery-link',
+          targetEmail: userEmail,
+          adminEmail: currentUser?.email || 'nguyenkhiemnet@gmail.com'
+        })
+      });
+      const data = await res.json();
+      if (data.success && data.actionLink) {
+        setCopiedLinks(prev => ({ ...prev, [userEmail]: data.actionLink }));
+        try {
+          if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(data.actionLink);
+          } else {
+            const textArea = document.createElement('textarea');
+            textArea.value = data.actionLink;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+          }
+        } catch (clipErr) {
+          console.warn("Lỗi ghi clipboard:", clipErr);
+        }
+        showAdminToast("Đã sao chép Link Đặt Lại Mật Khẩu! Hãy gửi link này cho thành viên qua Zalo/Tin nhắn", 'success');
+      } else {
+        showAdminToast(data.error || "Không thể tạo link khôi phục.", 'error');
+      }
+    } catch (err: any) {
+      showAdminToast("Lỗi kết nối khi sinh link khôi phục.", 'error');
+    } finally {
+      setGeneratingLinks(prev => ({ ...prev, [userEmail]: false }));
+    }
+  };
+
+  const handleDirectUpdatePassword = async () => {
+    if (!directPasswordModal.user || !directPasswordModal.password) {
+      setDirectPasswordModal(prev => ({ ...prev, error: 'Vui lòng nhập mật khẩu mới.' }));
+      return;
+    }
+    if (directPasswordModal.password.length < 6) {
+      setDirectPasswordModal(prev => ({ ...prev, error: 'Mật khẩu cần tối thiểu 6 ký tự.' }));
+      return;
+    }
+    setDirectPasswordModal(prev => ({ ...prev, loading: true, error: '', success: '' }));
+    try {
+      const res = await fetch('/api/admin/auth-ops/', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'update-password',
+          targetEmail: directPasswordModal.user.email,
+          targetUserId: directPasswordModal.user.id,
+          newPassword: directPasswordModal.password,
+          adminEmail: currentUser?.email || 'nguyenkhiemnet@gmail.com'
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setDirectPasswordModal(prev => ({
+          ...prev,
+          loading: false,
+          success: '🎉 Đã cập nhật mật khẩu mới thành công!',
+          password: ''
+        }));
+        showAdminToast(`Đã đổi mật khẩu cho ${directPasswordModal.user.email} thành công!`, 'success');
+        setTimeout(() => {
+          setDirectPasswordModal(prev => ({ ...prev, isOpen: false, success: '', user: null }));
+        }, 1500);
+      } else {
+        setDirectPasswordModal(prev => ({ ...prev, loading: false, error: data.error || 'Lỗi cập nhật mật khẩu.' }));
+      }
+    } catch (e: any) {
+      setDirectPasswordModal(prev => ({ ...prev, loading: false, error: 'Lỗi kết nối máy chủ.' }));
     }
   };
 
@@ -1450,33 +1565,89 @@ export default function DedicatedAdminPortal() {
 
                         <td className="py-3 px-4 text-right">
                           {(() => {
+                            const isGenerating = generatingLinks[u.email] || false;
+                            const copiedUrl = copiedLinks[u.email];
                             const cooldown = resetCooldowns[u.email] || 0;
                             const isSending = resetMessage[u.email] === 'Đang gửi...';
+
                             return (
-                              <>
-                                <div className="flex items-center justify-end gap-2">
+                              <div className="flex flex-col items-end gap-1.5">
+                                <div className="flex items-center justify-end gap-1.5 flex-wrap">
+                                  {/* 1. NÚT CHÍNH: 📋 LẤY LINK RESET TRỰC TIẾP (Bypass SMTP 100%, Copy vào clipboard tức thì) */}
+                                  <button
+                                    disabled={isGenerating}
+                                    onClick={() => handleGetDirectResetLink(u.email)}
+                                    className={`px-3 py-1.5 rounded-xl text-[11px] font-black border transition-all flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95 ${
+                                      copiedUrl 
+                                        ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-500' 
+                                        : 'bg-emerald-700 hover:bg-emerald-800 text-white border-emerald-600'
+                                    } disabled:opacity-50`}
+                                    title="Sinh link khôi phục mật khẩu trực tiếp qua Admin API và tự động sao chép vào clipboard để gửi Zalo/Tin nhắn"
+                                  >
+                                    {isGenerating ? (
+                                      <>
+                                        <RefreshCw className="w-3 h-3 animate-spin" />
+                                        <span>Đang tạo...</span>
+                                      </>
+                                    ) : copiedUrl ? (
+                                      <>
+                                        <Check className="w-3.5 h-3.5 text-emerald-200" />
+                                        <span>📋 Đã Chép Link</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy className="w-3.5 h-3.5" />
+                                        <span>📋 Lấy Link Reset</span>
+                                      </>
+                                    )}
+                                  </button>
+
+                                  {/* 2. NÚT BỔ SUNG: Đặt trực tiếp mật khẩu mới (Cấp cứu khẩn cấp) */}
+                                  <button
+                                    onClick={() => setDirectPasswordModal({
+                                      isOpen: true,
+                                      user: u,
+                                      password: '',
+                                      loading: false,
+                                      error: '',
+                                      success: ''
+                                    })}
+                                    className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold border border-warm-200 bg-warm-100 hover:bg-warm-200 text-warm-700 hover:text-warm-900 transition-all flex items-center gap-1 cursor-pointer"
+                                    title="Đặt trực tiếp mật khẩu mới cho thành viên này (không cần qua email)"
+                                  >
+                                    <KeyRound className="w-3 h-3 text-warm-500" />
+                                    <span>Đổi MK</span>
+                                  </button>
+
+                                  {/* 3. Nút phụ: Gửi qua email (nếu khách vẫn muốn nhận email tự động) */}
                                   <button
                                     disabled={cooldown > 0 || isSending}
                                     onClick={() => handleSendResetPassword(u.email)}
-                                    className={`px-3 py-1.5 rounded-xl text-[11px] font-bold border transition-all flex items-center gap-1.5 ${
+                                    className={`p-1.5 rounded-xl text-[11px] font-bold border transition-all flex items-center ${
                                       cooldown > 0 || isSending
-                                        ? 'bg-warm-100 text-warm-400 border-warm-200 cursor-not-allowed opacity-75'
-                                        : 'bg-warm-100 hover:bg-brand-50 hover:text-brand-700 text-warm-800 border-warm-200 cursor-pointer'
+                                        ? 'bg-warm-50 text-warm-300 border-warm-100 cursor-not-allowed'
+                                        : 'bg-warm-50 hover:bg-warm-100 text-warm-500 hover:text-warm-700 border-warm-200 cursor-pointer'
                                     }`}
-                                    title={cooldown > 0 ? `Đang chờ chống spam (${cooldown}s)` : "Gửi email đặt lại mật khẩu cho khách hàng này"}
+                                    title={cooldown > 0 ? `Chờ ${cooldown}s` : "Gửi email reset"}
                                   >
-                                    <KeyRound className="w-3 h-3"/>
-                                    <span>{cooldown > 0 ? `Đã gửi (Chờ ${cooldown}s...)` : isSending ? 'Đang gửi...' : 'Gửi Link Reset'}</span>
+                                    <Mail className="w-3.5 h-3.5" />
                                   </button>
                                 </div>
+
+                                {copiedUrl && (
+                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                    ✓ Đã copy link vào clipboard
+                                  </span>
+                                )}
+
                                 {resetMessage[u.email] && (
-                                  <p className={`text-[10px] font-bold mt-1 ${
+                                  <p className={`text-[10px] font-bold ${
                                     resetMessage[u.email].includes('thành công') ? 'text-emerald-600' : 'text-warm-600'
                                   }`}>
                                     {resetMessage[u.email]}
                                   </p>
                                 )}
-                              </>
+                              </div>
                             );
                           })()}
                         </td>
@@ -1925,6 +2096,93 @@ export default function DedicatedAdminPortal() {
                 className="flex-1 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-black cursor-pointer"
               >
                 Lưu Mật Mã
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TOAST THÔNG BÁO XANH BÀN QUẢN TRỊ */}
+      {adminToast && (
+        <div className="fixed bottom-6 right-6 z-[9999] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border transition-all animate-in slide-in-from-bottom-5 duration-200 bg-emerald-900/95 text-white border-emerald-500 backdrop-blur-md max-w-md">
+          {adminToast.type === 'success' ? (
+            <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          ) : (
+            <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
+          )}
+          <p className="text-xs font-bold leading-relaxed flex-1">{adminToast.message}</p>
+          <button 
+            onClick={() => setAdminToast(null)} 
+            className="p-1 rounded-lg text-emerald-300 hover:text-white hover:bg-emerald-800/50 cursor-pointer transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
+      {/* MODAL ĐẶT TRỰC TIẾP MẬT KHẨU KHẨN CẤP */}
+      {directPasswordModal.isOpen && directPasswordModal.user && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-warm-950/60 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl border border-warm-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-black text-warm-900 flex items-center gap-2">
+                <KeyRound className="w-4 h-4 text-emerald-600" />
+                <span>Đặt Trực Tiếp Mật Khẩu</span>
+              </h3>
+              <button
+                onClick={() => setDirectPasswordModal(prev => ({ ...prev, isOpen: false }))}
+                className="p-1 text-warm-400 hover:text-warm-700 cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-xl bg-warm-50 border border-warm-200 text-xs">
+              <div className="text-warm-500 font-medium">Thành viên:</div>
+              <div className="font-black text-warm-900">{directPasswordModal.user.full_name || 'Khách hàng'}</div>
+              <div className="font-bold text-emerald-700 break-all">{directPasswordModal.user.email}</div>
+            </div>
+
+            {directPasswordModal.error && (
+              <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-medium">
+                {directPasswordModal.error}
+              </div>
+            )}
+
+            {directPasswordModal.success && (
+              <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-bold">
+                {directPasswordModal.success}
+              </div>
+            )}
+
+            <div>
+              <label className="block text-xs font-bold text-warm-700 mb-1">
+                Mật khẩu mới (tối thiểu 6 ký tự):
+              </label>
+              <input
+                type="text"
+                placeholder="Nhập mật khẩu mới..."
+                value={directPasswordModal.password}
+                onChange={e => setDirectPasswordModal(prev => ({ ...prev, password: e.target.value, error: '' }))}
+                className="w-full px-3 py-2 border border-warm-200 rounded-xl text-xs font-medium focus:outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-500/20"
+              />
+            </div>
+
+            <div className="flex items-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setDirectPasswordModal(prev => ({ ...prev, isOpen: false }))}
+                className="flex-1 py-2 px-3 rounded-xl border border-warm-200 text-warm-700 text-xs font-bold hover:bg-warm-50 cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                type="button"
+                disabled={directPasswordModal.loading}
+                onClick={handleDirectUpdatePassword}
+                className="flex-1 py-2 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-black shadow-xs cursor-pointer"
+              >
+                {directPasswordModal.loading ? 'Đang cập nhật...' : 'Xác Nhận Đổi'}
               </button>
             </div>
           </div>

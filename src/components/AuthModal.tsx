@@ -218,14 +218,20 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
     setLoading(false);
 
     if (res.success) {
+      // Chỉ kích hoạt đếm ngược 60s khi Supabase trả về THÀNH CÔNG (màn hình xanh)
       setResetSuccess(true);
       setResetCooldown(60);
       setSuccessMessage(res.message || 'Đã gửi liên kết khôi phục mật khẩu vào email của bạn.');
     } else {
       let errText = res.error || '';
-      if (errText.includes('rate limit') || errText.includes('security purposes') || errText.includes('over_email_send_rate_limit')) {
-        errText = 'Hệ thống bảo vệ chống spam: Vui lòng đợi 60 giây trước khi yêu cầu gửi lại.';
-        setResetCooldown(60);
+      const lowerErr = errText.toLowerCase();
+      // TUYỆT ĐỐI KHÔNG kích hoạt bộ đếm ngược khi có lỗi đỏ (rate limit)
+      if (
+        lowerErr.includes('rate limit') || 
+        lowerErr.includes('over_email_send_rate_limit') || 
+        lowerErr.includes('security purposes')
+      ) {
+        errText = 'Hệ thống gửi thư tự động đang quá tải. Bạn có thể Đăng nhập ngay bằng Google, hoặc nhắn tin cho Quản trị viên để nhận mã khôi phục cấp tốc.';
       }
       setErrorMessage(errText || 'Không thể gửi email khôi phục.');
     }
