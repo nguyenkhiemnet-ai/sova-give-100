@@ -85,11 +85,13 @@ async function runBackup() {
   const targetPath = path.join(backupDir, filename);
   const latestPath = path.join(backupDir, 'vault_latest.json');
   const goldPath = path.join(backupDir, 'vault_snapshot_v1.0.0_gold.json');
+  const finalPath = path.join(backupDir, 'vault_snapshot_v1.0.0_final.json');
 
   const jsonString = JSON.stringify(snapshot, null, 2);
   fs.writeFileSync(targetPath, jsonString, 'utf-8');
   fs.writeFileSync(latestPath, jsonString, 'utf-8');
   fs.writeFileSync(goldPath, jsonString, 'utf-8');
+  fs.writeFileSync(finalPath, jsonString, 'utf-8');
 
   // Kiểm tra tính toàn vẹn (Integrity Check)
   const stats = fs.statSync(targetPath);
