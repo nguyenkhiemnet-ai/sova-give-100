@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { VIETNAM_PROVINCES, getDistrictsByProvince, CATEGORY_FALLBACK_IMAGES } from '@/lib/provinces';
@@ -9,7 +9,7 @@ import { getActiveUser, openAuthModal } from '@/lib/auth';
 import { 
   ArrowLeft, Sparkles, Laptop, Bike, Scissors, BookOpen, 
   Wrench, Camera, ShieldCheck, CheckCircle2, Heart, MapPin, 
-  Check, Plus, Lock, User
+  Check, Plus, Lock, User, Image as ImageIcon
 } from 'lucide-react';
 
 const CATEGORIES = [
@@ -40,6 +40,9 @@ export default function CreateWishPage() {
   const [enableCustom, setEnableCustom] = useState(false);
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [submitting, setSubmitting] = useState(false);
   const [createdPassport, setCreatedPassport] = useState<string | null>(null);
   const [subpageNotice, setSubpageNotice] = useState(DEFAULT_FULL_CMS.subpages.createWishNotice);
@@ -80,7 +83,7 @@ export default function CreateWishPage() {
   };
 
   // Nén ảnh trực tiếp qua Canvas để chống tràn bộ nhớ localStorage
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -95,7 +98,7 @@ export default function CreateWishPage() {
             h = Math.round((h * maxDim) / w);
             w = maxDim;
           } else if (h > maxDim) {
-            w = Math.round((w * maxDim) / h);
+            h = Math.round((w * maxDim) / h);
             h = maxDim;
           }
           canvas.width = w;
@@ -109,7 +112,9 @@ export default function CreateWishPage() {
       };
       reader.readAsDataURL(file);
     }
+    e.target.value = '';
   };
+  const handleImageChange = handleImageSelect;
 
   const handleProvinceChange = (pCode: string) => {
     setProvinceCode(pCode);
@@ -320,29 +325,65 @@ export default function CreateWishPage() {
             </div>
 
             <div className="border-2 border-dashed border-warm-200 rounded-3xl p-8 text-center space-y-4 hover:border-brand-500 transition-colors bg-warm-50/50">
+              {/* Input 1 (Camera trực tiếp): capture="environment" */}
+              <input
+                ref={cameraInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                className="hidden"
+                onChange={handleImageSelect}
+              />
+              {/* Input 2 (Thư viện máy) */}
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={handleImageSelect}
+              />
+
               {imagePreview ? (
                 <div className="relative inline-block">
                   <img src={imagePreview} alt="Preview" className="max-h-64 rounded-2xl shadow-md mx-auto object-cover"/>
                   <button
+                    type="button"
                     onClick={() => setImagePreview(null)}
-                    className="absolute -top-2 -right-2 w-7 h-7 bg-red-600 text-white rounded-full text-xs font-bold shadow-md"
+                    className="absolute -top-2 -right-2 w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded-full text-xs font-bold shadow-md flex items-center justify-center transition-transform hover:scale-110 cursor-pointer"
+                    title="Xóa ảnh để chọn lại"
                   >
                     ✕
                   </button>
                 </div>
               ) : (
-                <div className="space-y-3">
-                  <div className="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 mx-auto flex items-center justify-center">
+                <div className="space-y-4 max-w-md mx-auto">
+                  <div className="w-14 h-14 rounded-2xl bg-brand-50 text-brand-600 mx-auto flex items-center justify-center shadow-2xs">
                     <Camera className="w-7 h-7"/>
                   </div>
                   <div>
                     <p className="text-xs font-black text-warm-900">Chụp hoặc tải ảnh phương tiện bạn mong muốn</p>
                     <p className="text-[11px] text-warm-700 mt-0.5">Hệ thống sẽ tự động tối ưu hóa kích thước ảnh bảo đảm tải siêu tốc.</p>
                   </div>
-                  <label className="inline-block px-5 py-2.5 rounded-xl bg-brand-600 text-white text-xs font-bold shadow-xs hover:bg-brand-700 cursor-pointer">
-                    <span>Chọn Ảnh Từ Thiết Bị</span>
-                    <input type="file" accept="image/*" onChange={handleImageChange} className="hidden"/>
-                  </label>
+                  
+                  {/* Cụm 2 nút bấm: Nằm ngang trên máy tính (sm:flex-row), xếp dọc trên điện thoại (flex-col) */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-3 pt-2">
+                    <button
+                      type="button"
+                      onClick={() => cameraInputRef.current?.click()}
+                      className="px-5 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white text-xs font-black shadow-md shadow-brand-600/20 hover:shadow-brand-600/30 flex items-center justify-center gap-2 transition-all cursor-pointer border border-brand-500"
+                    >
+                      <Camera className="w-4 h-4"/>
+                      <span>📸 Chụp Ảnh Ngay</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="px-5 py-3 rounded-2xl bg-white hover:bg-brand-50 active:scale-95 text-brand-800 text-xs font-black border-2 border-brand-200 hover:border-brand-500 shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    >
+                      <ImageIcon className="w-4 h-4 text-brand-600"/>
+                      <span>🖼️ Chọn Từ Thư Viện</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
