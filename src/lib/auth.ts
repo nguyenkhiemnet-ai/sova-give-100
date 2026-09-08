@@ -191,12 +191,12 @@ export async function signUpWithEmail(email: string, password: string, fullName:
 
 export async function resetPassword(email: string): Promise<{ success: boolean; error?: string; message?: string }> {
   try {
-    const redirectTarget = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+    const redirectTarget = typeof window !== 'undefined'
       ? window.location.origin
       : 'https://sovahub.org';
 
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${redirectTarget}/profile`
+      redirectTo: `${redirectTarget}/`
     });
 
     if (error) {
@@ -209,6 +209,25 @@ export async function resetPassword(email: string): Promise<{ success: boolean; 
     };
   } catch (err: any) {
     return { success: false, error: err.message || 'Lỗi khôi phục mật khẩu.' };
+  }
+}
+
+export async function updateUserPassword(newPassword: string): Promise<{ success: boolean; error?: string; message?: string }> {
+  try {
+    const { data, error } = await supabase.auth.updateUser({
+      password: newPassword
+    });
+
+    if (error) {
+      return { success: false, error: error.message };
+    }
+
+    return {
+      success: true,
+      message: 'Đặt lại mật khẩu mới thành công! Bạn có thể sử dụng mật khẩu mới này từ bây giờ.'
+    };
+  } catch (err: any) {
+    return { success: false, error: err.message || 'Lỗi khi cập nhật mật khẩu.' };
   }
 }
 

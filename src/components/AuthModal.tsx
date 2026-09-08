@@ -6,24 +6,26 @@ import {
   X, Mail, Lock, User, Eye, EyeOff, KeyRound, 
   ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Sparkles 
 } from 'lucide-react';
-import { loginWithGoogle, loginWithEmail, signUpWithEmail, resetPassword } from '@/lib/auth';
+import { loginWithGoogle, loginWithEmail, signUpWithEmail, resetPassword, updateUserPassword } from '@/lib/auth';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  defaultTab?: 'LOGIN' | 'REGISTER';
+  defaultTab?: 'LOGIN' | 'REGISTER' | 'FORGOT' | 'UPDATE_PASSWORD';
 }
 
 export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: AuthModalProps) {
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState<'LOGIN' | 'REGISTER' | 'FORGOT'>(defaultTab);
+  const [activeTab, setActiveTab] = useState<'LOGIN' | 'REGISTER' | 'FORGOT' | 'UPDATE_PASSWORD'>(defaultTab);
   
   // Form fields
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -52,6 +54,8 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
       setActiveTab(defaultTab);
       setErrorMessage('');
       setSuccessMessage('');
+      setPassword('');
+      setConfirmPassword('');
     }
   }, [isOpen, defaultTab]);
 
@@ -71,6 +75,40 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
   const handleBackdropClick = (e: React.MouseEvent) => {
     if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
       onClose();
+    }
+  };
+
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!password) {
+      setErrorMessage('Vui lòng nhập mật khẩu mới.');
+      return;
+    }
+    if (password.length < 6) {
+      setErrorMessage('Mật khẩu mới cần tối thiểu 6 ký tự.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setErrorMessage('Xác nhận mật khẩu mới không khớp.');
+      return;
+    }
+
+    setLoading(true);
+    setErrorMessage('');
+    setSuccessMessage('');
+
+    const res = await updateUserPassword(password);
+    setLoading(false);
+
+    if (res.success) {
+      setSuccessMessage('🎉 Đặt lại mật khẩu thành công! Bạn có thể đăng nhập ngay.');
+      setTimeout(() => {
+        setActiveTab('LOGIN');
+        setPassword('');
+        setConfirmPassword('');
+      }, 1500);
+    } else {
+      setErrorMessage(res.error || 'Không thể cập nhật mật khẩu, vui lòng thử lại.');
     }
   };
 
@@ -194,11 +232,13 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
             {activeTab === 'LOGIN' && 'Đăng Nhập'}
             {activeTab === 'REGISTER' && 'Tạo Tài Khoản Mới'}
             {activeTab === 'FORGOT' && 'Khôi Phục Mật Khẩu'}
+            {activeTab === 'UPDATE_PASSWORD' && 'Thiết Lập Mật Khẩu Mới'}
           </h2>
           <p className="text-xs text-warm-500 mt-0.5">
             {activeTab === 'LOGIN' && 'Mạng lưới trao cơ hội & tuần hoàn tử tế'}
             {activeTab === 'REGISTER' && 'Gia nhập cộng đồng cho & nhận văn minh'}
             {activeTab === 'FORGOT' && 'Nhập email để nhận liên kết đặt lại mật khẩu'}
+            {activeTab === 'UPDATE_PASSWORD' && 'Nhập mật khẩu mới an toàn cho tài khoản của bạn'}
           </p>
         </div>
 
@@ -217,6 +257,91 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
               <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5 text-emerald-500" />
               <span className="leading-snug">{successMessage}</span>
             </div>
+          )}
+
+          {/* TAB 4: ĐẶT LẠI MẬT KHẨU MỚI (TỪ LINK EMAIL RECOVERY) */}
+          {activeTab === 'UPDATE_PASSWORD' && (
+            <form onSubmit={handleUpdatePassword} noValidate className="space-y-3.5">
+              <div>
+                <label className="block text-xs font-semibold text-warm-700 mb-1">
+                  Mật Khẩu Mới (từ 6 ký tự)
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400 pointer-events-none" />
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name="newPassword"
+                    autoComplete="new-password"
+                    placeholder="Nhập mật khẩu mới..."
+                    value={password}
+                    onChange={e => { setPassword(e.target.value); if (errorMessage) setErrorMessage(''); }}
+                    className="w-full pl-9 pr-9 py-2 bg-warm-50/60 border border-warm-200 rounded-xl text-xs font-medium text-warm-900 placeholder:text-warm-400 focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-warm-400 hover:text-warm-600 p-1 cursor-pointer"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-warm-700 mb-1">
+                  Xác Nhận Mật Khẩu Mới
+                </label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400 pointer-events-none" />
+                  <input
+                    type={showConfirmPassword ? 'text' : 'password'}
+                    name="confirmPassword"
+                    autoComplete="new-password"
+                    placeholder="Gõ lại mật khẩu mới..."
+                    value={confirmPassword}
+                    onChange={e => { setConfirmPassword(e.target.value); if (errorMessage) setErrorMessage(''); }}
+                    className="w-full pl-9 pr-9 py-2 bg-warm-50/60 border border-warm-200 rounded-xl text-xs font-medium text-warm-900 placeholder:text-warm-400 focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-warm-400 hover:text-warm-600 p-1 cursor-pointer"
+                    tabIndex={-1}
+                  >
+                    {showConfirmPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full py-2.5 px-4 mt-1 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white font-bold text-xs shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer active:scale-[0.99] disabled:opacity-50"
+              >
+                {loading ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                    <span>Đang cập nhật mật khẩu...</span>
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Lưu Mật Khẩu Mới</span>
+                  </>
+                )}
+              </button>
+
+              <div className="text-center pt-1">
+                <button
+                  type="button"
+                  onClick={() => { setActiveTab('LOGIN'); setErrorMessage(''); }}
+                  className="text-xs font-semibold text-emerald-700 hover:text-emerald-800 hover:underline cursor-pointer"
+                >
+                  ← Quay lại Đăng Nhập
+                </button>
+              </div>
+            </form>
           )}
 
           {/* TAB 1: ĐĂNG NHẬP */}
@@ -441,8 +566,8 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
             </form>
           )}
 
-          {/* Dòng phân cách & Tùy chọn Google tinh tế (chỉ hiện khi chưa ở FORGOT) */}
-          {activeTab !== 'FORGOT' && (
+          {/* Dòng phân cách & Tùy chọn Google tinh tế (chỉ hiện ở LOGIN hoặc REGISTER) */}
+          {(activeTab === 'LOGIN' || activeTab === 'REGISTER') && (
             <div className="pt-2">
               <div className="relative flex items-center justify-center py-2">
                 <div className="absolute inset-0 flex items-center">
@@ -473,7 +598,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
         </div>
 
         {/* Footer chuyển đổi Đăng nhập / Đăng ký nổi bật */}
-        {activeTab !== 'FORGOT' && (
+        {(activeTab === 'LOGIN' || activeTab === 'REGISTER') && (
           <div className="py-3.5 px-6 bg-gradient-to-r from-emerald-50/90 via-emerald-100/50 to-teal-50/90 border-t border-emerald-200/70 text-center text-xs">
             {activeTab === 'LOGIN' ? (
               <div className="flex items-center justify-center gap-2 flex-wrap">

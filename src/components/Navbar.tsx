@@ -20,7 +20,7 @@ export default function Navbar() {
   const [selectedProvince, setSelectedProvince] = useState('ALL');
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [showAuthModal, setShowAuthModal] = useState(false);
-  const [authModalTab, setAuthModalTab] = useState<'LOGIN' | 'REGISTER'>('LOGIN');
+  const [authModalTab, setAuthModalTab] = useState<'LOGIN' | 'REGISTER' | 'FORGOT' | 'UPDATE_PASSWORD'>('LOGIN');
 
   const dropdownRef = useRef<HTMLDivElement>(null);
   const mobileDropdownRef = useRef<HTMLDivElement>(null);
@@ -33,15 +33,31 @@ export default function Navbar() {
       setShowAuthModal(true);
     };
     window.addEventListener('sova_open_auth', handleOpenAuth);
-    // 1. Đồng bộ session tức thì khi Supabase nhận OAuth Token từ URL hoặc đăng nhập
+
+    // Kiểm tra nếu URL có chứa token recovery đặt lại mật khẩu
+    if (typeof window !== 'undefined') {
+      const hash = window.location.hash || '';
+      const search = window.location.search || '';
+      if (hash.includes('type=recovery') || search.includes('type=recovery')) {
+        setAuthModalTab('UPDATE_PASSWORD');
+        setShowAuthModal(true);
+      }
+    }
+
+    // 1. Đồng bộ session tức thì khi Supabase nhận OAuth Token hoặc Recovery Token
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setAuthModalTab('UPDATE_PASSWORD');
+        setShowAuthModal(true);
+      }
+
       if (session?.user) {
         const profile = buildUserProfile(session.user);
         setActiveUser(profile);
         setCurrentUser(profile);
 
-        // Dọn dẹp URL hash #access_token để thanh địa chỉ luôn sang trọng, sạch sẽ
-        if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
+        // Dọn dẹp URL hash #access_token khi không ở luồng PASSWORD_RECOVERY
+        if (typeof window !== 'undefined' && window.location.hash.includes('access_token') && event !== 'PASSWORD_RECOVERY') {
           window.history.replaceState(null, '', window.location.pathname + window.location.search);
         }
       }
