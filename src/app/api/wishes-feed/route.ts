@@ -1,9 +1,7 @@
 import { NextResponse } from 'next/server';
 import { supabase } from '@/lib/supabaseClient';
 
-export const revalidate = 30; // ISR: 30 giây tái tạo 1 lần tại Cloudflare Edge
-
-export async function GET() {
+export async function GET(request: Request) {
   try {
     // 1. Chỉ chọn các trường cần thiết phục vụ Feed để tối ưu hóa Egress (< 5KB payload)
     const { data, error } = await supabase
@@ -46,4 +44,8 @@ export async function GET() {
   } catch (err: any) {
     return NextResponse.json({ success: false, error: err.message || 'Lỗi tải feed' }, { status: 500 });
   }
+}
+
+export async function POST(request: Request) {
+  return NextResponse.json({ success: true, message: 'Wishes feed dynamic endpoint' });
 }
