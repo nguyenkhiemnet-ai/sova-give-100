@@ -15,7 +15,7 @@ import {
   Clock, Repeat, AlertCircle, ShieldCheck, CheckCircle2,
   Laptop, Bike, Scissors, BookOpen, Wrench, Navigation,
   ArrowUp, Lock, MessageSquare, Send, X, ExternalLink,
-  Share2, Check, Copy, PackageSearch
+  Share2, Check, Copy, PackageSearch, Phone
 } from 'lucide-react';
 
 interface WishItem {
@@ -254,11 +254,6 @@ export default function HomePage() {
   };
 
   const openChatModal = (item: WishItem) => {
-    const user = getActiveUser();
-    if (!user) {
-      openAuthModal('REGISTER');
-      return;
-    }
     setChatWish(item);
     const storageKey = `SOVA_CHAT_WISH_${item.id}`;
     const saved = localStorage.getItem(storageKey);
@@ -385,18 +380,14 @@ export default function HomePage() {
 
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3.5 pt-2">
               <button 
+                id="hero-btn-angel"
                 onClick={() => {
-                  const user = getActiveUser();
-                  if (!user) {
-                    openAuthModal('REGISTER');
-                  } else {
-                    const el = document.getElementById('wishlist-section');
-                    if (el) {
-                      const isMobile = window.innerWidth < 768;
-                      const navOffset = isMobile ? 112 : 80;
-                      const elementTop = el.getBoundingClientRect().top + window.pageYOffset;
-                      window.scrollTo({ top: Math.max(0, elementTop - navOffset), behavior: 'smooth' });
-                    }
+                  const el = document.getElementById('wishlist-section');
+                  if (el) {
+                    const isMobile = window.innerWidth < 768;
+                    const navOffset = isMobile ? 112 : 80;
+                    const elementTop = el.getBoundingClientRect().top + window.pageYOffset;
+                    window.scrollTo({ top: Math.max(0, elementTop - navOffset), behavior: 'smooth' });
                   }
                 }}
                 className="px-6 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 text-white font-black text-sm shadow-float hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer"
@@ -406,13 +397,9 @@ export default function HomePage() {
               </button>
 
               <button 
+                id="hero-btn-need-help"
                 onClick={() => {
-                  const user = getActiveUser();
-                  if (!user) {
-                    openAuthModal('REGISTER');
-                  } else {
-                    router.push('/create-wish/');
-                  }
+                  router.push('/create-wish/');
                 }}
                 className="px-6 py-3.5 rounded-2xl bg-white hover:bg-brand-50 border-2 border-brand-600 text-brand-700 font-black text-sm shadow-soft hover:scale-[1.02] transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
@@ -912,7 +899,42 @@ export default function HomePage() {
               </button>
             </div>
 
-            <div className="h-48 overflow-y-auto p-3 bg-warm-50 rounded-2xl border border-warm-200 space-y-2 text-xs">
+            {/* Kênh hỗ trợ trực tiếp qua Hotline & Zalo */}
+            <div className="p-3 bg-brand-50/80 border border-brand-200/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-brand-600 text-white flex items-center justify-center shrink-0">
+                  <Phone className="w-4 h-4" />
+                </div>
+                <div>
+                  <div className="text-[11px] font-bold text-warm-900">Hotline & Zalo Tiếp Nhận: <strong className="text-brand-800">0908.210.884</strong></div>
+                  <div className="text-[10px] text-warm-600">Nguyễn Khiêm • Ban điều phối SOVA hỗ trợ kết nối 24/7</div>
+                </div>
+              </div>
+              <div className="flex items-center gap-1.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  id="btn-copy-hotline"
+                  onClick={() => {
+                    navigator.clipboard.writeText('0908210884');
+                    alert('Đã sao chép Hotline & Zalo: 0908.210.884');
+                  }}
+                  className="flex-1 sm:flex-none px-2.5 py-1.5 rounded-lg bg-white hover:bg-warm-100 border border-warm-200 text-[11px] font-bold text-warm-800 transition-all cursor-pointer shadow-2xs"
+                >
+                  Sao chép SĐT
+                </button>
+                <a
+                  id="btn-open-zalo"
+                  href="https://zalo.me/0908210884"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex-1 sm:flex-none px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold transition-all flex items-center justify-center gap-1 shadow-2xs"
+                >
+                  Mở Zalo
+                </a>
+              </div>
+            </div>
+
+            <div className="h-44 overflow-y-auto p-3 bg-warm-50 rounded-2xl border border-warm-200 space-y-2 text-xs">
               {chatMessages.map((m, idx) => (
                 <div key={idx} className="space-y-0.5">
                   <span className="text-[10px] font-bold text-warm-700">{m.sender}</span>

@@ -115,7 +115,17 @@ export default function ProfilePage() {
       if (deletedIds.includes(id)) return true;
       if (!title) return false;
       const lower = title.toLowerCase();
-      return lower.includes('test wish') || lower.includes('kiểm tra gửi') || id === '0160532f-7480-4e73-8c95-e3df6839a897' || id === 'db4739ed-9ef1-4766-ba78-721a0648d679';
+      return (
+        lower.includes('test wish') ||
+        lower.includes('thử nghiệm') ||
+        lower.includes('kiểm thử') ||
+        lower.includes('kiểm tra gửi') ||
+        lower.includes('rpc') ||
+        lower.includes('pending') ||
+        lower.includes('verified') ||
+        id === '0160532f-7480-4e73-8c95-e3df6839a897' ||
+        id === 'db4739ed-9ef1-4766-ba78-721a0648d679'
+      );
     };
 
     // Kiểm tra xem điều ước có thuộc về người dùng hiện tại không
@@ -231,13 +241,32 @@ export default function ProfilePage() {
       imageUrl: chosenImg
     };
 
+    const dbPayload = {
+      title: editTitle.trim(),
+      category: editCategory,
+      reason: editReason.trim(),
+      honor_commitment: editPledge.trim(),
+      province_code: editProvince,
+      ward_code: editDistrict,
+      updated_at: new Date().toISOString()
+    };
+
     try {
       // 1. Cập nhật Supabase
       if (!editingWish.id.startsWith('opt-')) {
-        await supabase
+        const { error: sbErr } = await supabase
           .from('wishes')
-          .update(updatedData)
+          .update(dbPayload)
           .eq('id', editingWish.id);
+
+        if (sbErr) {
+          console.warn('Cập nhật client thất bại, chuyển tiếp qua admin API:', sbErr.message);
+          await fetch('/api/wishes/manage/', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'update', wishId: editingWish.id, data: dbPayload })
+          });
+        }
       }
 
       // 2. Lưu ảnh độc lập
@@ -279,9 +308,14 @@ export default function ProfilePage() {
     const wishId = deletingWish.id;
 
     try {
-      // 1. Gửi lệnh xóa lên Supabase
+      // 1. Gửi lệnh xóa lên Supabase & đồng thời qua API quản trị
       if (!wishId.startsWith('opt-')) {
         await supabase.from('wishes').delete().eq('id', wishId);
+        await fetch('/api/wishes/manage/', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete', wishId })
+        }).catch(() => {});
       }
 
       // 2. Thêm vào danh sách ID đã xóa vĩnh viễn (Chặn 100% server kéo về lại)

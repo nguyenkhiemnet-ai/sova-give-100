@@ -229,18 +229,29 @@ export default function DedicatedAdminPortal() {
   };
 
   // Hệ thống thông báo Toast Ban Quản Trị
-  const [adminToast, setAdminToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
+  const [adminToast, setAdminToast] = useState<{ message: string; type: 'success' | 'error' | 'warning' } | null>(null);
 
-  const showAdminToast = (message: string, type: 'success' | 'error' = 'success') => {
+  const showAdminToast = (message: string, type: 'success' | 'error' | 'warning' = 'success') => {
     setAdminToast({ message, type });
     setTimeout(() => {
       setAdminToast(null);
-    }, 5000);
+    }, 6000);
   };
 
   // Trạng thái sinh Link Khôi Phục Trực Tiếp (Bypass SMTP)
   const [generatingLinks, setGeneratingLinks] = useState<{ [email: string]: boolean }>({});
   const [copiedLinks, setCopiedLinks] = useState<{ [email: string]: string }>({});
+  const [activeResetLinkModal, setActiveResetLinkModal] = useState<{
+    isOpen: boolean;
+    email: string;
+    link: string;
+    copied: boolean;
+  }>({
+    isOpen: false,
+    email: '',
+    link: '',
+    copied: false
+  });
 
   // Modal đặt trực tiếp mật khẩu mới cho thành viên
   const [directPasswordModal, setDirectPasswordModal] = useState<{
@@ -280,7 +291,14 @@ export default function DedicatedAdminPortal() {
         } catch (clipErr) {
           console.warn("Lỗi ghi clipboard:", clipErr);
         }
-        showAdminToast("Đã sao chép Link Đặt Lại Mật Khẩu! Hãy gửi link này cho thành viên qua Zalo/Tin nhắn", 'success');
+        // Hiển thị modal link chi tiết để Admin quan sát và copy tiện lợi
+        setActiveResetLinkModal({
+          isOpen: true,
+          email: userEmail,
+          link: data.actionLink!,
+          copied: true
+        });
+        showAdminToast("Đã sinh & sao chép Link Khôi Phục vào bộ nhớ tạm!", 'success');
       } else {
         showAdminToast(data.error || "Không thể tạo link khôi phục.", 'error');
       }
@@ -322,7 +340,7 @@ export default function DedicatedAdminPortal() {
         setDirectPasswordModal(prev => ({ ...prev, loading: false, error: data.error || 'Lỗi cập nhật mật khẩu.' }));
       }
     } catch (e: any) {
-      setDirectPasswordModal(prev => ({ ...prev, loading: false, error: 'Lỗi kết nối máy chủ.' }));
+      setDirectPasswordModal(prev => ({ ...prev, loading: false, error: e?.message || 'Lỗi kết nối máy chủ.' }));
     }
   };
 
@@ -333,12 +351,20 @@ export default function DedicatedAdminPortal() {
     const res = await resetPassword(userEmail);
     if (res.success) {
       setResetMessage(prev => ({ ...prev, [userEmail]: 'Đã gửi email khôi phục thành công! (Kiểm tra cả Inbox & Spam)' }));
+      showAdminToast(`Đã gửi email khôi phục mật khẩu đến ${userEmail}!`, 'success');
     } else {
       let errText = res.error || '';
-      if (errText.toLowerCase().includes('security purposes') || errText.toLowerCase().includes('rate limit') || errText.toLowerCase().includes('over_email_send_rate_limit')) {
-        errText = 'Hệ thống bảo vệ chống spam: Vui lòng đợi 60 giây trước khi yêu cầu gửi lại.';
+      const isRateLimit = errText.toLowerCase().includes('security purposes') ||
+                          errText.toLowerCase().includes('rate limit') || 
+                          errText.toLowerCase().includes('over_email_send_rate_limit') ||
+                          errText.includes('429');
+      if (isRateLimit) {
+        errText = 'Máy chủ Supabase đang nghẽn gửi mail. Vui lòng bấm nút "📋 Lấy Link" bên cạnh để gửi link trực tiếp cho thành viên qua Zalo!';
+        showAdminToast('Máy chủ Supabase đang nghẽn gửi mail. Vui lòng bấm "📋 Lấy Link" bên cạnh!', 'warning');
+      } else {
+        showAdminToast(`Lỗi: ${errText}`, 'error');
       }
-      setResetMessage(prev => ({ ...prev, [userEmail]: `Lỗi: ${errText}` }));
+      setResetMessage(prev => ({ ...prev, [userEmail]: errText }));
     }
   };
 
@@ -1620,9 +1646,24 @@ export default function DedicatedAdminPortal() {
                                 </div>
 
                                 {copiedUrl && (
-                                  <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
-                                    ✓ Đã copy link vào clipboard
-                                  </span>
+                                  <div className="flex items-center gap-1 mt-0.5">
+                                    <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                                      ✓ Đã lưu link
+                                    </span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setActiveResetLinkModal({
+                                        isOpen: true,
+                                        email: u.email,
+                                        link: copiedUrl,
+                                        copied: false
+                                      })}
+                                      className="text-[10px] font-black text-emerald-700 hover:text-emerald-800 underline cursor-pointer hover:bg-emerald-50 px-1 py-0.5 rounded transition-colors"
+                                      title="Xem và sao chép lại liên kết này"
+                                    >
+                                      [Xem / Gửi lại]
+                                    </button>
+                                  </div>
                                 )}
 
                                 {resetMessage[u.email] && (
@@ -2087,18 +2128,26 @@ export default function DedicatedAdminPortal() {
         </div>
       )}
 
-      {/* TOAST THÔNG BÁO XANH BÀN QUẢN TRỊ */}
+      {/* TOAST THÔNG BÁO BÀN QUẢN TRỊ */}
       {adminToast && (
-        <div className="fixed bottom-6 right-6 z-[9999] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border transition-all animate-in slide-in-from-bottom-5 duration-200 bg-emerald-900/95 text-white border-emerald-500 backdrop-blur-md max-w-md">
+        <div className={`fixed bottom-6 right-6 z-[9999] flex items-center gap-3 px-5 py-3.5 rounded-2xl shadow-2xl border transition-all animate-in slide-in-from-bottom-5 duration-200 backdrop-blur-md max-w-md ${
+          adminToast.type === 'success' 
+            ? 'bg-emerald-900/95 text-white border-emerald-500' 
+            : adminToast.type === 'warning'
+            ? 'bg-amber-900/95 text-white border-amber-500'
+            : 'bg-rose-900/95 text-white border-rose-500'
+        }`}>
           {adminToast.type === 'success' ? (
             <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+          ) : adminToast.type === 'warning' ? (
+            <AlertTriangle className="w-5 h-5 text-amber-400 shrink-0" />
           ) : (
             <AlertTriangle className="w-5 h-5 text-rose-400 shrink-0" />
           )}
           <p className="text-xs font-bold leading-relaxed flex-1">{adminToast.message}</p>
           <button 
             onClick={() => setAdminToast(null)} 
-            className="p-1 rounded-lg text-emerald-300 hover:text-white hover:bg-emerald-800/50 cursor-pointer transition-colors"
+            className="p-1 rounded-lg text-white/70 hover:text-white hover:bg-white/10 cursor-pointer transition-colors"
           >
             <X className="w-4 h-4" />
           </button>
@@ -2168,6 +2217,101 @@ export default function DedicatedAdminPortal() {
                 className="flex-1 py-2 px-3 rounded-xl bg-emerald-700 hover:bg-emerald-800 disabled:opacity-50 text-white text-xs font-black shadow-xs cursor-pointer"
               >
                 {directPasswordModal.loading ? 'Đang cập nhật...' : 'Xác Nhận Đổi'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL HIỂN THỊ LINK KHÔI PHỤC CHI TIẾT ĐỂ ADMIN QUAN SÁT VÀ COPY TIỆN LỢI */}
+      {activeResetLinkModal.isOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-warm-950/60 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-lg bg-white rounded-3xl p-6 shadow-2xl border border-warm-200 space-y-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-9 h-9 rounded-2xl bg-emerald-100 flex items-center justify-center text-emerald-700">
+                  <CheckCircle2 className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-warm-900">
+                    Link Đặt Lại Mật Khẩu Khẩn Cấp
+                  </h3>
+                  <p className="text-[11px] text-emerald-700 font-bold">
+                    ✓ Đã tạo thành công • Bypass SMTP 100%
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setActiveResetLinkModal(prev => ({ ...prev, isOpen: false }))}
+                className="p-1 text-warm-400 hover:text-warm-700 rounded-lg hover:bg-warm-100 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-3 rounded-2xl bg-warm-50 border border-warm-200 text-xs">
+              <span className="text-warm-500 font-medium">Thành viên: </span>
+              <span className="font-bold text-emerald-800 break-all">{activeResetLinkModal.email}</span>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="block text-xs font-bold text-warm-700">
+                Liên kết bảo mật (Đã tự động chép vào Clipboard):
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={activeResetLinkModal.link}
+                  onFocus={e => e.target.select()}
+                  className="w-full px-3 py-2 bg-warm-100 border border-warm-200 rounded-xl text-xs font-mono text-warm-900 select-all focus:outline-none focus:border-emerald-600"
+                />
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      if (typeof navigator !== 'undefined' && navigator.clipboard) {
+                        await navigator.clipboard.writeText(activeResetLinkModal.link);
+                      }
+                      setActiveResetLinkModal(prev => ({ ...prev, copied: true }));
+                      showAdminToast("Đã chép liên kết vào clipboard!", 'success');
+                    } catch (e) {
+                      showAdminToast("Vui lòng chọn toàn bộ link và nhấn Ctrl+C / Cmd+C", 'warning');
+                    }
+                  }}
+                  className="px-3.5 py-2 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black shrink-0 flex items-center gap-1.5 transition-all active:scale-95 cursor-pointer"
+                >
+                  {activeResetLinkModal.copied ? (
+                    <>
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Đã chép</span>
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="w-3.5 h-3.5" />
+                      <span>Sao chép</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs space-y-1">
+              <div className="font-bold flex items-center gap-1.5">
+                <span>💡 Hướng dẫn gửi cho thành viên:</span>
+              </div>
+              <p className="text-[11px] leading-relaxed text-amber-800">
+                Hãy dán liên kết này vào Zalo hoặc tin nhắn SMS gửi trực tiếp cho thành viên. Thành viên chỉ cần bấm vào link sẽ lập tức mở màn hình tạo mật khẩu mới mà không bị phụ thuộc vào email.
+              </p>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setActiveResetLinkModal(prev => ({ ...prev, isOpen: false }))}
+                className="px-4 py-2 rounded-xl bg-warm-200 hover:bg-warm-300 text-warm-900 text-xs font-bold transition-colors cursor-pointer"
+              >
+                Đóng lại
               </button>
             </div>
           </div>
