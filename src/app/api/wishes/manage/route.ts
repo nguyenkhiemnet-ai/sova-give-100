@@ -18,6 +18,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const { action, wishId, data } = body;
 
+    if (action === 'test') {
+      return NextResponse.json({ success: true, message: 'Local API endpoint active 100%' });
+    }
+
     if (!wishId) {
       return NextResponse.json({ success: false, error: 'Thiếu wishId' }, { status: 400 });
     }

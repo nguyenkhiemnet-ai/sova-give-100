@@ -43,10 +43,34 @@ const CATEGORIES = [
   { id: 'livelihood_tools', label: 'Công cụ mưu sinh', shortLabel: 'Mưu sinh', icon: Wrench },
 ];
 
+function WishSkeletonCard() {
+  return (
+    <div className="bg-white rounded-2xl sm:rounded-3xl border border-warm-200/90 overflow-hidden shadow-soft flex flex-col justify-between animate-pulse">
+      <div className="relative aspect-[4/3] sm:aspect-[16/10] bg-gradient-to-r from-warm-200 via-warm-100 to-warm-200" />
+      <div className="p-3 sm:p-5 flex-1 flex flex-col justify-between space-y-3">
+        <div className="space-y-2">
+          <div className="h-4 bg-warm-200 rounded-md w-3/4" />
+          <div className="h-3 bg-warm-100 rounded-md w-1/2" />
+        </div>
+        <div className="space-y-1.5 pt-2 hidden sm:block">
+          <div className="h-3 bg-warm-100 rounded w-full" />
+          <div className="h-3 bg-warm-100 rounded w-4/5" />
+        </div>
+        <div className="pt-3 border-t border-warm-100 flex items-center justify-between">
+          <div className="h-3 bg-warm-100 rounded w-1/3" />
+          <div className="h-6 sm:h-7 bg-brand-100/70 rounded-xl w-16 sm:w-24" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function HomePage() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [wishes, setWishes] = useState<WishItem[]>([]);
+  const [loadingWishes, setLoadingWishes] = useState(true);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedProvince, setSelectedProvince] = useState('ALL');
@@ -160,6 +184,7 @@ export default function HomePage() {
   }, []);
 
   async function fetchCombinedWishes() {
+    setLoadingWishes(true);
     let serverItems: WishItem[] = [];
     try {
       // 1. Ưu tiên lấy qua Edge Cached Route (/api/wishes-feed) - KHÔNG dùng trailing slash để tránh 404 trên Cloudflare
@@ -242,6 +267,7 @@ export default function HomePage() {
     });
 
     setWishes(Array.from(mergedMap.values()));
+    setLoadingWishes(false);
   }
 
   const handleOpenClaimModal = (item: WishItem) => {
@@ -312,7 +338,11 @@ export default function HomePage() {
   const handleCopyShareLink = () => {
     navigator.clipboard.writeText(shareUrl);
     setCopiedLink(true);
-    setTimeout(() => setCopiedLink(false), 2500);
+    setToastMessage('Đã sao chép đường dẫn chia sẻ vào bộ nhớ tạm!');
+    setTimeout(() => {
+      setCopiedLink(false);
+      setToastMessage(null);
+    }, 2500);
   };
 
   // Tự động cuộn mượt đến Cây Nguyện Ước khi chọn danh mục hoặc tìm kiếm
@@ -512,17 +542,17 @@ export default function HomePage() {
                   <button
                     key={cat.id}
                     onClick={(e) => handleSelectCategory(cat.id, e)}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 sm:px-3.5 sm:py-2 rounded-xl text-xs font-bold whitespace-nowrap transition-all duration-200 cursor-pointer ${
                       active 
-                        ? 'bg-brand-600 text-white shadow-soft scale-[1.02]' 
-                        : 'bg-warm-100/80 hover:bg-warm-200/90 text-warm-700 hover:text-warm-900 border border-warm-200/50'
+                        ? 'bg-brand-600 text-white shadow-md shadow-brand-600/25 ring-2 ring-emerald-400/80 scale-[1.03]' 
+                        : 'bg-warm-100/80 hover:bg-warm-200/90 text-warm-700 hover:text-warm-900 border border-warm-200/50 hover:scale-[1.01]'
                     }`}
                   >
                     <Icon className="w-3.5 h-3.5 shrink-0"/>
                     <span className="hidden sm:inline">{cat.label}</span>
                     <span className="sm:hidden">{cat.shortLabel}</span>
-                    <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-black ${
-                      active ? 'bg-white/20 text-white' : 'bg-warm-200/90 text-warm-700'
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-black transition-all ${
+                      active ? 'bg-white text-brand-700 shadow-xs ring-1 ring-white/60' : 'bg-warm-200/90 text-warm-700'
                     }`}>
                       {count}
                     </span>
@@ -578,7 +608,13 @@ export default function HomePage() {
         )}
 
         {/* LƯỚI ĐIỀU ƯỚC: 2 CỘT TRÊN MOBILE, 3 CỘT TRÊN DESKTOP HOẶC EMPTY STATE */}
-        {filteredWishes.length > 0 ? (
+        {loadingWishes ? (
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4 md:gap-6 animate-in fade-in duration-300">
+            {[1, 2, 3, 4, 5, 6].map(i => (
+              <WishSkeletonCard key={i} />
+            ))}
+          </div>
+        ) : filteredWishes.length > 0 ? (
           <div key={selectedCategory + searchQuery} className="grid grid-cols-2 lg:grid-cols-3 gap-2.5 sm:gap-4 md:gap-6 animate-in fade-in duration-300">
             {filteredWishes.map(item => {
               const isUrgent = item.urgency === 'urgent' || item.urgency_level === 'urgent';
@@ -934,7 +970,8 @@ export default function HomePage() {
                   id="btn-copy-hotline"
                   onClick={() => {
                     navigator.clipboard.writeText('0908210884');
-                    alert('Đã sao chép Hotline & Zalo: 0908.210.884');
+                    setToastMessage('Đã sao chép Hotline 0908.210.884 vào bộ nhớ tạm!');
+                    setTimeout(() => setToastMessage(null), 3000);
                   }}
                   className="flex-1 sm:flex-none px-2.5 py-1.5 rounded-lg bg-white hover:bg-warm-100 border border-warm-200 text-[11px] font-bold text-warm-800 transition-all cursor-pointer shadow-2xs"
                 >
@@ -1104,6 +1141,16 @@ export default function HomePage() {
               </div>
             )}
           </div>
+        </div>
+      )}
+
+      {/* 6-STAR SENSORY GLASSMORPHISM TOAST */}
+      {toastMessage && (
+        <div className="fixed bottom-20 md:bottom-8 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 px-5 py-3 rounded-2xl bg-brand-950/90 text-white shadow-2xl backdrop-blur-md border border-emerald-500/50 ring-2 ring-emerald-500/20 animate-in fade-in slide-in-from-bottom-5 duration-300">
+          <div className="w-6 h-6 rounded-full bg-emerald-500/20 border border-emerald-400 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+          </div>
+          <span className="text-xs sm:text-sm font-bold tracking-wide text-emerald-50">{toastMessage}</span>
         </div>
       )}
 

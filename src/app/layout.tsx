@@ -1,13 +1,32 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import Link from 'next/link';
 import Navbar from '@/components/Navbar';
 import BroadcastBanner from '@/components/BroadcastBanner';
 import { Sparkles, PlusCircle, QrCode, Compass, UserCheck, ShieldCheck } from 'lucide-react';
 
+export const viewport: Viewport = {
+  themeColor: '#0b1120',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+};
+
 export const metadata: Metadata = {
   title: 'SOVA GIVE 100 - Cây Nguyện Ước Tuần Hoàn 0-VND',
   description: 'Nền tảng tuần hoàn công cụ sinh kế tử tế đạt chuẩn Enterprise ACID 10/10',
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'SOVAHUB',
+  },
+  icons: {
+    icon: '/logo.svg',
+    apple: '/logo.svg',
+  },
 };
 
 export default function RootLayout({

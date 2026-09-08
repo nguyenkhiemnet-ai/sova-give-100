@@ -22,6 +22,10 @@ export async function GET() {
   try {
     const supabaseAdmin = getAdminClient();
 
+    const cacheHeaders = {
+      'Cache-Control': 'public, max-age=60, s-maxage=300'
+    };
+
     // 1. Thử lấy từ bảng site_settings
     try {
       const { data, error } = await supabaseAdmin
@@ -31,7 +35,7 @@ export async function GET() {
         .maybeSingle();
 
       if (!error && data && Array.isArray(data.value) && data.value.length > 0) {
-        return NextResponse.json({ success: true, categories: data.value });
+        return NextResponse.json({ success: true, categories: data.value }, { headers: cacheHeaders });
       }
     } catch {}
 
@@ -40,13 +44,15 @@ export async function GET() {
       const { data: usersData } = await supabaseAdmin.auth.admin.listUsers();
       const admin = usersData?.users?.find(u => u.email === 'nguyenkhiemnet@gmail.com');
       if (admin?.user_metadata?.site_categories && Array.isArray(admin.user_metadata.site_categories)) {
-        return NextResponse.json({ success: true, categories: admin.user_metadata.site_categories });
+        return NextResponse.json({ success: true, categories: admin.user_metadata.site_categories }, { headers: cacheHeaders });
       }
     } catch {}
 
-    return NextResponse.json({ success: true, categories: DEFAULT_CATEGORIES });
+    return NextResponse.json({ success: true, categories: DEFAULT_CATEGORIES }, { headers: cacheHeaders });
   } catch (err: any) {
-    return NextResponse.json({ success: true, categories: DEFAULT_CATEGORIES });
+    return NextResponse.json({ success: true, categories: DEFAULT_CATEGORIES }, {
+      headers: { 'Cache-Control': 'public, max-age=60, s-maxage=300' }
+    });
   }
 }
 

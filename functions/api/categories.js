@@ -34,7 +34,11 @@ export async function onRequestGet(context) {
         if (Array.isArray(rows) && rows.length > 0 && Array.isArray(rows[0].value) && rows[0].value.length > 0) {
           return new Response(JSON.stringify({ success: true, categories: rows[0].value }), {
             status: 200,
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+              'Cache-Control': 'public, max-age=60, s-maxage=300'
+            }
           });
         }
       }
@@ -51,7 +55,11 @@ export async function onRequestGet(context) {
         if (admin?.user_metadata?.site_categories && Array.isArray(admin.user_metadata.site_categories)) {
           return new Response(JSON.stringify({ success: true, categories: admin.user_metadata.site_categories }), {
             status: 200,
-            headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+            headers: {
+              'Content-Type': 'application/json',
+              'Access-Control-Allow-Origin': '*',
+              'Cache-Control': 'public, max-age=60, s-maxage=300'
+            }
           });
         }
       }
@@ -59,12 +67,20 @@ export async function onRequestGet(context) {
 
     return new Response(JSON.stringify({ success: true, categories: DEFAULT_CATEGORIES }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'public, max-age=60, s-maxage=300'
+      }
     });
   } catch (err) {
     return new Response(JSON.stringify({ success: true, categories: DEFAULT_CATEGORIES }), {
       status: 200,
-      headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' }
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Cache-Control': 'public, max-age=60, s-maxage=300'
+      }
     });
   }
 }
