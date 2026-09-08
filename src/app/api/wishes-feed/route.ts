@@ -24,7 +24,15 @@ export async function GET(request: Request) {
 
     const isTestWish = (w: any) => {
       const title = (w.title || '').toLowerCase();
-      return title.includes('thử nghiệm') || title.includes('test wish') || title.includes('kiểm thử') || title.includes('kiểm tra gửi') || w.id === '0160532f-7480-4e73-8c95-e3df6839a897' || w.id === 'db4739ed-9ef1-4766-ba78-721a0648d679';
+      const reason = (w.reason || '').toLowerCase();
+      return title.includes('thử nghiệm') || 
+             title.includes('test wish') || 
+             title.includes('kiểm thử') || 
+             title.includes('kiểm tra gửi') || 
+             reason.includes('máy m3') ||
+             w.id === '5d141b76-93d3-4a9f-82f4-deb816b5b946' ||
+             w.id === '0160532f-7480-4e73-8c95-e3df6839a897' || 
+             w.id === 'db4739ed-9ef1-4766-ba78-721a0648d679';
     };
 
     const cleanData = (data || []).filter(item => !isTestWish(item) && item.status !== 'archived');

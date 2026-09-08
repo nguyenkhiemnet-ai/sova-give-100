@@ -34,10 +34,11 @@ async function runGate() {
     const activeWishes = Array.isArray(wishes) ? wishes.filter(w => w.status !== 'archived') : [];
     const trashWishes = activeWishes.filter(w => {
       const t = (w.title || '').toLowerCase();
-      return t.includes('thử nghiệm') || t.includes('test wish') || t.includes('kiểm thử');
+      const r = (w.reason || '').toLowerCase();
+      return t.includes('thử nghiệm') || t.includes('test wish') || t.includes('kiểm thử') || r.includes('máy m3') || w.id === '5d141b76-93d3-4a9f-82f4-deb816b5b946';
     });
 
-    assert(activeWishes.length >= 4, `Cơ sở dữ liệu lưu giữ đúng tối thiểu 4 bài thật (hiện có: ${activeWishes.length})`);
+    assert(activeWishes.length === 4, `Cơ sở dữ liệu lưu giữ chuẩn xác đúng 4 bài thật (hiện có: ${activeWishes.length})`);
     assert(trashWishes.length === 0, `Không còn bài đăng thử nghiệm rác nào hiển thị công khai (rác tìm thấy: ${trashWishes.length})`);
   } catch (err) {
     assert(false, `Lỗi kết nối kiểm tra dữ liệu Supabase: ${err.message}`);

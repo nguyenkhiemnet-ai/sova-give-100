@@ -897,11 +897,11 @@ export default function HomePage() {
 
             {/* SCROLLABLE BODY CONTENT */}
             <div className="p-4 sm:p-6 space-y-4 sm:space-y-5 overflow-y-auto flex-1">
-              <div className="aspect-[16/10] rounded-2xl overflow-hidden border border-warm-200 bg-warm-900 shadow-soft">
+              <div className="aspect-[16/10] sm:aspect-[16/9] rounded-2xl overflow-hidden border border-warm-200 bg-warm-950/90 shadow-soft flex items-center justify-center">
                 <img 
                   src={detailWish.imageUrl || CATEGORY_FALLBACK_IMAGES[inferCategory(detailWish.title, detailWish.category)] || CATEGORY_FALLBACK_IMAGES['bicycle']} 
                   alt={detailWish.title} 
-                  className="w-full h-full object-cover object-center"
+                  className="w-full h-full object-contain object-center"
                 />
               </div>
 

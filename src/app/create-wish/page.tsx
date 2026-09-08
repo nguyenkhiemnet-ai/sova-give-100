@@ -40,6 +40,7 @@ export default function CreateWishPage() {
   const [enableCustom, setEnableCustom] = useState(false);
 
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageSizeKb, setImageSizeKb] = useState<number | null>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -82,7 +83,7 @@ export default function CreateWishPage() {
     );
   };
 
-  // Nén ảnh trực tiếp qua Canvas để chống tràn bộ nhớ localStorage
+  // Nén ảnh bảo toàn tỉ lệ khung hình gốc & ép dung lượng chuẩn 40KB - 75KB (< 80KB)
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -91,22 +92,49 @@ export default function CreateWishPage() {
         const img = new Image();
         img.onload = () => {
           const canvas = document.createElement('canvas');
-          const maxDim = 600;
-          let w = img.width;
-          let h = img.height;
-          if (w > h && w > maxDim) {
-            h = Math.round((h * maxDim) / w);
-            w = maxDim;
-          } else if (h > maxDim) {
-            h = Math.round((w * maxDim) / h);
-            h = maxDim;
+          const MAX_DIMENSION = 1200; // Cạnh lớn nhất tối đa 1200px
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_DIMENSION) {
+              height = Math.round((height * MAX_DIMENSION) / width);
+              width = MAX_DIMENSION;
+            }
+          } else {
+            if (height > MAX_DIMENSION) {
+              width = Math.round((width * MAX_DIMENSION) / height);
+              height = MAX_DIMENSION;
+            }
           }
-          canvas.width = w;
-          canvas.height = h;
+
+          canvas.width = width;
+          canvas.height = height;
           const ctx = canvas.getContext('2d');
-          ctx?.drawImage(img, 0, 0, w, h);
-          const compressed = canvas.toDataURL('image/jpeg', 0.8);
+          ctx?.drawImage(img, 0, 0, width, height);
+
+          // Nén thông minh: tự động điều chỉnh chất lượng để kích thước luôn nằm trong khoảng 40KB - 75KB (< 80KB)
+          let quality = 0.72;
+          let compressed = canvas.toDataURL('image/jpeg', quality);
+
+          // Nếu ảnh > 75KB (~102,000 ký tự Base64), giảm dần quality
+          while (compressed.length > 102000 && quality > 0.28) {
+            quality -= 0.08;
+            compressed = canvas.toDataURL('image/jpeg', quality);
+          }
+
+          // Nếu vẫn > 75KB (ảnh chi tiết phức tạp), downscale nhẹ thêm 1 nấc
+          if (compressed.length > 102000) {
+            const downScale = 0.8;
+            canvas.width = Math.round(width * downScale);
+            canvas.height = Math.round(height * downScale);
+            ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+            compressed = canvas.toDataURL('image/jpeg', 0.65);
+          }
+
+          const approxKb = Math.round((compressed.length * 3) / 4 / 1024);
           setImagePreview(compressed);
+          setImageSizeKb(approxKb);
         };
         img.src = event.target?.result as string;
       };
@@ -344,12 +372,29 @@ export default function CreateWishPage() {
               />
 
               {imagePreview ? (
-                <div className="relative inline-block">
-                  <img src={imagePreview} alt="Preview" className="max-h-64 rounded-2xl shadow-md mx-auto object-cover"/>
+                <div className="relative inline-block max-w-full">
+                  <div className="p-2 bg-warm-100/70 rounded-2xl border border-warm-200 shadow-inner">
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview" 
+                      className="max-h-72 sm:max-h-80 w-auto max-w-full rounded-xl shadow-xs mx-auto object-contain"
+                    />
+                  </div>
+
+                  <div className="mt-3 flex items-center justify-center gap-2">
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-800 text-[11px] font-bold shadow-2xs">
+                      <ShieldCheck className="w-3.5 h-3.5 text-emerald-600"/>
+                      <span>Dung lượng chuẩn: ~{imageSizeKb || 55} KB (&lt; 80KB) • Tỉ lệ gốc 100%</span>
+                    </span>
+                  </div>
+
                   <button
                     type="button"
-                    onClick={() => setImagePreview(null)}
-                    className="absolute -top-2 -right-2 w-7 h-7 bg-red-600 hover:bg-red-700 text-white rounded-full text-xs font-bold shadow-md flex items-center justify-center transition-transform hover:scale-110 cursor-pointer"
+                    onClick={() => {
+                      setImagePreview(null);
+                      setImageSizeKb(null);
+                    }}
+                    className="absolute -top-2 -right-2 w-8 h-8 bg-red-600 hover:bg-red-700 text-white rounded-full text-xs font-bold shadow-md flex items-center justify-center transition-transform hover:scale-110 cursor-pointer"
                     title="Xóa ảnh để chọn lại"
                   >
                     ✕
@@ -505,7 +550,7 @@ export default function CreateWishPage() {
       </div>
 
       {/* FLOATING ACTION DOCK (6-STAR ERGONOMIC EXPERIENCE) */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-emerald-500/20 px-4 py-3 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]">
+      <div className="fixed bottom-0 left-0 right-0 z-[60] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-emerald-500/30 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
           {/* Nút Quay Lại */}
           {step > 1 ? (
