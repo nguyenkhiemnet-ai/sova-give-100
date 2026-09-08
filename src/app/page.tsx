@@ -189,7 +189,7 @@ export default function HomePage() {
       if (deletedIds.includes(id)) return true;
       if (!title) return false;
       const lower = title.toLowerCase();
-      return lower.includes('test wish') || lower.includes('kiểm tra gửi') || id === '0160532f-7480-4e73-8c95-e3df6839a897' || id === 'db4739ed-9ef1-4766-ba78-721a0648d679';
+      return lower.includes('test wish') || lower.includes('thử nghiệm') || lower.includes('kiểm thử') || lower.includes('kiểm tra gửi') || id === '0160532f-7480-4e73-8c95-e3df6839a897' || id === 'db4739ed-9ef1-4766-ba78-721a0648d679';
     };
 
     localItems.forEach(item => {

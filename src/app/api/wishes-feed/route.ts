@@ -23,10 +23,17 @@ export async function GET() {
       });
     }
 
+    const isTestWish = (w: any) => {
+      const title = (w.title || '').toLowerCase();
+      return title.includes('thử nghiệm') || title.includes('test wish') || title.includes('kiểm thử') || title.includes('kiểm tra gửi') || w.id === '0160532f-7480-4e73-8c95-e3df6839a897' || w.id === 'db4739ed-9ef1-4766-ba78-721a0648d679';
+    };
+
+    const cleanData = (data || []).filter(item => !isTestWish(item));
+
     // 2. Trả về payload kèm Edge CDN Caching Headers
     // s-maxage=30: Cloudflare Edge lưu cache 30s
     // stale-while-revalidate=300: Phục vụ ngay dữ liệu đệm cũ trong khi tái tạo nền
-    return NextResponse.json({ success: true, data: data || [] }, {
+    return NextResponse.json({ success: true, data: cleanData }, {
       status: 200,
       headers: {
         'Cache-Control': 'public, s-maxage=30, stale-while-revalidate=300, max-age=10',
