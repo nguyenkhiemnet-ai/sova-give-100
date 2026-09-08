@@ -24,6 +24,7 @@ import {
   SUPER_ADMIN_EMAIL, UserProfile, loginWithGoogle,
   getAllProfiles, resetPassword
 } from '@/lib/auth';
+import { adminGenerateRecoveryLink, adminDirectUpdatePassword } from '@/lib/adminAuthOps';
 
 interface WishItem {
   id: string;
@@ -262,24 +263,15 @@ export default function DedicatedAdminPortal() {
     if (!userEmail) return;
     setGeneratingLinks(prev => ({ ...prev, [userEmail]: true }));
     try {
-      const res = await fetch('/api/admin/auth-ops/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'generate-recovery-link',
-          targetEmail: userEmail,
-          adminEmail: currentUser?.email || 'nguyenkhiemnet@gmail.com'
-        })
-      });
-      const data = await res.json();
+      const data = await adminGenerateRecoveryLink(userEmail, currentUser?.email || 'nguyenkhiemnet@gmail.com');
       if (data.success && data.actionLink) {
-        setCopiedLinks(prev => ({ ...prev, [userEmail]: data.actionLink }));
+        setCopiedLinks(prev => ({ ...prev, [userEmail]: data.actionLink! }));
         try {
           if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(data.actionLink);
+            await navigator.clipboard.writeText(data.actionLink!);
           } else {
             const textArea = document.createElement('textarea');
-            textArea.value = data.actionLink;
+            textArea.value = data.actionLink!;
             document.body.appendChild(textArea);
             textArea.select();
             document.execCommand('copy');
@@ -310,18 +302,11 @@ export default function DedicatedAdminPortal() {
     }
     setDirectPasswordModal(prev => ({ ...prev, loading: true, error: '', success: '' }));
     try {
-      const res = await fetch('/api/admin/auth-ops/', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          action: 'update-password',
-          targetEmail: directPasswordModal.user.email,
-          targetUserId: directPasswordModal.user.id,
-          newPassword: directPasswordModal.password,
-          adminEmail: currentUser?.email || 'nguyenkhiemnet@gmail.com'
-        })
-      });
-      const data = await res.json();
+      const data = await adminDirectUpdatePassword(
+        directPasswordModal.user.email,
+        directPasswordModal.password,
+        currentUser?.email || 'nguyenkhiemnet@gmail.com'
+      );
       if (data.success) {
         setDirectPasswordModal(prev => ({
           ...prev,

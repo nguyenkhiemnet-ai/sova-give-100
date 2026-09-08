@@ -212,7 +212,7 @@ export async function resetPassword(email: string): Promise<{ success: boolean; 
   }
 }
 
-export async function updateUserPassword(newPassword: string): Promise<{ success: boolean; error?: string; message?: string }> {
+export async function updateUserPassword(newPassword: string): Promise<{ success: boolean; error?: string; message?: string; email?: string }> {
   try {
     const { data, error } = await supabase.auth.updateUser({
       password: newPassword
@@ -224,6 +224,7 @@ export async function updateUserPassword(newPassword: string): Promise<{ success
 
     return {
       success: true,
+      email: data.user?.email || undefined,
       message: 'Đặt lại mật khẩu mới thành công! Bạn có thể sử dụng mật khẩu mới này từ bây giờ.'
     };
   } catch (err: any) {

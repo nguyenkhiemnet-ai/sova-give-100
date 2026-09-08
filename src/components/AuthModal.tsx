@@ -7,6 +7,7 @@ import {
   ArrowRight, CheckCircle2, AlertCircle, RefreshCw, Sparkles 
 } from 'lucide-react';
 import { loginWithGoogle, loginWithEmail, signUpWithEmail, resetPassword, updateUserPassword } from '@/lib/auth';
+import { supabase } from '@/lib/supabaseClient';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -92,6 +93,17 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
     }
   };
 
+  // Tự động nhận diện email thành viên khi mở tab Đổi Mật Khẩu (từ Recovery Link)
+  useEffect(() => {
+    if (isOpen && activeTab === 'UPDATE_PASSWORD') {
+      supabase.auth.getUser().then(({ data }) => {
+        if (data?.user?.email) {
+          setEmail(data.user.email);
+        }
+      });
+    }
+  }, [isOpen, activeTab]);
+
   const handleUpdatePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!password) {
@@ -115,12 +127,25 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
     setLoading(false);
 
     if (res.success) {
-      setSuccessMessage('🎉 Đặt lại mật khẩu thành công! Bạn có thể đăng nhập ngay.');
+      // Lưu lại email thực tế vừa đổi mật khẩu thành công để điền sẵn vào ô đăng nhập
+      let resolvedEmail = res.email || email;
+      if (!resolvedEmail) {
+        const { data: uData } = await supabase.auth.getUser();
+        if (uData?.user?.email) resolvedEmail = uData.user.email;
+      }
+      if (resolvedEmail) {
+        setEmail(resolvedEmail);
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('SOVA_SAVED_EMAIL', resolvedEmail);
+        }
+      }
+
+      setSuccessMessage('🎉 Đặt lại mật khẩu thành công! Bạn có thể đăng nhập ngay với mật khẩu mới.');
       setTimeout(() => {
         setActiveTab('LOGIN');
         setPassword('');
         setConfirmPassword('');
-      }, 1500);
+      }, 1200);
     } else {
       setErrorMessage(res.error || 'Không thể cập nhật mật khẩu, vui lòng thử lại.');
     }
@@ -391,7 +416,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
                     type="email"
                     name="email"
                     autoComplete="username"
-                    placeholder="nguyenvana@gmail.com"
+                    placeholder="email.cua.ban@gmail.com"
                     value={email}
                     onChange={e => { setEmail(e.target.value); if (errorMessage) setErrorMessage(''); }}
                     className="w-full pl-9 pr-3 py-2 bg-warm-50/60 border border-warm-200 rounded-xl text-xs font-medium text-warm-900 placeholder:text-warm-400 focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 transition-all"
@@ -497,7 +522,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
                     type="email"
                     name="email"
                     autoComplete="username"
-                    placeholder="nguyenvana@gmail.com"
+                    placeholder="email.cua.ban@gmail.com"
                     value={email}
                     onChange={e => { setEmail(e.target.value); if (errorMessage) setErrorMessage(''); }}
                     className="w-full pl-9 pr-3 py-2 bg-warm-50/60 border border-warm-200 rounded-xl text-xs font-medium text-warm-900 placeholder:text-warm-400 focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 transition-all"
@@ -626,7 +651,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-warm-400 pointer-events-none" />
                     <input
                       type="email"
-                      placeholder="nguyenvana@gmail.com"
+                      placeholder="email.cua.ban@gmail.com"
                       value={email}
                       onChange={e => { setEmail(e.target.value); if (errorMessage) setErrorMessage(''); }}
                       className="w-full pl-9 pr-3 py-2 bg-warm-50/60 border border-warm-200 rounded-xl text-xs font-medium text-warm-900 placeholder:text-warm-400 focus:outline-none focus:border-emerald-600 focus:bg-white focus:ring-2 focus:ring-emerald-500/15 transition-all"
