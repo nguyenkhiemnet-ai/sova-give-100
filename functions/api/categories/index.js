@@ -20,6 +20,44 @@ export async function onRequestOptions() {
 }
 
 export async function onRequestGet(context) {
+  // 1. Kiểm tra RAM Edge Cache của Cloudflare PoP trước (TTFB < 50ms)
+  let cache = null;
+  let cacheKey = null;
+  try {
+    cache = caches.default;
+    cacheKey = new Request(context.request.url, {
+      method: 'GET',
+      headers: context.request.headers
+    });
+    const cachedRes = await cache.match(cacheKey);
+    if (cachedRes) {
+      const resHeaders = new Headers(cachedRes.headers);
+      resHeaders.set('cf-edge-cache', 'HIT');
+      return new Response(cachedRes.body, {
+        status: cachedRes.status,
+        headers: resHeaders
+      });
+    }
+  } catch {}
+
+  const edgeHeaders = {
+    'Content-Type': 'application/json',
+    'Access-Control-Allow-Origin': '*',
+    'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400',
+    'CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400',
+    'Cloudflare-CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400',
+    'cf-edge-cache': 'MISS'
+  };
+
+  const commitToEdgeCache = (resp) => {
+    if (cache && cacheKey) {
+      try {
+        context.waitUntil(cache.put(cacheKey, resp.clone()));
+      } catch {}
+    }
+    return resp;
+  };
+
   try {
     const envKey = context.env?.SUPABASE_SERVICE_ROLE_KEY || SUPABASE_SERVICE_ROLE_KEY;
     const envUrl = context.env?.NEXT_PUBLIC_SUPABASE_URL || SUPABASE_URL;
@@ -32,16 +70,11 @@ export async function onRequestGet(context) {
       if (sbRes.ok) {
         const rows = await sbRes.json();
         if (Array.isArray(rows) && rows.length > 0 && Array.isArray(rows[0].value) && rows[0].value.length > 0) {
-          return new Response(JSON.stringify({ success: true, categories: rows[0].value }), {
+          const resp = new Response(JSON.stringify({ success: true, categories: rows[0].value }), {
             status: 200,
-            headers: {
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*',
-              'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400',
-              'CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400',
-              'Cloudflare-CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400'
-            }
+            headers: edgeHeaders
           });
+          return commitToEdgeCache(resp);
         }
       }
     } catch {}
@@ -55,40 +88,24 @@ export async function onRequestGet(context) {
         const data = await usersRes.json();
         const admin = data.users?.find(u => u.email === 'nguyenkhiemnet@gmail.com');
         if (admin?.user_metadata?.site_categories && Array.isArray(admin.user_metadata.site_categories)) {
-          return new Response(JSON.stringify({ success: true, categories: admin.user_metadata.site_categories }), {
+          const resp = new Response(JSON.stringify({ success: true, categories: admin.user_metadata.site_categories }), {
             status: 200,
-            headers: {
-              'Content-Type': 'application/json',
-              'Access-Control-Allow-Origin': '*',
-              'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400',
-              'CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400',
-              'Cloudflare-CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400'
-            }
+            headers: edgeHeaders
           });
+          return commitToEdgeCache(resp);
         }
       }
     } catch {}
 
-    return new Response(JSON.stringify({ success: true, categories: DEFAULT_CATEGORIES }), {
+    const defaultResp = new Response(JSON.stringify({ success: true, categories: DEFAULT_CATEGORIES }), {
       status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400',
-        'CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400',
-        'Cloudflare-CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400'
-      }
+      headers: edgeHeaders
     });
+    return commitToEdgeCache(defaultResp);
   } catch (err) {
     return new Response(JSON.stringify({ success: true, categories: DEFAULT_CATEGORIES }), {
       status: 200,
-      headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*',
-        'Cache-Control': 'public, max-age=60, s-maxage=300, stale-while-revalidate=86400',
-        'CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400',
-        'Cloudflare-CDN-Cache-Control': 'max-age=300, stale-while-revalidate=86400'
-      }
+      headers: edgeHeaders
     });
   }
 }
@@ -148,6 +165,13 @@ export async function onRequestPost(context) {
           });
         }
       }
+    } catch {}
+
+    // 3. Xóa cache trên Edge nếu có
+    try {
+      const cache = caches.default;
+      const getReq = new Request(context.request.url, { method: 'GET' });
+      await cache.delete(getReq);
     } catch {}
 
     return new Response(JSON.stringify({ success: true, categories, message: 'Đồng bộ danh mục Cloudflare Pages thành công' }), {

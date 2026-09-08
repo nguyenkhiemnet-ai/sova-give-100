@@ -103,8 +103,17 @@ async function runGate() {
 
     const headersExists = fs.existsSync(headersPath);
     assert(headersExists, 'Tệp public/_headers cấu hình Cloudflare Edge RAM Cache tồn tại');
+
+    const wishesFeedFn = fs.readFileSync(path.resolve(process.cwd(), 'functions/api/wishes-feed.js'), 'utf-8');
+    assert(wishesFeedFn.includes('caches.default'), 'Cloudflare Pages Function wishes-feed tích hợp RAM Edge Cache (caches.default)');
+
+    const categoriesFn = fs.readFileSync(path.resolve(process.cwd(), 'functions/api/categories.js'), 'utf-8');
+    assert(categoriesFn.includes('caches.default'), 'Cloudflare Pages Function categories tích hợp RAM Edge Cache (caches.default)');
+
+    const layoutContent = fs.readFileSync(path.resolve(process.cwd(), 'src/app/layout.tsx'), 'utf-8');
+    assert(layoutContent.includes('rel="preconnect"'), 'RootLayout có gắn thẻ preconnect tăng tốc tải tài nguyên tĩnh');
   } catch (err) {
-    assert(false, `Lỗi kiểm tra tệp PWA / _headers: ${err.message}`);
+    assert(false, `Lỗi kiểm tra tệp PWA / _headers / Edge Cache: ${err.message}`);
   }
 
   // 5. CHECK CANONICAL DOMAIN ENFORCEMENT

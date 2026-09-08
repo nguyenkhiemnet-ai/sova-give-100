@@ -15,8 +15,12 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://sovahub.org'),
   title: 'SOVA GIVE 100 - Cây Nguyện Ước Tuần Hoàn 0-VND',
   description: 'Nền tảng tuần hoàn công cụ sinh kế tử tế đạt chuẩn Enterprise ACID 10/10',
+  alternates: {
+    canonical: 'https://sovahub.org',
+  },
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -37,6 +41,10 @@ export default function RootLayout({
   return (
     <html lang="vi" className="scroll-smooth">
       <head>
+        <link rel="preconnect" href="https://images.unsplash.com" />
+        <link rel="dns-prefetch" href="https://images.unsplash.com" />
+        <link rel="preconnect" href="https://bltzkqrjzuplukamvdvb.supabase.co" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://bltzkqrjzuplukamvdvb.supabase.co" />
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -67,6 +75,9 @@ export default function RootLayout({
               <ShieldCheck className="w-4 h-4"/>
               <span>Enterprise ACID 10/10 • Tuân thủ Nghị định 13/2023/NĐ-CP • Phi Thương Mại 0-VND</span>
             </div>
+            <p className="text-warm-700">
+              Hotline hỗ trợ: <a href="tel:0912661558" className="font-bold text-brand-700 hover:underline">0912.661.558</a> • Zalo: <a href="https://zalo.me/0912661558" target="_blank" rel="noopener noreferrer" className="font-bold text-blue-600 hover:underline">0912661558</a>
+            </p>
             <p className="text-warm-700">Bản quyền vận hành: <strong className="text-warm-900">Nguyễn Khiêm (21/08/1984)</strong></p>
           </div>
         </footer>

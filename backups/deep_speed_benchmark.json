@@ -1,0 +1,613 @@
+{
+  "timestamp": "2026-09-08T15:32:10.099Z",
+  "networkResults": [
+    {
+      "name": "Trang chủ (Home)",
+      "url": "https://sovahub.org/",
+      "method": "GET",
+      "dns_ms": 3,
+      "tcp_ms": 141,
+      "tls_ms": 150,
+      "ttfb_ms": 452,
+      "server_process_ms": 152,
+      "total_ms": 614,
+      "size_bytes": 50809,
+      "http_code": 200,
+      "all_runs": [
+        {
+          "dns_ms": 232,
+          "tcp_ms": 141,
+          "tls_ms": 154,
+          "ttfb_ms": 686,
+          "server_process_ms": 158,
+          "total_ms": 752,
+          "size_bytes": 50809,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 3,
+          "tcp_ms": 143,
+          "tls_ms": 155,
+          "ttfb_ms": 452,
+          "server_process_ms": 152,
+          "total_ms": 522,
+          "size_bytes": 50809,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 3,
+          "tcp_ms": 128,
+          "tls_ms": 150,
+          "ttfb_ms": 421,
+          "server_process_ms": 140,
+          "total_ms": 1182,
+          "size_bytes": 50809,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 141,
+          "tls_ms": 124,
+          "ttfb_ms": 541,
+          "server_process_ms": 275,
+          "total_ms": 614,
+          "size_bytes": 50809,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 3,
+          "tcp_ms": 132,
+          "tls_ms": 117,
+          "ttfb_ms": 374,
+          "server_process_ms": 122,
+          "total_ms": 429,
+          "size_bytes": 50809,
+          "http_code": 200
+        }
+      ]
+    },
+    {
+      "name": "Trang hồ sơ (Profile)",
+      "url": "https://sovahub.org/profile",
+      "method": "GET",
+      "dns_ms": 2,
+      "tcp_ms": 133,
+      "tls_ms": 129,
+      "ttfb_ms": 428,
+      "server_process_ms": 161,
+      "total_ms": 428,
+      "size_bytes": 0,
+      "http_code": 308,
+      "all_runs": [
+        {
+          "dns_ms": 2,
+          "tcp_ms": 113,
+          "tls_ms": 129,
+          "ttfb_ms": 406,
+          "server_process_ms": 163,
+          "total_ms": 406,
+          "size_bytes": 0,
+          "http_code": 308
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 117,
+          "tls_ms": 116,
+          "ttfb_ms": 387,
+          "server_process_ms": 152,
+          "total_ms": 387,
+          "size_bytes": 0,
+          "http_code": 308
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 168,
+          "tls_ms": 122,
+          "ttfb_ms": 444,
+          "server_process_ms": 151,
+          "total_ms": 444,
+          "size_bytes": 0,
+          "http_code": 308
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 133,
+          "tls_ms": 131,
+          "ttfb_ms": 428,
+          "server_process_ms": 161,
+          "total_ms": 428,
+          "size_bytes": 0,
+          "http_code": 308
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 146,
+          "tls_ms": 156,
+          "ttfb_ms": 500,
+          "server_process_ms": 197,
+          "total_ms": 500,
+          "size_bytes": 0,
+          "http_code": 308
+        }
+      ]
+    },
+    {
+      "name": "Feed điều ước (API)",
+      "url": "https://sovahub.org/api/wishes-feed",
+      "method": "GET",
+      "dns_ms": 2,
+      "tcp_ms": 128,
+      "tls_ms": 131,
+      "ttfb_ms": 614,
+      "server_process_ms": 368,
+      "total_ms": 617,
+      "size_bytes": 2378,
+      "http_code": 200,
+      "all_runs": [
+        {
+          "dns_ms": 2,
+          "tcp_ms": 118,
+          "tls_ms": 123,
+          "ttfb_ms": 614,
+          "server_process_ms": 371,
+          "total_ms": 617,
+          "size_bytes": 2378,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 148,
+          "tls_ms": 134,
+          "ttfb_ms": 651,
+          "server_process_ms": 368,
+          "total_ms": 652,
+          "size_bytes": 2378,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 128,
+          "tls_ms": 131,
+          "ttfb_ms": 603,
+          "server_process_ms": 341,
+          "total_ms": 603,
+          "size_bytes": 2378,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 3,
+          "tcp_ms": 131,
+          "tls_ms": 130,
+          "ttfb_ms": 993,
+          "server_process_ms": 729,
+          "total_ms": 993,
+          "size_bytes": 2378,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 116,
+          "tls_ms": 131,
+          "ttfb_ms": 589,
+          "server_process_ms": 340,
+          "total_ms": 589,
+          "size_bytes": 2378,
+          "http_code": 200
+        }
+      ]
+    },
+    {
+      "name": "Danh mục CMS (API)",
+      "url": "https://sovahub.org/api/categories",
+      "method": "GET",
+      "dns_ms": 3,
+      "tcp_ms": 123,
+      "tls_ms": 140,
+      "ttfb_ms": 945,
+      "server_process_ms": 645,
+      "total_ms": 945,
+      "size_bytes": 806,
+      "http_code": 200,
+      "all_runs": [
+        {
+          "dns_ms": 2,
+          "tcp_ms": 123,
+          "tls_ms": 125,
+          "ttfb_ms": 1234,
+          "server_process_ms": 984,
+          "total_ms": 1235,
+          "size_bytes": 806,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 3,
+          "tcp_ms": 155,
+          "tls_ms": 162,
+          "ttfb_ms": 1245,
+          "server_process_ms": 926,
+          "total_ms": 1246,
+          "size_bytes": 806,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 134,
+          "tls_ms": 163,
+          "ttfb_ms": 945,
+          "server_process_ms": 645,
+          "total_ms": 945,
+          "size_bytes": 806,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 3,
+          "tcp_ms": 118,
+          "tls_ms": 140,
+          "ttfb_ms": 890,
+          "server_process_ms": 628,
+          "total_ms": 891,
+          "size_bytes": 806,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 3,
+          "tcp_ms": 108,
+          "tls_ms": 132,
+          "ttfb_ms": 811,
+          "server_process_ms": 568,
+          "total_ms": 811,
+          "size_bytes": 806,
+          "http_code": 200
+        }
+      ]
+    },
+    {
+      "name": "Manifest PWA",
+      "url": "https://sovahub.org/manifest.json",
+      "method": "GET",
+      "dns_ms": 2,
+      "tcp_ms": 126,
+      "tls_ms": 138,
+      "ttfb_ms": 448,
+      "server_process_ms": 166,
+      "total_ms": 448,
+      "size_bytes": 449,
+      "http_code": 200,
+      "all_runs": [
+        {
+          "dns_ms": 2,
+          "tcp_ms": 112,
+          "tls_ms": 131,
+          "ttfb_ms": 393,
+          "server_process_ms": 148,
+          "total_ms": 394,
+          "size_bytes": 449,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 126,
+          "tls_ms": 158,
+          "ttfb_ms": 437,
+          "server_process_ms": 150,
+          "total_ms": 437,
+          "size_bytes": 449,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 124,
+          "tls_ms": 142,
+          "ttfb_ms": 448,
+          "server_process_ms": 180,
+          "total_ms": 448,
+          "size_bytes": 449,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 146,
+          "tls_ms": 138,
+          "ttfb_ms": 452,
+          "server_process_ms": 166,
+          "total_ms": 453,
+          "size_bytes": 449,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 3,
+          "tcp_ms": 144,
+          "tls_ms": 136,
+          "ttfb_ms": 469,
+          "server_process_ms": 186,
+          "total_ms": 469,
+          "size_bytes": 449,
+          "http_code": 200
+        }
+      ]
+    }
+  ],
+  "payload": {
+    "rawHtmlSize": 50809,
+    "brHtmlSize": 9839,
+    "htmlEncoding": "br",
+    "cfCacheStatus": "DYNAMIC",
+    "cacheControl": "public, max-age=0, must-revalidate",
+    "totalJsRaw": 235663,
+    "totalJsBr": 235663,
+    "jsCount": 12,
+    "totalCssRaw": 9126,
+    "totalCssBr": 9126,
+    "logoSize": 550,
+    "bikeImgSize": 72306
+  },
+  "browserMetrics": {
+    "fcp_ms": 251,
+    "lcp_ms": 339,
+    "dom_content_loaded_ms": 358,
+    "window_load_ms": 650,
+    "cls": 0
+  },
+  "apiResults": [
+    {
+      "name": "GET /api/wishes-feed",
+      "url": "https://sovahub.org/api/wishes-feed",
+      "method": "GET",
+      "dns_ms": 2,
+      "tcp_ms": 133,
+      "tls_ms": 138,
+      "ttfb_ms": 659,
+      "server_process_ms": 373,
+      "total_ms": 660,
+      "size_bytes": 2378,
+      "http_code": 200,
+      "all_runs": [
+        {
+          "dns_ms": 4,
+          "tcp_ms": 121,
+          "tls_ms": 138,
+          "ttfb_ms": 987,
+          "server_process_ms": 724,
+          "total_ms": 988,
+          "size_bytes": 2378,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 142,
+          "tls_ms": 142,
+          "ttfb_ms": 659,
+          "server_process_ms": 373,
+          "total_ms": 660,
+          "size_bytes": 2378,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 3,
+          "tcp_ms": 133,
+          "tls_ms": 165,
+          "ttfb_ms": 1045,
+          "server_process_ms": 744,
+          "total_ms": 1046,
+          "size_bytes": 2378,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 133,
+          "tls_ms": 127,
+          "ttfb_ms": 623,
+          "server_process_ms": 361,
+          "total_ms": 631,
+          "size_bytes": 2378,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 155,
+          "tls_ms": 132,
+          "ttfb_ms": 647,
+          "server_process_ms": 357,
+          "total_ms": 650,
+          "size_bytes": 2378,
+          "http_code": 200
+        }
+      ]
+    },
+    {
+      "name": "GET /api/categories",
+      "url": "https://sovahub.org/api/categories",
+      "method": "GET",
+      "dns_ms": 2,
+      "tcp_ms": 125,
+      "tls_ms": 137,
+      "ttfb_ms": 897,
+      "server_process_ms": 636,
+      "total_ms": 897,
+      "size_bytes": 806,
+      "http_code": 200,
+      "all_runs": [
+        {
+          "dns_ms": 2,
+          "tcp_ms": 118,
+          "tls_ms": 125,
+          "ttfb_ms": 1243,
+          "server_process_ms": 998,
+          "total_ms": 1243,
+          "size_bytes": 806,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 125,
+          "tls_ms": 165,
+          "ttfb_ms": 886,
+          "server_process_ms": 594,
+          "total_ms": 886,
+          "size_bytes": 806,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 147,
+          "tls_ms": 162,
+          "ttfb_ms": 897,
+          "server_process_ms": 585,
+          "total_ms": 897,
+          "size_bytes": 806,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 130,
+          "tls_ms": 128,
+          "ttfb_ms": 897,
+          "server_process_ms": 636,
+          "total_ms": 897,
+          "size_bytes": 806,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 124,
+          "tls_ms": 137,
+          "ttfb_ms": 910,
+          "server_process_ms": 648,
+          "total_ms": 911,
+          "size_bytes": 806,
+          "http_code": 200
+        }
+      ]
+    },
+    {
+      "name": "POST /api/auth/check-method",
+      "url": "https://sovahub.org/api/auth/check-method",
+      "method": "POST",
+      "dns_ms": 2,
+      "tcp_ms": 133,
+      "tls_ms": 139,
+      "ttfb_ms": 657,
+      "server_process_ms": 379,
+      "total_ms": 658,
+      "size_bytes": 70,
+      "http_code": 200,
+      "all_runs": [
+        {
+          "dns_ms": 2,
+          "tcp_ms": 116,
+          "tls_ms": 122,
+          "ttfb_ms": 597,
+          "server_process_ms": 356,
+          "total_ms": 597,
+          "size_bytes": 70,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 151,
+          "tls_ms": 139,
+          "ttfb_ms": 673,
+          "server_process_ms": 381,
+          "total_ms": 673,
+          "size_bytes": 70,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 133,
+          "tls_ms": 158,
+          "ttfb_ms": 857,
+          "server_process_ms": 564,
+          "total_ms": 858,
+          "size_bytes": 70,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 3,
+          "tcp_ms": 131,
+          "tls_ms": 143,
+          "ttfb_ms": 657,
+          "server_process_ms": 379,
+          "total_ms": 658,
+          "size_bytes": 70,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 3,
+          "tcp_ms": 152,
+          "tls_ms": 125,
+          "ttfb_ms": 633,
+          "server_process_ms": 354,
+          "total_ms": 633,
+          "size_bytes": 70,
+          "http_code": 200
+        }
+      ]
+    },
+    {
+      "name": "POST /api/wishes/manage",
+      "url": "https://sovahub.org/api/wishes/manage",
+      "method": "POST",
+      "dns_ms": 3,
+      "tcp_ms": 123,
+      "tls_ms": 139,
+      "ttfb_ms": 422,
+      "server_process_ms": 150,
+      "total_ms": 422,
+      "size_bytes": 70,
+      "http_code": 200,
+      "all_runs": [
+        {
+          "dns_ms": 2,
+          "tcp_ms": 121,
+          "tls_ms": 149,
+          "ttfb_ms": 443,
+          "server_process_ms": 171,
+          "total_ms": 443,
+          "size_bytes": 70,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 3,
+          "tcp_ms": 128,
+          "tls_ms": 127,
+          "ttfb_ms": 398,
+          "server_process_ms": 141,
+          "total_ms": 399,
+          "size_bytes": 70,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 3,
+          "tcp_ms": 123,
+          "tls_ms": 139,
+          "ttfb_ms": 427,
+          "server_process_ms": 162,
+          "total_ms": 427,
+          "size_bytes": 70,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 2,
+          "tcp_ms": 120,
+          "tls_ms": 150,
+          "ttfb_ms": 422,
+          "server_process_ms": 150,
+          "total_ms": 422,
+          "size_bytes": 70,
+          "http_code": 200
+        },
+        {
+          "dns_ms": 3,
+          "tcp_ms": 129,
+          "tls_ms": 128,
+          "ttfb_ms": 405,
+          "server_process_ms": 145,
+          "total_ms": 405,
+          "size_bytes": 70,
+          "http_code": 200
+        }
+      ]
+    }
+  ]
+}

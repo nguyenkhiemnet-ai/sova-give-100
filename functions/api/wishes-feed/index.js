@@ -12,6 +12,26 @@ export async function onRequestOptions() {
 }
 
 export async function onRequestGet(context) {
+  // 1. Kiểm tra RAM Edge Cache của Cloudflare PoP trước (TTFB < 50ms)
+  let cache = null;
+  let cacheKey = null;
+  try {
+    cache = caches.default;
+    cacheKey = new Request(context.request.url, {
+      method: 'GET',
+      headers: context.request.headers
+    });
+    const cachedRes = await cache.match(cacheKey);
+    if (cachedRes) {
+      const resHeaders = new Headers(cachedRes.headers);
+      resHeaders.set('cf-edge-cache', 'HIT');
+      return new Response(cachedRes.body, {
+        status: cachedRes.status,
+        headers: resHeaders
+      });
+    }
+  } catch {}
+
   const envKey = context.env?.SUPABASE_SERVICE_ROLE_KEY || SUPABASE_SERVICE_ROLE_KEY;
   const envUrl = context.env?.NEXT_PUBLIC_SUPABASE_URL || SUPABASE_URL;
 
@@ -20,7 +40,8 @@ export async function onRequestGet(context) {
     'Access-Control-Allow-Origin': '*',
     'Cache-Control': 'public, max-age=30, s-maxage=120, stale-while-revalidate=600',
     'CDN-Cache-Control': 'max-age=120, stale-while-revalidate=600',
-    'Cloudflare-CDN-Cache-Control': 'max-age=120, stale-while-revalidate=600'
+    'Cloudflare-CDN-Cache-Control': 'max-age=120, stale-while-revalidate=600',
+    'cf-edge-cache': 'MISS'
   };
 
   try {
@@ -51,10 +72,19 @@ export async function onRequestGet(context) {
 
     const cleanData = Array.isArray(items) ? items.filter(item => !isTestWish(item) && item.status !== 'archived' && !item.is_deleted) : [];
 
-    return new Response(JSON.stringify({ success: true, data: cleanData }), {
+    const response = new Response(JSON.stringify({ success: true, data: cleanData }), {
       status: 200,
       headers: edgeHeaders
     });
+
+    // 2. Lưu vào bộ đệm RAM Edge của Cloudflare (chống sập 10.000 CCU)
+    if (cache && cacheKey) {
+      try {
+        context.waitUntil(cache.put(cacheKey, response.clone()));
+      } catch {}
+    }
+
+    return response;
   } catch (err) {
     return new Response(JSON.stringify({ success: false, data: [], error: err.message }), {
       status: 200,
