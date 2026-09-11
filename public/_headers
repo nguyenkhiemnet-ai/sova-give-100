@@ -21,6 +21,11 @@
   Alt-Svc: clear
 
 /manifest.json
-  Cache-Control: public, max-age=86400
+  Cache-Control: no-cache, no-store, must-revalidate
+  Access-Control-Allow-Origin: *
+  Alt-Svc: clear
+
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
   Access-Control-Allow-Origin: *
   Alt-Svc: clear
