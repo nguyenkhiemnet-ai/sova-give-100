@@ -26,6 +26,12 @@ export default function Navbar() {
   const mobileDropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('sova_auth_modal_state', { detail: { isOpen: showAuthModal } }));
+    }
+  }, [showAuthModal]);
+
+  useEffect(() => {
     // Lắng nghe sự kiện mở Auth Modal từ bất kỳ nút nào trên website
     const handleOpenAuth = (e: any) => {
       const tab = e?.detail?.tab || 'REGISTER';

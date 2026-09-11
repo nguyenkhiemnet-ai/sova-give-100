@@ -48,6 +48,7 @@ export default function CreateWishPage() {
   const [createdPassport, setCreatedPassport] = useState<string | null>(null);
   const [subpageNotice, setSubpageNotice] = useState(DEFAULT_FULL_CMS.subpages.createWishNotice);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   useEffect(() => {
     setSubpageNotice(getFullSiteCMS().subpages.createWishNotice);
@@ -55,13 +56,33 @@ export default function CreateWishPage() {
     setCurrentUser(user);
     if (!user) {
       openAuthModal('REGISTER');
+      setIsAuthModalOpen(true);
     }
 
     const handleAuthChange = () => {
-      setCurrentUser(getActiveUser());
+      const u = getActiveUser();
+      setCurrentUser(u);
+      if (u) {
+        setIsAuthModalOpen(false);
+      }
     };
+
+    const handleAuthModalState = (e: any) => {
+      setIsAuthModalOpen(!!e?.detail?.isOpen);
+    };
+
+    const handleOpenAuth = () => {
+      setIsAuthModalOpen(true);
+    };
+
     window.addEventListener('sova_auth_change', handleAuthChange);
-    return () => window.removeEventListener('sova_auth_change', handleAuthChange);
+    window.addEventListener('sova_auth_modal_state', handleAuthModalState);
+    window.addEventListener('sova_open_auth', handleOpenAuth);
+    return () => {
+      window.removeEventListener('sova_auth_change', handleAuthChange);
+      window.removeEventListener('sova_auth_modal_state', handleAuthModalState);
+      window.removeEventListener('sova_open_auth', handleOpenAuth);
+    };
   }, []);
 
   // Tự động nhận diện danh mục theo từ khóa
@@ -310,7 +331,7 @@ export default function CreateWishPage() {
                         window.scrollTo({ top: 0, behavior: 'smooth' });
                       }, 300);
                     }}
-                    className={`p-4 rounded-2xl border-2 text-left flex items-start gap-3.5 transition-all cursor-pointer ${
+                    className={`btn-spring p-4 rounded-2xl border-2 text-left flex items-start gap-3.5 transition-all cursor-pointer ${
                       active 
                         ? 'border-brand-600 bg-brand-50/60 shadow-soft ring-2 ring-brand-500 scale-[1.01]' 
                         : 'border-warm-200 hover:border-brand-300 hover:bg-warm-50/50 bg-white'
@@ -460,6 +481,47 @@ export default function CreateWishPage() {
                   className="w-full p-3 rounded-2xl border-2 border-warm-200 text-xs font-medium text-warm-900 focus:border-brand-600 focus:outline-none"
                 />
               </div>
+
+              {/* DIGNITY METER (THƯỚC ĐO CAM KẾT DANH DỰ 0-VND) */}
+              <div className="p-3.5 rounded-2xl bg-warm-50/80 border border-warm-200/80 space-y-2">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5 font-bold text-warm-800">
+                    <ShieldCheck className={`w-4 h-4 ${reason.trim().length >= 30 ? 'text-emerald-600' : reason.trim().length >= 12 ? 'text-amber-500' : 'text-warm-400'}`}/>
+                    <span>Thước Đo Danh Dự:</span>
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-black transition-all ${
+                    reason.trim().length >= 30 
+                      ? 'bg-emerald-100 text-emerald-800' 
+                      : reason.trim().length >= 12 
+                        ? 'bg-amber-100 text-amber-800' 
+                        : 'bg-warm-200 text-warm-700'
+                  }`}>
+                    {reason.trim().length >= 30 
+                      ? '✨ Chuẩn Danh Dự 10/10' 
+                      : reason.trim().length >= 12 
+                        ? `Cơ bản (${reason.trim().length}/30 ký tự)` 
+                        : `Cần thêm chi tiết (${reason.trim().length}/30 ký tự)`}
+                  </span>
+                </div>
+
+                <div className="h-2 w-full bg-warm-200/80 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-500 rounded-full ${
+                      reason.trim().length >= 30 
+                        ? 'bg-gradient-to-r from-emerald-500 to-teal-500 w-full' 
+                        : reason.trim().length >= 12 
+                          ? 'bg-amber-400 w-1/2' 
+                          : 'bg-warm-300 w-1/6'
+                    }`}
+                  />
+                </div>
+
+                <p className="text-[10px] text-warm-600 italic">
+                  {reason.trim().length >= 30 
+                    ? 'Lời chia sẻ chân thành, rõ ràng giúp người trao (Angel) thấu hiểu và an tâm tiếp sức.' 
+                    : 'Hãy chia sẻ ít nhất 30 ký tự về hoàn cảnh thực tế để tăng tối đa cơ hội được trao tặng 0-VND.'}
+                </p>
+              </div>
             </div>
 
             {/* CHECKLIST CAM KẾT DANH DỰ */}
@@ -550,7 +612,9 @@ export default function CreateWishPage() {
       </div>
 
       {/* FLOATING ACTION DOCK (6-STAR ERGONOMIC EXPERIENCE) */}
-      <div className="fixed bottom-0 left-0 right-0 z-[60] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-emerald-500/30 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.12)]">
+      <div className={`fixed bottom-0 left-0 right-0 z-[50] bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-t border-emerald-500/30 px-4 py-3 shadow-[0_-8px_30px_rgba(0,0,0,0.12)] transition-all duration-300 ${
+        isAuthModalOpen ? 'opacity-0 pointer-events-none translate-y-full' : 'opacity-100 translate-y-0'
+      }`}>
         <div className="max-w-3xl mx-auto flex items-center justify-between gap-3">
           {/* Nút Quay Lại */}
           {step > 1 ? (
@@ -560,7 +624,7 @@ export default function CreateWishPage() {
                 setStep(step - 1);
                 window.scrollTo({ top: 0, behavior: 'smooth' });
               }}
-              className="px-4 sm:px-5 py-2.5 rounded-xl border border-warm-200 bg-white hover:bg-warm-50 text-xs font-bold text-warm-700 hover:text-brand-700 shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
+              className="btn-spring px-4 sm:px-5 py-2.5 rounded-xl border border-warm-200 bg-white hover:bg-warm-50 text-xs font-bold text-warm-700 hover:text-brand-700 shadow-2xs flex items-center gap-1.5 transition-all cursor-pointer"
             >
               <ArrowLeft className="w-4 h-4"/>
               <span>Quay Lại</span>
@@ -581,7 +645,7 @@ export default function CreateWishPage() {
                   setStep(2);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                className="px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white text-xs font-black shadow-float flex items-center gap-2 transition-all cursor-pointer"
+                className="btn-spring px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white text-xs font-black shadow-float flex items-center gap-2 transition-all cursor-pointer"
               >
                 <span>Tiếp Tục Bước 2: Hình Ảnh</span>
                 <Sparkles className="w-4 h-4"/>
@@ -595,7 +659,7 @@ export default function CreateWishPage() {
                   setStep(3);
                   window.scrollTo({ top: 0, behavior: 'smooth' });
                 }}
-                className="px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white text-xs font-black shadow-float flex items-center gap-2 transition-all cursor-pointer"
+                className="btn-spring px-6 py-3 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white text-xs font-black shadow-float flex items-center gap-2 transition-all cursor-pointer"
               >
                 <span>Tiếp Tục Bước 3: Cam Kết</span>
                 <Sparkles className="w-4 h-4"/>
@@ -607,7 +671,7 @@ export default function CreateWishPage() {
                 type="button"
                 disabled={submitting}
                 onClick={handleSubmit}
-                className="px-6 sm:px-8 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white text-xs font-black shadow-float disabled:opacity-50 flex items-center gap-2 transition-all cursor-pointer"
+                className="btn-spring px-6 sm:px-8 py-3.5 rounded-2xl bg-brand-600 hover:bg-brand-700 active:scale-95 text-white text-xs font-black shadow-float disabled:opacity-50 flex items-center gap-2 transition-all cursor-pointer"
               >
                 <Sparkles className="w-4 h-4"/>
                 <span>{submitting ? 'Đang Gieo Mầm...' : 'Gieo Mầm Ước Nguyện 0-VND'}</span>
@@ -619,7 +683,7 @@ export default function CreateWishPage() {
 
       {/* MODAL THÀNH CÔNG */}
       {createdPassport && (
-        <div className="fixed inset-0 z-50 bg-warm-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-white rounded-3xl border-2 border-brand-500 max-w-md w-full p-6 sm:p-8 shadow-2xl text-center space-y-5">
             <div className="w-16 h-16 rounded-full bg-brand-50 text-brand-600 mx-auto flex items-center justify-center ring-8 ring-brand-100">
               <CheckCircle2 className="w-9 h-9"/>

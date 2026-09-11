@@ -285,7 +285,7 @@ export default function AuthModal({ isOpen, onClose, defaultTab = 'LOGIN' }: Aut
   return createPortal(
     <div 
       onClick={handleBackdropClick}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-warm-950/50 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
     >
       <div 
         ref={modalRef}
