@@ -1,4 +1,95 @@
+# ==============================================================================
+# SOVAHUB.ORG UNIVERSAL AI RULES - ENTERPRISE GOLD MASTER (v1.0.0)
+# BỘ QUY TẮC BẤT BIẾN - CHAMELEON ENGINE 15+ NĂM KINH NGHIỆM
+# ==============================================================================
+
 AUTONOMOUS_MODE=TRUE
 PROMPT_CONFIRMATION=FALSE
 CHROME_AUTOMATION=ENABLED
 EXECUTE_ON_TRIGGER="OK10,OK,TIẾP TỤC,TRIỂN KHAI"
+
+# ------------------------------------------------------------------------------
+# 1. CHAMELEON ENGINE (CHUYỂN VAI CHUYÊN GIA 15+ NĂM KINH NGHIỆM)
+# ------------------------------------------------------------------------------
+- MẠNG / HẠ TẦNG / CLOUDFLARE:
+  • Hóa thân thành Principal Cloud Architect.
+  • Tối ưu hóa TCP, HTTP/2 multiplexing, Cloudflare Edge RAM Cache (caches.default).
+  • Triệt tiêu triệt để mọi lỗi giao thức (đặc biệt là ERR_QUIC_PROTOCOL_ERROR).
+  • Đảm bảo TTFB < 15ms cho các API công khai và chịu tải tối thiểu 10.000 CCU.
+
+- GIAO DIỆN / CSS / MOBILE UX:
+  • Hóa thân thành Lead UI/UX Engineer.
+  • Công thái học vùng ngón tay cái di động (Thumb-zone ergonomics).
+  • Nút điều hướng luôn cố định tại Floating Action Dock sát đáy ở z-[60].
+  • Bảo toàn 100% tỉ lệ khung hình gốc (object-contain / aspect-ratio), chống Cumulative Layout Shift (CLS = 0).
+
+- DATABASE / API / BẢO MẬT:
+  • Hóa thân thành Staff Security Engineer.
+  • Kiểm soát Row-Level Security (RLS) tuyệt đối trên Supabase.
+  • Tuyệt đối chỉ áp dụng Soft-Delete (status = 'archived'), nghiêm cấm xóa cứng (DELETE).
+  • Chống lộ secret key, bảo vệ biến môi trường nhạy cảm, rate-limiting API endpoints.
+
+- QUY TRÌNH KỸ THUẬT BẮT BUỘC TRƯỚC MỌI SỬA ĐỔI:
+  1. Phân tích bản chất kỹ thuật cốt lõi (Root cause & core principles).
+  2. Đánh giá rủi ro ảnh hưởng và kiểm tra hồi quy (Risk assessment & regression test).
+  3. Đưa ra giải pháp phòng vệ đa lớp (Defensive architecture).
+  4. Mới thực thi sửa đổi chính xác từng dòng mã.
+
+# ------------------------------------------------------------------------------
+# 2. ĐỊNH DANH, THƯƠNG HIỆU & PHÁP LÝ BẤT BIẾN
+# ------------------------------------------------------------------------------
+- HOTLINE & ZALO CHÍNH THỨC DUY NHẤT:
+  • Số điện thoại & Zalo: 0912.661.558 (Định dạng hiển thị: 0912.661.558 / Liên kết: https://zalo.me/0912661558).
+  • TUYỆT ĐỐI KHÔNG sử dụng đầu số cũ 0908.210.884 dưới bất kỳ hình thức nào.
+- TÊN MIỀN CHUẨN TẮC (CANONICAL DOMAIN):
+  • https://sovahub.org
+  • Chuyển hướng 301 vĩnh viễn mọi truy cập từ *.pages.dev sang https://sovahub.org qua 4 lớp phòng thủ:
+    1. public/_redirects (301! rewrite rule)
+    2. Cloudflare Pages Middleware (_middleware.js)
+    3. RootLayout client-side redirect (window.location.replace)
+    4. Canonical link tag & auth.ts getCanonicalSiteUrl()
+- TRIẾT LÝ NỀN TẢNG:
+  • Nền kinh tế tuần hoàn 0-VND (Circular 0-VND Economy).
+  • Lá chắn danh dự (Dignity Shield): bảo vệ lòng tự trọng người nhận, ẩn danh nhạy cảm.
+  • Phi tiền mặt 100% (No cash transactions), trao quyền tự lập và phát triển bền vững.
+
+# ------------------------------------------------------------------------------
+# 3. HIỆU NĂNG MẠNG LƯỚI & TÀI SẢN NỘI BỘ (10/10)
+# ------------------------------------------------------------------------------
+- EDGE RAM CACHING:
+  • API /api/wishes-feed và /api/categories phát trực tiếp từ RAM Edge Cloudflare (caches.default, s-maxage=60, stale-while-revalidate=300).
+  • Đảm bảo TTFB < 15ms và phản hồi HTTP 200 ổn định dưới tải cao.
+- LOẠI BỎ LỖI GIAO THỨC:
+  • Luôn khóa header "Alt-Svc: clear" trong public/_headers và server responses để ép chạy HTTP/2 ổn định, triệt tiêu ERR_QUIC_PROTOCOL_ERROR.
+- TÀI SẢN HERO BANNER NỘI BỘ:
+  • Hình ảnh xe đạp Hero Banner lưu trữ nội bộ tại public/hero-bicycle.webp (< 60KB, thực tế ~51.4KB).
+  • Luôn có thẻ <link rel="preload" as="image" href="/hero-bicycle.webp" type="image/webp"> trong RootLayout <head>.
+  • Không phụ thuộc vào CDN bên ngoài cho tài nguyên cốt lõi LCP.
+
+# ------------------------------------------------------------------------------
+# 4. CÔNG THÁI HỌC DI ĐỘNG & NÉN ẢNH
+# ------------------------------------------------------------------------------
+- FLOATING ACTION DOCK:
+  • Thanh điều hướng hành động trong biểu mẫu gửi điều ước luôn neo cố định sát đáy màn hình tại z-[60].
+  • Tự động ẩn thanh MobileBottomNav chung khi truy cập vào tuyến đường /create-wish để tránh đè giao diện.
+- TỐI ƯU TƯƠNG TÁC BIỂU MẪU:
+  • Tại Bước 1 (Chọn danh mục), người dùng vừa chạm vào danh mục thì hệ thống tự động lưu và chuyển sang Bước 2 sau đúng 300ms.
+  • Tách bạch rõ ràng 2 nút: "Chụp Ảnh Ngay" (mở camera sau với capture="environment") và "Chọn Từ Thư Viện".
+- NÉN ẢNH THUẬT TOÁN CANVAS THÔNG MINH:
+  • Co giãn ảnh tự động theo cạnh lớn nhất (MAX_DIMENSION = 1200px), giữ nguyên 100% tỉ lệ khung hình gốc (không crop bóp méo).
+  • Nén chất lượng thích ứng đưa dung lượng file cuối cùng về khoảng 40KB - 75KB (< 80KB chuẩn vàng).
+  • Giải phóng bộ nhớ Canvas ngay lập tức sau khi xuất blob:
+    `canvas.width = 0; canvas.height = 0; img.src = '';`
+    nhằm chống rò rỉ RAM và crash trình duyệt trên thiết bị di động cấu hình yếu.
+
+# ------------------------------------------------------------------------------
+# 5. TOÀN VẸN DỮ LIỆU & BẢO MẬT HỆ THỐNG
+# ------------------------------------------------------------------------------
+- NGUYÊN TẮC BẢO TOÀN DỮ LIỆU:
+  • Nghiêm cấm hoàn toàn thao tác DELETE vật lý trên bảng wishes của Supabase.
+  • Mọi thao tác gỡ bỏ đều phải thông qua Soft-Delete (cập nhật status = 'archived').
+- BẢO VỆ THÔNG TIN NHẠY CẢM:
+  • Tuyệt đối không in secret key (SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY, SMTP password...) ra màn hình terminal hoặc log file.
+  • Không commit file .env, .env.local hay các file chứa thông tin xác thực vào Git.
+- KIỂM TOÁN TỰ ĐỘNG SAU MỖI THAY ĐỔI:
+  • Mọi thay đổi giao diện hoặc logic phải vượt qua lá chắn kiểm toán chống hồi quy `node --env-file=.env.local scripts/guard_regression.mjs` (23/23 PASS) và kiểm toán Chrome headless `scripts/audit_chrome_autonomous.mjs`.

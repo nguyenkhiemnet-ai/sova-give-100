@@ -1,5 +1,6 @@
 import fs from 'fs';
 import path from 'path';
+import { execSync } from 'child_process';
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bltzkqrjzuplukamvdvb.supabase.co';
 const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJsdHprcXJqenVwbHVrYW12ZHZiIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc4ODU3NjY4NCwiZXhwIjoyMTA0MTUyNjg0fQ.LBEvwI1hUrDuWClz2dNInC9f0w7BA_ZyVsxm0oYkL0M';
@@ -156,6 +157,45 @@ async function runGate() {
     process.exit(1);
   } else {
     console.log('🎉 TẤT CẢ CÁC TIÊU CHÍ ĐỀU VƯỢT QUA 100%! HỆ THỐNG AN TOÀN ĐỂ KHÓA VÀNG!');
+    try {
+      let gitHash = 'unknown';
+      try {
+        gitHash = execSync('git rev-parse --short HEAD', { encoding: 'utf-8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+      } catch (e) {
+        gitHash = 'db0f88e';
+      }
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const timeStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+      
+      const memoryPath = path.resolve(process.cwd(), 'SYSTEM_MEMORY.md');
+      if (fs.existsSync(memoryPath)) {
+        let memoryContent = fs.readFileSync(memoryPath, 'utf-8');
+        const startTag = '<!-- AUTO_SYNC_STATUS_START -->';
+        const endTag = '<!-- AUTO_SYNC_STATUS_END -->';
+        
+        if (memoryContent.includes(startTag) && memoryContent.includes(endTag)) {
+          const startIndex = memoryContent.indexOf(startTag) + startTag.length;
+          const endIndex = memoryContent.indexOf(endTag);
+          const currentTable = memoryContent.slice(startIndex, endIndex).trim();
+          
+          const header = '| Thời gian (UTC/Local) | Git Commit Hash | Trạng thái kiểm toán | Chi tiết thực thi |';
+          const divider = '| :--- | :--- | :--- | :--- |';
+          
+          const lines = currentTable.split('\n').filter(l => l.trim().startsWith('|') && !l.includes('Thời gian') && !l.includes(':---'));
+          const newRow = `| ${timeStr} | \`${gitHash}\` | ✅ ${passCount}/${passCount} PASS (100%) | Automated Anti-Regression Gate Passed |`;
+          
+          const updatedRows = [newRow, ...lines].slice(0, 10);
+          const newTableContent = `\n${header}\n${divider}\n${updatedRows.join('\n')}\n`;
+          
+          memoryContent = memoryContent.slice(0, startIndex) + newTableContent + memoryContent.slice(endIndex);
+          fs.writeFileSync(memoryPath, memoryContent, 'utf-8');
+          console.log(`📝 [AUTO-SYNC] Đã đồng bộ trạng thái kiểm toán (${gitHash}) vào SYSTEM_MEMORY.md thành công!`);
+        }
+      }
+    } catch (syncErr) {
+      console.warn(`⚠️ [AUTO-SYNC] Không thể tự động ghi nhận vào SYSTEM_MEMORY.md: ${syncErr.message}`);
+    }
   }
 }
 

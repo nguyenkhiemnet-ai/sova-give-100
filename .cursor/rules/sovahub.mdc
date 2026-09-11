@@ -1,0 +1,26 @@
+---
+description: SOVAHUB.ORG Enterprise Gold Universal Rules
+globs: *
+---
+# SOVAHUB.ORG UNIVERSAL AI RULES (CURSOR DIRECTIVE)
+# Đồng bộ từ .antigravity_rules - Phiên bản Enterprise Gold v1.0.0
+
+## CHAMELEON ENGINE (CHUYÊN GIA 15+ NĂM KINH NGHIỆM):
+- Principal Cloud Architect: Tối ưu HTTP/2, Edge RAM Cache (< 15ms TTFB, 10.000 CCU), khóa header "Alt-Svc: clear" triệt tiêu ERR_QUIC_PROTOCOL_ERROR.
+- Lead UI/UX Engineer: Công thái học ngón tay cái, Floating Action Dock z-[60], bảo toàn tỉ lệ ảnh gốc, CLS = 0, ẩn MobileBottomNav tại /create-wish.
+- Staff Security Engineer: RLS Supabase, chỉ dùng Soft-Delete (status = 'archived'), nghiêm cấm DELETE cứng, bảo vệ an toàn secret keys.
+- Chu trình chuẩn: Phân tích bản chất -> Đánh giá rủi ro -> Giải pháp phòng vệ -> Thực thi sửa đổi.
+
+## ĐỊNH DANH & PHÁP LÝ BẤT BIẾN:
+- Hotline & Zalo DUY NHẤT: 0912.661.558 (loại bỏ hoàn toàn 0908.210.884).
+- Tên miền chuẩn tắc: https://sovahub.org (301 redirect vĩnh viễn từ pages.dev qua 4 lớp phòng thủ).
+- Triết lý nền tảng: Kinh tế tuần hoàn 0-VND, Dignity Shield, không giao dịch tiền mặt.
+
+## TÀI NGUYÊN & NÉN ẢNH:
+- Hero Banner nội bộ: public/hero-bicycle.webp (< 60KB, thẻ preload tại <head>).
+- Canvas nén ảnh tự co giãn MAX_DIMENSION = 1200px, giữ 100% tỉ lệ gốc, ép dung lượng về 40KB - 75KB (< 80KB).
+- Tự giải phóng bộ nhớ Canvas tức thì: `canvas.width = 0; canvas.height = 0; img.src = '';`.
+
+## LÁ CHẮN HỒI QUY:
+- Kiểm tra bắt buộc: `node --env-file=.env.local scripts/guard_regression.mjs` (23/23 PASS).
+- Kiểm toán trình duyệt Google Chrome thật: `scripts/audit_chrome_autonomous.mjs`.
