@@ -55,6 +55,7 @@ Toàn bộ mã nguồn và dữ liệu ở trạng thái hoàn hảo Gold Master
 <!-- AUTO_SYNC_STATUS_START -->
 | Thời gian (UTC/Local) | Git Commit Hash | Trạng thái kiểm toán | Chi tiết thực thi |
 | :--- | :--- | :--- | :--- |
+| 2026-09-11 09:46:00 | `5994f76` | ✅ 23/23 PASS (100%) | Automated Anti-Regression Gate Passed |
 | 2026-09-11 09:40:47 | `c12a423` | ✅ 23/23 PASS (100%) | Automated Anti-Regression Gate Passed |
 | 2026-09-11 09:39:41 | `c12a423` | ✅ 23/23 PASS (100%) | Automated Anti-Regression Gate Passed |
 | 2026-09-11 09:32:35 | `c331ff6` | ✅ 23/23 PASS (100%) | Automated Anti-Regression Gate Passed |
@@ -72,4 +73,24 @@ Toàn bộ mã nguồn và dữ liệu ở trạng thái hoàn hảo Gold Master
 Mỗi lần can thiệp mã nguồn:
 1. Luôn kích hoạt `node --env-file=.env.local scripts/guard_regression.mjs`.
 2. Khi 23/23 tiêu chí PASS, hệ thống tự động ghi nhật ký vào bảng trạng thái bên trên.
-3. Kích hoạt `node scripts/audit_chrome_autonomous.mjs` để xác nhận 0 lỗi Console, 0 lỗi giao thức mạng và giao diện hiển thị 10/10.
+3. Kích hoạt `node scripts/audit_chrome_autonomous.mjs` hoặc `node scripts/audit_e2e_user_journeys.mjs` để xác nhận 0 lỗi Console, 0 lỗi giao thức mạng và giao diện hiển thị 10/10.
+
+---
+
+## 6. GIAO THỨC PHÁP Y THỊ GIÁC & TRẢI NGHIỆM WOW 10/10 (VFAP-6S)
+> **KÍCH HOẠT BẮT BUỘC MỖI KHI CÓ ẢNH CHỤP MÀN HÌNH ĐƯỢC GỬI LÊN Ô CHAT**:
+1. **Dual-Persona Engine**:
+   - *Senior Principal Product Designer*: Bóc tách lưới bố cục, nhịp điệu khoảng trắng, tương phản màu WCAG AAA, phân cấp thị giác, tính nhất quán Design System.
+   - *The Hyper-Critical User*: Soi xét từng điểm cấn tay, thao tác thừa, chữ khó đọc, độ trễ nhận thức, bố cục rối mắt.
+2. **Responsive Trinity (3 phân mẫu màn hình)**:
+   - *Mobile (360px - 430px)*: Thumb-zone, nút bấm >= 48px, Floating Dock z-[50], chống che khuất bàn phím.
+   - *Tablet (768px - 1024px)*: Chống bè ngang, tối ưu lưới 2 cột, popover và modal cân đối.
+   - *Desktop (1280px - 1920px+)*: Tỷ lệ vàng chia cột, cân bằng khoảng trống hai bên, độ nét typography và Hero.
+3. **Bóc tách góc khuất & Giải pháp đột phá**:
+   - Không khen sáo rỗng; soi thấu các edge cases (text tràn, ảnh vỡ, mạng yếu, màn hình OLED).
+   - Đánh giá góc nhìn cả 2 phía: Người dùng (Giver/Striver) và Quản trị viên (Admin).
+   - Đưa ra giải pháp sáng tạo, đột phá, thực tế và khả thi 100% để nâng tầm trải nghiệm lên chuẩn WOW 10/10.
+4. **Xác nhận hoàn hảo (If already 10/10)**:
+   - Lập bảng kiểm toán chứng minh: Phân cấp thị giác ĐẠT, Công thái học 3 thiết bị ĐẠT, Nhất quán Design System ĐẠT.
+   - Kết luận: Giao diện đạt chuẩn hoàn hảo, an toàn tuyệt đối và không cần chỉnh sửa thêm.
+

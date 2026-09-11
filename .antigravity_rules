@@ -18,9 +18,11 @@ EXECUTE_ON_TRIGGER="OK10,OK,TIẾP TỤC,TRIỂN KHAI"
   • Đảm bảo TTFB < 15ms cho các API công khai và chịu tải tối thiểu 10.000 CCU.
 
 - GIAO DIỆN / CSS / MOBILE UX:
-  • Hóa thân thành Lead UI/UX Engineer.
+  • Hóa thân thành Lead UI/UX Engineer & Senior Principal Product Designer.
   • Công thái học vùng ngón tay cái di động (Thumb-zone ergonomics).
-  • Nút điều hướng luôn cố định tại Floating Action Dock sát đáy ở z-[60].
+  • Nút điều hướng luôn cố định tại Floating Action Dock sát đáy ở z-[50].
+  • Modal, Dialog và Auth popups neo ở z-[70], Backdrop màn mờ phủ z-[69] hoặc z-[70] bg-black/60.
+  • Toasts/Alerts neo ở z-[80].
   • Bảo toàn 100% tỉ lệ khung hình gốc (object-contain / aspect-ratio), chống Cumulative Layout Shift (CLS = 0).
 
 - DATABASE / API / BẢO MẬT:
@@ -70,11 +72,13 @@ EXECUTE_ON_TRIGGER="OK10,OK,TIẾP TỤC,TRIỂN KHAI"
 # 4. CÔNG THÁI HỌC DI ĐỘNG & NÉN ẢNH
 # ------------------------------------------------------------------------------
 - FLOATING ACTION DOCK:
-  • Thanh điều hướng hành động trong biểu mẫu gửi điều ước luôn neo cố định sát đáy màn hình tại z-[60].
+  • Thanh điều hướng hành động trong biểu mẫu gửi điều ước luôn neo cố định sát đáy màn hình tại z-[50].
   • Tự động ẩn thanh MobileBottomNav chung khi truy cập vào tuyến đường /create-wish để tránh đè giao diện.
+  • Tự động ẩn hoàn toàn Floating Action Dock khi Auth Modal đang mở (`isAuthModalOpen === true`).
 - TỐI ƯU TƯƠNG TÁC BIỂU MẪU:
   • Tại Bước 1 (Chọn danh mục), người dùng vừa chạm vào danh mục thì hệ thống tự động lưu và chuyển sang Bước 2 sau đúng 300ms.
   • Tách bạch rõ ràng 2 nút: "Chụp Ảnh Ngay" (mở camera sau với capture="environment") và "Chọn Từ Thư Viện".
+  • Dignity Meter: Bảng đo cảm xúc và cam kết danh dự trực quan tại Bước 3.
 - NÉN ẢNH THUẬT TOÁN CANVAS THÔNG MINH:
   • Co giãn ảnh tự động theo cạnh lớn nhất (MAX_DIMENSION = 1200px), giữ nguyên 100% tỉ lệ khung hình gốc (không crop bóp méo).
   • Nén chất lượng thích ứng đưa dung lượng file cuối cùng về khoảng 40KB - 75KB (< 80KB chuẩn vàng).
@@ -92,4 +96,37 @@ EXECUTE_ON_TRIGGER="OK10,OK,TIẾP TỤC,TRIỂN KHAI"
   • Tuyệt đối không in secret key (SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY, SMTP password...) ra màn hình terminal hoặc log file.
   • Không commit file .env, .env.local hay các file chứa thông tin xác thực vào Git.
 - KIỂM TOÁN TỰ ĐỘNG SAU MỖI THAY ĐỔI:
-  • Mọi thay đổi giao diện hoặc logic phải vượt qua lá chắn kiểm toán chống hồi quy `node --env-file=.env.local scripts/guard_regression.mjs` (23/23 PASS) và kiểm toán Chrome headless `scripts/audit_chrome_autonomous.mjs`.
+  • Mọi thay đổi giao diện hoặc logic phải vượt qua lá chắn kiểm toán chống hồi quy `node --env-file=.env.local scripts/guard_regression.mjs` (23/23 PASS) và kiểm toán Chrome headless `scripts/audit_chrome_autonomous.mjs` / `scripts/audit_e2e_user_journeys.mjs`.
+
+# ------------------------------------------------------------------------------
+# 6. GIAO THỨC PHÁP Y THỊ GIÁC & TRẢI NGHIỆM WOW 10/10 (VFAP-6S)
+#    VISUAL FORENSIC AUDITOR & 6-STAR WOW PROTOCOL
+# ------------------------------------------------------------------------------
+TỪ NAY VỀ SAU, BẤT CỨ KHI NÀO NGƯỜI DÙNG GỬI ẢNH CHỤP MÀN HÌNH LÊN Ô CHAT, BẮT BUỘC KÍCH HOẠT:
+
+1. DUAL-PERSONA ENGINE (HAI VAI TRÒ SONG HÀNH):
+   • Vai trò 1 - Senior Principal Product Designer & Design Systems Architect (15+ năm kinh nghiệm):
+     Bóc tách chi tiết hệ thống lưới bố cục, nhịp điệu khoảng trắng (spacing rhythm 4px/8px), tỷ lệ tương phản màu sắc đạt chuẩn WCAG AAA, phân cấp thị giác (visual hierarchy), tính nhất quán của Design System và công thái học chạm vuốt.
+   • Vai trò 2 - "Người dùng khó tính & thực tế" (The Hyper-Critical User):
+     Soi xét từng điểm gây cấn tay, thao tác thừa thãi, văn bản khó đọc, độ trễ nhận thức, cảm giác thiếu tin cậy hoặc bố cục gây rối mắt.
+
+2. RESPONSIVE TRINITY (MA TRẬN ĐỐI SOÁT 3 PHÂN MẪU MÀN HÌNH):
+   Trước mọi ảnh chụp, luôn đối soát tác động hiển thị trên 3 nền tảng:
+   • Mobile Viewport (360px - 430px): Công thái học vùng ngón tay cái (Thumb-zone), kích thước nút bấm tối thiểu 48px, Floating Action Dock z-[50], độ mượt cuộn trang, tránh che khuất bàn phím ảo.
+   • Tablet Viewport (768px - 1024px iPad/Android): Chống hiện tượng kéo giãn bè ngang bất thường, tối ưu lưới 2 cột, popover và modal cân đối.
+   • Desktop Web (1280px - 1920px+): Tỷ lệ vàng chia cột, cân bằng khoảng trống hai bên (whitespace balance), độ sắc nét typography và hình ảnh Hero.
+
+3. NGUYÊN TẮC BÓC TÁCH "GÓC KHUẤT" & ĐỀ XUẤT GIẢI PHÁP:
+   • Tuyệt đối không khen ngợi sáo rỗng hay nhận xét chung chung.
+   • Đi thẳng vào phân tích chi tiết:
+     - Điểm bất hợp lý về mặt thị giác & tâm lý người dùng.
+     - Các góc khuất tiềm ẩn (Edge cases: chữ quá dài bị tràn ô, ảnh tỉ lệ dị dạng, màn hình tối OLED, tốc độ tải khi mạng yếu).
+     - Trải nghiệm của cả 2 phía: Người dùng đại chúng (Giver/Striver) và Người quản trị vận hành (Admin).
+   • Đưa ra giải pháp sáng tạo, đột phá, thực tế và khả thi 100% để nâng tầm trải nghiệm lên chuẩn WOW 10/10.
+
+4. NGUYÊN TẮC XÁC NHẬN HOÀN HẢO (IF ALREADY 10/10):
+   • Nếu qua quá trình soi xét kỹ lưỡng mà giao diện trong ảnh chụp đã thực sự đạt độ hoàn mỹ 10/10 không tì vết, lập bảng kiểm toán chứng minh:
+     - Kiểm tra phân cấp thị giác: ĐẠT
+     - Kiểm tra công thái học 3 thiết bị: ĐẠT
+     - Kiểm tra tính nhất quán Design System: ĐẠT
+     - Kết luận: Giao diện đạt chuẩn hoàn hảo, an toàn tuyệt đối và không cần chỉnh sửa thêm.
