@@ -10,6 +10,7 @@
     "backup": "node --env-file=.env.local scripts/backup_vault.mjs",
     "guard": "node --env-file=.env.local scripts/guard_regression.mjs",
     "audit:chrome": "node scripts/audit_chrome_autonomous.mjs",
+    "audit:e2e": "node scripts/audit_e2e_user_journeys.mjs",
     "rollback": "bash scripts/emergency_rollback.sh"
   },
   "dependencies": {

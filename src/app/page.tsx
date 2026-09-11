@@ -491,7 +491,10 @@ export default function HomePage() {
                 alt="Mỗi chiếc xe đạp trao đi..." 
                 className="w-full h-full object-cover rounded-2xl shadow-xl"
                 onError={(e) => {
-                  (e.currentTarget as HTMLImageElement).src = '/hero-bicycle.webp';
+                  const target = e.currentTarget as HTMLImageElement;
+                  if (!target.src.endsWith('/hero-bicycle.webp')) {
+                    target.src = '/hero-bicycle.webp';
+                  }
                 }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent flex items-end p-5">
@@ -669,6 +672,13 @@ export default function HomePage() {
                       src={resolvedImg} 
                       alt={item.title} 
                       className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-300"
+                      onError={(e) => {
+                        const target = e.currentTarget as HTMLImageElement;
+                        const fallback = CATEGORY_FALLBACK_IMAGES[effectiveCat] || CATEGORY_FALLBACK_IMAGES['bicycle'];
+                        if (target.src !== fallback) {
+                          target.src = fallback;
+                        }
+                      }}
                     />
                     
                     <div className="absolute top-2 left-2 right-2 sm:top-3 sm:left-3 sm:right-3 flex justify-between items-center gap-1">
@@ -905,6 +915,13 @@ export default function HomePage() {
                   src={detailWish.imageUrl || CATEGORY_FALLBACK_IMAGES[inferCategory(detailWish.title, detailWish.category)] || CATEGORY_FALLBACK_IMAGES['bicycle']} 
                   alt={detailWish.title} 
                   className="w-full h-full object-contain object-center"
+                  onError={(e) => {
+                    const target = e.currentTarget as HTMLImageElement;
+                    const fallback = CATEGORY_FALLBACK_IMAGES[inferCategory(detailWish.title, detailWish.category)] || CATEGORY_FALLBACK_IMAGES['bicycle'];
+                    if (target.src !== fallback) {
+                      target.src = fallback;
+                    }
+                  }}
                 />
               </div>
 
